@@ -493,3 +493,29 @@ class Ek(models.Model):
     def sahip_kisa(self) -> str:
         """URL'lerde kullanılan sahip türü adı."""
         return {"kasa_hareketi": "kasa"}.get(self.sahip_turu, self.sahip_turu)
+
+
+class YedekKaydi(models.Model):
+    """Her yedek denemesinin kaydı (başarılı ya da başarısız). Genel Bakış'taki yedek uyarısı buradan beslenir."""
+
+    class Durum(models.TextChoices):
+        TAMAM = "TAMAM", "Tamam"
+        UYARI = "UYARI", "Uyarı"
+        HATA = "HATA", "Hata"
+
+    zaman = models.DateTimeField(auto_now_add=True)
+    hedef = models.CharField("Hedef klasör", max_length=500)
+    dosya = models.CharField(max_length=200, blank=True)
+    boyut_bayt = models.PositiveBigIntegerField(default=0)
+    durum = models.CharField(max_length=6, choices=Durum.choices)
+    dogrulandi = models.BooleanField("Hash doğrulaması yapıldı", default=False)
+    geri_yukleme_testi = models.BooleanField("Geri yükleme testi geçti", default=False)
+    ayrinti = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Yedek kaydı"
+        verbose_name_plural = "Yedek kayıtları"
+        ordering = ["-zaman", "-id"]
+
+    def __str__(self):
+        return f"{self.zaman:%d.%m.%Y %H:%M} · {self.hedef} · {self.get_durum_display()}"

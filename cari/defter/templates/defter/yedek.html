@@ -1,0 +1,38 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Yedek · Cari Program{% endblock %}
+{% block icerik %}
+<h1>Yedek</h1>
+<section class="ozet">
+  <div class="kart"><div class="not">Son başarılı yedek</div>
+    <div class="deger">{% if durum.son %}{{ durum.son.zaman|date:"d.m.Y H:i" }}{% else %}Hiç yok{% endif %}</div>
+    <div>{% if durum.uyari %}<span class="chip hata">⚠ {{ durum.mesaj }}</span>{% else %}<span class="chip tamam">✓ Güncel</span>{% endif %}</div></div>
+  <div class="kart"><div class="not">Saklama kuralı</div>
+    <div class="deger" style="font-size:18px">Son {{ gunluk }} gün: hepsi<br>Daha eski: ayda 1 ({{ aylik }} ay)</div></div>
+</section>
+
+{% if not hedefler %}
+<div class="kart" style="margin-bottom:12px"><h2>Yedek hedefi tanımlı değil</h2>
+  <p>Yedek klasörünü <b>ayrı bir diske veya USB'ye</b> yönlendirin. Başlatıcıdaki (<code>baslat.bat</code> / <code>ayarlar.bat</code>) şu satırı düzenleyin:</p>
+  <p><code>set CARI_YEDEK_DIZINLERI=D:\Yedek;E:\Yedek</code></p>
+  <p class="not">Birden fazla hedef <code>;</code> ile ayrılır. Hedef tanımlanana kadar buradan yedek alınamaz.</p></div>
+{% else %}
+<div class="kart" style="margin-bottom:12px"><h2>Şimdi yedekle</h2>
+  <p>Hedefler: {% for h in hedefler %}<code>{{ h }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+  {% if ayni_disk %}<p><span class="chip uyari">⚠ Şu hedef verinin diskinde: {{ ayni_disk|join:", " }}. Disk bozulursa yedek de kaybolur.</span></p>{% endif %}
+  <form method="post" action="{% url 'yedek_al' %}">{% csrf_token %}<button type="submit">Şimdi yedek al</button></form>
+  <p class="not">Yedek; veritabanını (tutarlı anlık görüntü) ve ek dosyaları içerir, hash'lerle doğrulanır ve geçici klasöre
+    <b>gerçekten geri yüklenerek test edilir</b>. Gizli anahtar yedeğe konmaz. <b>Yedek şifrelenmez:</b> parola özetleri ve tüm mali veri içerir;
+    şifreli bir sürücüye (BitLocker/VeraCrypt) veya şifreli bulut klasörüne alın.</p></div>
+{% endif %}
+
+<div class="kart"><h2>Son yedek denemeleri</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Zaman</th><th>Hedef</th><th>Dosya</th><th class="sayi">Boyut</th><th>Durum</th><th>Doğrulama</th><th>Geri yükleme testi</th><th>Ayrıntı</th></tr></thead>
+    <tbody>{% for k in kayitlar %}
+      <tr><td>{{ k.zaman|date:"d.m.Y H:i" }}</td><td>{{ k.hedef }}</td><td>{{ k.dosya|default:"—" }}</td><td class="sayi">{{ k.boyut_bayt|boyut }}</td>
+        <td>{% if k.durum == "TAMAM" %}<span class="chip tamam">✓ Tamam</span>{% elif k.durum == "UYARI" %}<span class="chip uyari">⚠ Uyarı</span>{% else %}<span class="chip hata">✕ Hata</span>{% endif %}</td>
+        <td>{% if k.dogrulandi %}✓{% else %}—{% endif %}</td><td>{% if k.geri_yukleme_testi %}✓{% else %}—{% endif %}</td><td>{{ k.ayrinti|default:"" }}</td></tr>
+    {% empty %}<tr><td colspan="8" class="not">Henüz yedek denemesi yok.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="not">Geri yükleme (komut satırı): <code>python manage.py yedek_geri_yukle YEDEK.zip --hedef D:\YeniVeri</code> — çalışan verinin üzerine yazmaz.</p></div>
+{% endblock %}

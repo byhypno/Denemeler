@@ -16,10 +16,12 @@
     <a href="{% url 'kasa' %}" class="{% if sayfa == 'kasa' %}aktif{% endif %}">Kasa</a>
     <a href="{% url 'mutabakat_liste' %}" class="{% if sayfa == 'mutabakat' %}aktif{% endif %}">Ekstre Mutabakatı</a>
     <a href="{% url 'admin:index' %}">Veri Girişi (Yönetim)</a>
+    {% if request.user.is_superuser %}<a href="{% url 'yedek_sayfasi' %}" class="{% if sayfa == 'yedek' %}aktif{% endif %}">Yedek</a>{% endif %}
   </nav>
   <span class="sag">{{ request.user.get_username }} · <a href="{% url 'admin:logout' %}">Çıkış</a></span>
 </header>
 <main>
+  {% if yedek_durumu.uyari and sayfa != 'yedek' %}<div class="mesaj error" role="alert">⚠ {{ yedek_durumu.mesaj }} <a href="{% url 'yedek_sayfasi' %}">Yedek sayfası</a></div>{% endif %}
   {% for m in messages %}<div class="mesaj {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
   {% block icerik %}{% endblock %}
 </main>

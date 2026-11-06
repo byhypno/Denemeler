@@ -2,8 +2,10 @@ from datetime import date
 
 from django import forms
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404, redirect, render
 
 from . import ek_servisi as es
 from . import odeme_listesi as ol
@@ -12,6 +14,21 @@ from .models import Belge, Cari, EkstreMutabakat
 
 AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
 giris_gerekli = staff_member_required(login_url="/admin/login/")
+
+
+def yonetici_gerekli(view):
+    """Yalnızca yönetici (superuser). Giriş yapmış ama yetkisiz kullanıcıya 403 verir."""
+    from functools import wraps
+
+    from django.core.exceptions import PermissionDenied
+
+    @wraps(view)
+    @giris_gerekli
+    def sarmal(request, *a, **kw):
+        if not request.user.is_superuser:
+            raise PermissionDenied("Bu sayfa yalnızca yöneticilere açıktır.")
+        return view(request, *a, **kw)
+    return sarmal
 
 
 @giris_gerekli
@@ -154,3 +171,35 @@ def odeme_listesi(request):
         "sekiller": Belge.OdemeSekli.choices, "bas": bas, "bit": bit, "hata": hata, "bugun": bugun,
         "kova_etiketleri": ol.KOVA_ETIKETLERI, "excel_sorgu": sorgu.urlencode(), "sayfa": "odemeler",
     })
+
+
+@yonetici_gerekli
+def yedek_sayfasi(request):
+    from django.conf import settings
+
+    from . import yedek as yd
+    from .models import YedekKaydi
+    hedefler = [str(h) for h in settings.YEDEK_DIZINLERI]
+    ayni_disk = [h for h in hedefler if yd.ayni_disk_mi(h, settings.VERI_DIZINI)]
+    return render(request, "defter/yedek.html", {
+        "hedefler": hedefler, "ayni_disk": ayni_disk, "durum": yd.yedek_durumu(),
+        "kayitlar": YedekKaydi.objects.all()[:30], "sayfa": "yedek",
+        "gunluk": settings.YEDEK_GUNLUK_SAKLA, "aylik": settings.YEDEK_AYLIK_SAKLA,
+    })
+
+
+@yonetici_gerekli
+@require_POST
+def yedek_al(request):
+    from . import yedek as yd
+    try:
+        for k in yd.yedekle():
+            if k.durum == "HATA":
+                messages.error(request, f"{k.hedef}: yedek BAŞARISIZ — {k.ayrinti}")
+            elif k.durum == "UYARI":
+                messages.warning(request, f"{k.hedef}: yedek alındı ama uyarı var — {k.ayrinti}")
+            else:
+                messages.success(request, f"{k.hedef}: yedek alındı, doğrulandı, geri yükleme testi geçti ({k.dosya}).")
+    except yd.YedekHatasi as e:
+        messages.error(request, str(e))
+    return redirect("yedek_sayfasi")

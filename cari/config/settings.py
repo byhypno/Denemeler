@@ -29,6 +29,13 @@ EK_DIZINI = Path(os.environ.get("CARI_EK_DIZINI", VERI_DIZINI / "ekler"))
 EK_MAX_BAYT = 20 * 1024 * 1024      # dosya başına
 EK_MAX_ADET = 20                    # tek yüklemede
 
+# Yedek hedefleri (birden fazla olabilir; Windows'ta ';' ile ayrılır): ör. CARI_YEDEK_DIZINLERI=D:\\Yedek;E:\\Yedek
+# Yedekler AYNI DİSKTE tutulursa disk bozulunca hepsi gider; mümkünse ayrı disk/USB kullanın.
+YEDEK_DIZINLERI = [Path(p) for p in os.environ.get("CARI_YEDEK_DIZINLERI", "").split(os.pathsep) if p.strip()]
+YEDEK_UYARI_GUN = 2                 # bu kadar günden eski son yedek için uyarı gösterilir
+YEDEK_GUNLUK_SAKLA = 30             # son N gün: her yedek saklanır
+YEDEK_AYLIK_SAKLA = 12              # daha eskiler: ay başına en son yedek, son N ay
+
 SECRET_KEY = _gizli_anahtar()
 DEBUG = os.environ.get("CARI_DEBUG", "0") == "1"
 # Sadece bu bilgisayardan erişim. Ağdan erişim ileride bilinçli olarak açılacak.
@@ -67,6 +74,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "defter.context.genel",
             ],
         },
     },
