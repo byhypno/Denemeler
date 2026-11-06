@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from . import ek_servisi as es
 from . import kasa_servisi as ks
 from .fields import kurus_bicimle
 from .forms import GunSonuForm, KasaHareketiForm
@@ -80,6 +81,7 @@ def kasa_ana(request):
         "grafik": {"aylar": AYLAR, **aylik, "kat_etiket": [a for a, _ in dagilim],
                    "kat_deger": [t for _, t in dagilim]},
         "sayfa": "kasa", "bugun": bugun,
+        "ek_sayi": es.ek_sayilari([h.pk for h in sayfa.object_list], "kasa_hareketi"),
     })
 
 

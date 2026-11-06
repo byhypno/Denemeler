@@ -1,0 +1,40 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Ek Dosya Deposu · Cari Program{% endblock %}
+{% block icerik %}
+<h1>Ek dosya deposu</h1>
+<section class="ozet">
+  <div class="kart"><div class="not">Aktif ek</div><div class="deger">{{ adet }}</div></div>
+  <div class="kart"><div class="not">Toplam boyut</div><div class="deger">{{ toplam_bayt|boyut }}</div></div>
+</section>
+<p class="not">Dosya eklemek için ilgili kaydın ekler sayfasını açın: cari ekstresinde belge satırındaki <b>📎</b>, kasada hareket satırındaki <b>📎</b>
+veya mutabakat sayfasındaki <b>Ekler</b> bağlantısı. Yedek alırken veri klasöründeki <code>ekler</code> klasörünü de alın.</p>
+
+<form class="filtre" method="get">
+  <label>Ara <input type="text" name="q" value="{{ filtre.q }}" placeholder="dosya adı, cari, evrak no…"></label>
+  <label>Tür <select name="tur"><option value="">Tümü</option>
+    <option value="belge" {% if filtre.tur == "belge" %}selected{% endif %}>Cari belge</option>
+    <option value="kasa" {% if filtre.tur == "kasa" %}selected{% endif %}>Kasa hareketi</option>
+    <option value="mutabakat" {% if filtre.tur == "mutabakat" %}selected{% endif %}>Ekstre mutabakatı</option>
+    <option value="cari" {% if filtre.tur == "cari" %}selected{% endif %}>Cari kartı</option></select></label>
+  <label>Yüklenme (başlangıç) <input type="date" name="bas" value="{{ filtre.bas }}"></label>
+  <label>Yüklenme (bitiş) <input type="date" name="bit" value="{{ filtre.bit }}"></label>
+  <label><span>Kaldırılanlar</span><span><input type="checkbox" name="kaldirilan" value="1" {% if filtre.kaldirilan == "1" %}checked{% endif %}> göster</span></label>
+  <button type="submit">Filtrele</button>
+</form>
+
+<div class="kart"><div class="tablo-kaydir"><table>
+  <thead><tr><th>Dosya</th><th>Ait olduğu kayıt</th><th>Boyut</th><th>Yüklenme</th><th>Açıklama</th></tr></thead>
+  <tbody>{% for e in sayfa_nesnesi %}
+    <tr class="{% if e.kaldirildi %}iptal-satir{% endif %}">
+      <td>{% if e.kaldirildi %}{{ e.orijinal_ad }}{% else %}<a href="{% url 'ek_indir' e.pk %}" target="_blank" rel="noopener">{{ e.orijinal_ad }}</a>{% endif %}</td>
+      <td><a href="{% url 'ek_sahip' e.sahip_kisa e.sahip.pk %}">{{ e.sahip|ek_etiketi }}</a></td>
+      <td class="sayi">{{ e.boyut_bayt|boyut }}</td><td>{{ e.yuklenme|date:"d.m.Y H:i" }}</td>
+      <td>{{ e.aciklama|default:"" }}{% if e.kaldirildi %} <i>(kaldırıldı: {{ e.kaldirma_nedeni }})</i>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="not">Ek yok.</td></tr>{% endfor %}</tbody>
+</table></div>
+<div class="sayfalama">
+  {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">← Önceki</a>{% endif %}
+  <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }} · {{ sayfa_nesnesi.paginator.count }} kayıt</span>
+  {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Sonraki →</a>{% endif %}
+</div></div>
+{% endblock %}

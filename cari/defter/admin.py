@@ -1,9 +1,22 @@
 from django.contrib import admin, messages
+from django.urls import reverse
+from django.utils.html import format_html
 from django.core.exceptions import ValidationError
 
 from .fields import kurus_bicimle
-from .models import (Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri, GunSonu, Hesap,
+from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, EkstreSatiri, GunSonu, Hesap,
                      KasaHareketi, KasaKategori)
+
+
+def ekler_baglantisi(tur):
+    """Yönetim formlarında 'Ekler' sayfasına bağlantı veren salt okunur alan üretir."""
+    def _bag(self, obj):
+        if not obj or not obj.pk:
+            return "— (önce kaydedin)"
+        n = obj.ekler.filter(kaldirildi=False).count()
+        return format_html('<a href="{}">📎 Ekler ({})</a>', reverse("ek_sahip", args=[tur, obj.pk]), n)
+    _bag.short_description = "Ek dosyalar"
+    return _bag
 
 
 class SilmeKapali:
@@ -29,6 +42,8 @@ class CariAdmin(admin.ModelAdmin):
     list_display = ("unvan", "kisa_kod", "bakiye", "vade_gun", "aktif")
     search_fields = ("unvan", "kisa_kod", "vergi_bilgisi")
     list_filter = ("aktif",)
+    readonly_fields = ("ekler_bag",)
+    ekler_bag = ekler_baglantisi("cari")
 
     @admin.display(description="Güncel borcumuz (₺)")
     def bakiye(self, obj):
@@ -43,10 +58,11 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
     date_hierarchy = "tarih"
     inlines = [KalemInline]
     actions = [iptal_et]
-    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl")
+    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag")
+    ekler_bag = ekler_baglantisi("belge")
     fieldsets = (
         (None, {"fields": ("cari", "tur", "tarih", "evrak_no", "harici_evrak_no", "aciklama",
-                           "odeme_sekli", "kaynak_notu")}),
+                           "odeme_sekli", "kaynak_notu", "ekler_bag")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),
         ("İptal", {"fields": ("iptal", "iptal_nedeni")}),
@@ -108,10 +124,11 @@ class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
     search_fields = ("aciklama", "makbuz_no", "cari__unvan")
     date_hierarchy = "tarih"
     actions = [kasa_iptal_et]
-    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl")
+    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag")
+    ekler_bag = ekler_baglantisi("kasa")
     fieldsets = (
         (None, {"fields": ("hesap", "tarih", "yon", "kategori", "cari", "ilgili_odeme", "makbuz_no",
-                           "aciklama")}),
+                           "aciklama", "ekler_bag")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),
         ("İptal", {"fields": ("iptal", "iptal_nedeni")}),
@@ -155,6 +172,8 @@ class EkstreSatiriInline(admin.TabularInline):
 class EkstreMutabakatAdmin(admin.ModelAdmin):
     list_display = ("cari", "ekstre_tarihi", "ekstre_bakiye")
     inlines = [EkstreSatiriInline]
+    readonly_fields = ("ekler_bag",)
+    ekler_bag = ekler_baglantisi("mutabakat")
 
     @admin.display(description="Ekstre bakiyesi (₺)")
     def ekstre_bakiye(self, obj):
@@ -186,3 +205,19 @@ class GunSonuAdmin(SilmeKapali, admin.ModelAdmin):
     @admin.display(description="Fark (₺)")
     def fark(self, obj):
         return kurus_bicimle(obj.fark_kurus)
+
+
+@admin.register(Ek)
+class EkAdmin(SilmeKapali, admin.ModelAdmin):
+    """Ekler Ekler sayfasından yüklenir/kaldırılır; burada yalnızca görülür."""
+
+    list_display = ("orijinal_ad", "sahip_kisa", "icerik_turu", "boyut_bayt", "yuklenme", "kaldirildi")
+    list_filter = ("icerik_turu", "kaldirildi")
+    search_fields = ("orijinal_ad", "aciklama", "sha256")
+    readonly_fields = [f.name for f in Ek._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

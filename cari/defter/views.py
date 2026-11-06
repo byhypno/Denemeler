@@ -5,6 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
+from . import ek_servisi as es
 from . import odeme_listesi as ol
 from . import services
 from .models import Belge, Cari, EkstreMutabakat
@@ -73,7 +74,8 @@ def mutabakat_liste(request):
 def mutabakat_detay(request, pk):
     m = get_object_or_404(EkstreMutabakat.objects.select_related("cari"), pk=pk)
     return render(request, "defter/mutabakat_detay.html",
-                  {"oz": services.mutabakat_ozeti(m), "sayfa": "mutabakat"})
+                  {"oz": services.mutabakat_ozeti(m), "sayfa": "mutabakat",
+                   "ek_sayisi": m.ekler.filter(kaldirildi=False).count()})
 
 
 class _Donem(forms.Form):
@@ -94,6 +96,8 @@ def cari_ekstre(request, pk):
     onceki, satirlar = services.ekstre(cari, bas, bit)
     kapanis = satirlar[-1][1] if satirlar else onceki
     return render(request, "defter/ekstre.html", {
+        "ek_sayi": es.ek_sayilari([b.pk for b, _ in satirlar], "belge"),
+        "cari_ek_sayisi": cari.ekler.filter(kaldirildi=False).count(),
         "cari": cari, "onceki": onceki, "satirlar": satirlar, "kapanis": kapanis,
         "bas": bas, "bit": bit, "hata": hata, "sayfa": "ekstre",
         "toplam_artis": sum(b.tutar_kurus for b, _ in satirlar if b.etki > 0),

@@ -1,4 +1,4 @@
-# Cari Program (Aşama 1 + 2 + 3)
+# Cari Program (Aşama 1–4)
 
 Tek bilgisayarda, yerelde çalışan cari (tedarikçi) ve **Ofis Kasa** takip programı.
 Tutarlar veritabanında **tamsayı kuruş** olarak saklanır; kayıt silinmez, **iptal** edilir.
@@ -85,7 +85,26 @@ Cari ödemeleri için iki liste; ikisi de **Yazdır** (tarayıcıdan PDF'e de ka
 
 Excel dosyalarında tutarlar kuruşlu sayı olarak yazılır; metin hücreleri (cari adı, açıklama) `=` ile başlasa bile formül olarak çalışmaz.
 
+## Ek dosyalar (Aşama 4, üst menü: Ekler)
+Fiş/fatura görseli, ekstre PDF'i, dekont gibi dosyalar **belgeye, kasa hareketine, ekstre mutabakatına veya cari kartına** eklenir.
+- **Nereden eklenir:** cari ekstresinde belge satırındaki **📎**, kasada hareket satırındaki **📎**, mutabakat sayfasında **Ekler**,
+  cari ekstresinde **Cari dosyaları**. Birden fazla dosya seçilebilir. **Ekler** menüsü tüm dosyaları arama/filtre ile listeler.
+- **İzinli türler:** PDF, JPG, PNG, GIF, WEBP, XLSX, DOCX; dosya başına en fazla 20 MB. Uzantıya güvenilmez: dosya **içeriği** türüyle
+  uyuşmalıdır (ör. `.pdf` adlı bir PNG reddedilir). HTML/SVG/EXE gibi türler hiç kabul edilmez.
+- **Depolama:** `veri/ekler/` klasörü; dosyalar **içerik hash'iyle** adlandırılır (aynı içerik diskte tek kez durur), yalnızca sahibi okuyabilir.
+  Dosyalar bir web adresiyle sunulmaz; yalnızca giriş yapmış kullanıcıya özel görünümle verilir.
+  **Yedek alırken `veri/` klasörünün tamamını (`cari.sqlite3` + `ekler/`) alın.**
+- **Silme yok:** *Kaldır* nedenle işaretler ve listeden çıkarır; dosya diskte kalır.
+- **Toplu fiş görseli bağlama** (dosya adı = fiş numarası, ör. `001.png`):
+  ```powershell
+  python manage.py fis_gorselleri_ekle "C:\yol\Fis_Gorselleri.zip" --cari "ERÖZ HIRDAVAT" --deneme   # önce deneme
+  python manage.py fis_gorselleri_ekle "C:\yol\Fis_Gorselleri.zip" --cari "ERÖZ HIRDAVAT"
+  ```
+  Tekrar çalıştırmak güvenlidir (zaten ekli olanlar atlanır).
+- **Depo sağlık kontrolü:** `python manage.py ekleri_dogrula` — eksik dosya, bozuk (hash'i tutmayan) dosya ve kayıtsız dosya var mı?
+
 ## Henüz YOK (sonraki aşamalar)
-Ek dosya/fiş OCR (4); otomatik yedek, rol/yetki, **işlem günlüğü** (kim ne değiştirdi) ve Windows paketleme (5).
+Otomatik yedek, rol/yetki, **işlem günlüğü** (kim ne değiştirdi) ve Windows paketleme (aşama 5).
+Fiş OCR (görselden otomatik okuma) yapılmadı; ek dosya deposu yalnızca saklar.
 Kasada banka hesabı ve kasa↔banka transferi yoktur (yalnızca Ofis Kasa istendi).
 **Şimdilik yedek için `veri/` klasörünü düzenli olarak başka bir diske kopyalayın.**

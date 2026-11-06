@@ -427,3 +427,69 @@ class GunSonu(models.Model):
 
     def __str__(self):
         return f"{self.hesap} · {self.tarih:%d.%m.%Y}"
+
+
+class Ek(models.Model):
+    """Belgeye / kasa hareketine / ekstre mutabakatına / cariye eklenen dosya (fiş görseli, ekstre PDF'i...).
+
+    Dosya diskte içerik hash'iyle saklanır (ayni içerik tek kez); burada yalnızca künye tutulur.
+    Silinmez: kaldırılan ek 'kaldırıldı' işaretlenir, dosya diskte kalır.
+    """
+
+    SAHIP_ALANLARI = ("belge", "kasa_hareketi", "mutabakat", "cari")
+
+    belge = models.ForeignKey(Belge, null=True, blank=True, on_delete=models.PROTECT, related_name="ekler")
+    kasa_hareketi = models.ForeignKey(KasaHareketi, null=True, blank=True, on_delete=models.PROTECT,
+                                      related_name="ekler")
+    mutabakat = models.ForeignKey(EkstreMutabakat, null=True, blank=True, on_delete=models.PROTECT,
+                                  related_name="ekler")
+    cari = models.ForeignKey(Cari, null=True, blank=True, on_delete=models.PROTECT, related_name="ekler")
+    orijinal_ad = models.CharField("Dosya adı", max_length=200)
+    icerik_turu = models.CharField("Tür", max_length=100)
+    boyut_bayt = models.PositiveBigIntegerField("Boyut (bayt)")
+    sha256 = models.CharField(max_length=64, db_index=True)
+    yol = models.CharField("Depo yolu", max_length=200)
+    aciklama = models.CharField("Açıklama", max_length=250, blank=True)
+    yukleyen = models.CharField(max_length=150, blank=True)
+    yuklenme = models.DateTimeField(auto_now_add=True)
+    kaldirildi = models.BooleanField("Kaldırıldı", default=False)
+    kaldirma_nedeni = models.CharField(max_length=250, blank=True)
+    kaldirma_zamani = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Ek dosya"
+        verbose_name_plural = "Ek dosyalar"
+        ordering = ["-yuklenme", "-id"]
+        constraints = [
+            # Her ek TAM OLARAK bir sahibe aittir.
+            models.CheckConstraint(
+                condition=(
+                    (Q(belge__isnull=False) & Q(kasa_hareketi__isnull=True) & Q(mutabakat__isnull=True) & Q(cari__isnull=True))
+                    | (Q(belge__isnull=True) & Q(kasa_hareketi__isnull=False) & Q(mutabakat__isnull=True) & Q(cari__isnull=True))
+                    | (Q(belge__isnull=True) & Q(kasa_hareketi__isnull=True) & Q(mutabakat__isnull=False) & Q(cari__isnull=True))
+                    | (Q(belge__isnull=True) & Q(kasa_hareketi__isnull=True) & Q(mutabakat__isnull=True) & Q(cari__isnull=False))),
+                name="ek_tek_sahip"),
+        ]
+
+    def __str__(self):
+        return self.orijinal_ad
+
+    @property
+    def sahip(self):
+        for alan in self.SAHIP_ALANLARI:
+            nesne = getattr(self, alan)
+            if nesne is not None:
+                return nesne
+        return None
+
+    @property
+    def sahip_turu(self) -> str:
+        for alan in self.SAHIP_ALANLARI:
+            if getattr(self, f"{alan}_id") is not None:
+                return alan
+        return ""
+
+    @property
+    def sahip_kisa(self) -> str:
+        """URL'lerde kullanılan sahip türü adı."""
+        return {"kasa_hareketi": "kasa"}.get(self.sahip_turu, self.sahip_turu)

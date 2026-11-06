@@ -23,6 +23,12 @@ def _gizli_anahtar() -> str:
     return dosya.read_text().strip()
 
 
+# Ek dosyalar (fiş görseli, ekstre PDF'i vb.): içerik hash'iyle adlandırılır, yalnızca giriş yapmış
+# kullanıcıya özel bir görünümle sunulur (statik/medya adresi YOKTUR). Yedek alırken bu klasör de alınmalıdır.
+EK_DIZINI = Path(os.environ.get("CARI_EK_DIZINI", VERI_DIZINI / "ekler"))
+EK_MAX_BAYT = 20 * 1024 * 1024      # dosya başına
+EK_MAX_ADET = 20                    # tek yüklemede
+
 SECRET_KEY = _gizli_anahtar()
 DEBUG = os.environ.get("CARI_DEBUG", "0") == "1"
 # Sadece bu bilgisayardan erişim. Ağdan erişim ileride bilinçli olarak açılacak.
@@ -107,4 +113,6 @@ LOGIN_URL = "/admin/login/"
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 saat
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
+DATA_UPLOAD_MAX_NUMBER_FILES = 25
+FILE_UPLOAD_PERMISSIONS = 0o600
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -99,7 +99,7 @@
         <td>{{ h.kategori|default:"—" }}</td>
         {% if hesap.cari_bagli %}<td>{{ h.cari|default:"—" }}{% if h.ilgili_odeme_id %} <span class="chip tamam" title="İlgili cari ödemesi bağlı">↔</span>{% endif %}</td>{% endif %}
         <td>{{ h.aciklama|default:"" }}{% if h.iptal %} <i>(iptal: {{ h.iptal_nedeni }})</i>{% endif %}</td>
-        <td>{{ h.makbuz_no|default:"" }}</td>
+        <td>{{ h.makbuz_no|default:"" }}<a class="ek-bag yazdirma-gizle" href="{% url 'ek_sahip' 'kasa' h.pk %}" title="Ekler (fiş/makbuz görseli)">📎{% with n=ek_sayi|sozluk_al:h.pk %}{% if n %} {{ n }}{% else %}<span class="not">+</span>{% endif %}{% endwith %}</a></td>
         <td class="sayi">{{ h.tutar_kurus|kurus_say }}</td>
         <td class="sayi">{% if not h.iptal %}{{ bakiyeler|sozluk_al:h.pk|kurus_say }}{% endif %}</td>
         <td class="islem yazdirma-gizle">

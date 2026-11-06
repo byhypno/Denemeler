@@ -12,6 +12,7 @@
   <nav>
     <a href="{% url 'dashboard' %}" class="{% if sayfa == 'dashboard' %}aktif{% endif %}">Genel Bakış</a>
     <a href="{% url 'odeme_listesi' %}" class="{% if sayfa == 'odemeler' %}aktif{% endif %}">Ödeme Listesi</a>
+    <a href="{% url 'ek_depo' %}" class="{% if sayfa == 'ekler' %}aktif{% endif %}">Ekler</a>
     <a href="{% url 'kasa' %}" class="{% if sayfa == 'kasa' %}aktif{% endif %}">Kasa</a>
     <a href="{% url 'mutabakat_liste' %}" class="{% if sayfa == 'mutabakat' %}aktif{% endif %}">Ekstre Mutabakatı</a>
     <a href="{% url 'admin:index' %}">Veri Girişi (Yönetim)</a>

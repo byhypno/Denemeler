@@ -89,6 +89,8 @@ tr.vurgu td { background: var(--uyari-bg); }
 details.ek > summary { cursor: pointer; color: var(--brand); margin: 8px 0; }
 .satir-form { display: inline-flex; gap: 4px; align-items: center; }
 .satir-form input { padding: 3px 6px; min-height: 28px; width: 130px; font-size: 13px; }
+.kucuk-resim { max-height: 64px; max-width: 96px; border: 1px solid var(--line); border-radius: 4px; display: block; }
+.ek-bag { text-decoration: none; margin-left: 6px; white-space: nowrap; font-size: 13px; }
 .sekmeler { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .sekmeler a { padding: 8px 14px; text-decoration: none; border-bottom: 3px solid transparent; color: var(--muted); }
 .sekmeler a.aktif { color: var(--ink); border-bottom-color: var(--brand); font-weight: 600; }

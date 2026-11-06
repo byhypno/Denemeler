@@ -28,3 +28,22 @@ def sozluk_al(sozluk, anahtar):
         return sozluk.get(anahtar)
     except AttributeError:
         return None
+
+
+@register.filter
+def boyut(bayt):
+    """1234567 -> '1,2 MB'"""
+    try:
+        b = float(bayt)
+    except (TypeError, ValueError):
+        return "—"
+    for birim in ("bayt", "KB", "MB", "GB"):
+        if b < 1024 or birim == "GB":
+            return (f"{int(b)} {birim}" if birim == "bayt" else f"{b:.1f} {birim}".replace(".", ","))
+        b /= 1024
+
+
+@register.filter
+def ek_etiketi(sahip):
+    from ..ek_views import sahip_etiketi
+    return sahip_etiketi(sahip)
