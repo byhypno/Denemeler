@@ -52,8 +52,13 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
 ## Kasa (Aşama 3)
-Üst menüde **Kasa**. Varsayılan hesap **Ofis Kasa** (TL) hazır gelir. Kasa hareketleri **cari ödemesinden bağımsızdır**.
-- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, isteğe bağlı cari / KDV. Kategorileri *Kategoriler* bağlantısından ekleyin.
+Üst menüde **Kasa**. Varsayılan hesap **Ofis Kasa** (TL) hazır gelir.
+
+**Ofis Kasa ile cari defteri tamamen ayrıdır.** Kasa hareketinde cari seçilmez; kasa hareketi cari bakiyesini,
+cari ödemesi (nakit olsa bile) kasa bakiyesini değiştirmez; aralarında eşleştirme/referans yoktur.
+Bir tedarikçiye kasadan nakit ödeme yaparsanız **iki yere ayrı girersiniz** (cari ödemesi + kasa çıkışı);
+biri unutulursa bakiyeler ayrışır ve program bunu sizin yerinize denetlemez.
+- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV. Kategorileri *Kategoriler* bağlantısından ekleyin.
 - **Kasa eksiye düşemez** (Hesap ayarından değiştirilebilir). Bir girişi iptal etmek de kasayı eksiye düşürüyorsa reddedilir.
 - **Silme yok, iptal var:** satırdaki iptal kutusuna neden yazılır; iptal kayıtlar bakiyeye girmez, "iptaller: göster" ile görülür.
 - **Gün sonu kapanışı:** nakdi sayıp yazarsınız; program kayıtlı bakiyeyle farkı saklar. İsterseniz fark, kapanış gününe
@@ -62,9 +67,6 @@ Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca
   (Kilidi kaldırmak yalnızca Yönetim > Gün sonu kapanışları > "Kilitli" kutusundandır; bilinçli ve nadir bir işlemdir.)
 - **Kasa dashboard'u:** güncel bakiye, bugün/bu ay giriş-çıkış, aylık giriş/çıkış ve ay sonu bakiye grafiği,
   kategoriye göre çıkışlar, en büyük çıkışlar, kapanış bekleyen günler.
-- **Cari ödemesi kontrolü:** "nakit ödendi ama kasadan çıkışı yok" ve "kasadan cariye çıkış var ama cari ödemesi yok"
-  listeleri. Aynı cari + aynı tutar + en çok 3 gün farkla **tek aday** varsa *Eşleştir* önerilir.
-  Eşleştirme yalnızca referans bağıdır; hiçbir tutarı değiştirmez.
 
 ## Henüz YOK (sonraki aşamalar)
 Ek dosya/fiş OCR (4); otomatik yedek, rol/yetki, **işlem günlüğü** (kim ne değiştirdi) ve Windows paketleme (5).

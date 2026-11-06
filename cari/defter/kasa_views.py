@@ -48,7 +48,7 @@ def kasa_ana(request):
         yil = yillar[-1]
 
     # --- Hareket listesi + filtreler
-    qs = hesap.hareketler.select_related("kategori", "cari", "ilgili_odeme").order_by("-tarih", "-id")
+    qs = hesap.hareketler.select_related("kategori").order_by("-tarih", "-id")
     f = {k: request.GET.get(k, "") for k in ("bas", "bit", "yon", "kategori", "iptal")}
     for alan, op in (("bas", "tarih__gte"), ("bit", "tarih__lte")):
         try:
@@ -68,11 +68,10 @@ def kasa_ana(request):
 
     aylik = ks.kasa_aylik(hesap, yil, bugun)
     dagilim = ks.kategori_dagilimi(hesap, yil)
-    kontrol = ks.kasa_kontrol(hesap)
     ozet = ks.kasa_ozeti(hesap, bugun)
     return render(request, "defter/kasa.html", {
         "hesap": hesap, "hesaplar": ks.Hesap.objects.filter(aktif=True, tur="KASA"),
-        "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "kontrol_adet": kontrol["adet"],
+        "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]),
         "yil": yil, "yillar": yillar, "filtre": f, "sayfa_nesnesi": sayfa, "sorgu": sorgu.urlencode(),
         "bakiyeler": ks.hareketler_bakiyeli(hesap), "kategoriler": KasaKategori.objects.filter(aktif=True),
         "en_buyuk": ks.en_buyuk_cikislar(hesap, yil),
@@ -134,19 +133,3 @@ def kasa_gun_sonu(request):
         "kilit_siniri": hesap.kilit_siniri(), "acik_gunler": ks.acik_gunler(hesap, bugun),
         "kapanislar": GunSonu.objects.filter(hesap=hesap)[:30], "sayfa": "kasa",
     })
-
-
-@giris_gerekli
-def kasa_kontrol(request):
-    if request.method == "POST":
-        try:
-            ks.eslestir(int(request.POST.get("hareket", 0)), int(request.POST.get("odeme", 0)))
-            messages.success(request, "Eşleştirildi (yalnızca referans bağı kuruldu, tutarlar değişmedi).")
-        except ValidationError as e:
-            messages.error(request, _hata_metni(e))
-        except (ValueError, KasaHareketi.DoesNotExist, ks.Belge.DoesNotExist):
-            messages.error(request, "Kayıt bulunamadı.")
-        return redirect("kasa_kontrol")
-    hesap = _hesap_veya_yok(request, request.GET.get("hesap"))
-    return render(request, "defter/kasa_kontrol.html",
-                  {"hesap": hesap, "kontrol": ks.kasa_kontrol(hesap), "sayfa": "kasa"})

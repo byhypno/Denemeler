@@ -189,14 +189,12 @@ class KasaTests(TestCase):
     def test_kasa_ve_cari_odemesi_birbirini_degistirmez(self):
         cari = Cari.objects.create(unvan="X")
         kasa = Hesap.objects.get(ad="Ofis Kasa")
-        odeme = Belge.objects.create(cari=cari, tur=Belge.Tur.ODEME, tarih=date(2026, 1, 1),
-                                     tutar_kurus=5000)
+        Belge.objects.create(cari=cari, tur=Belge.Tur.ODEME, tarih=date(2026, 1, 1), tutar_kurus=5000)
         KasaHareketi.objects.create(hesap=kasa, tarih=date(2026, 1, 1), yon="GIRIS", tutar_kurus=9000)
-        KasaHareketi.objects.create(hesap=kasa, tarih=date(2026, 1, 1), yon="CIKIS", tutar_kurus=5000,
-                                    cari=cari, ilgili_odeme=odeme)
+        KasaHareketi.objects.create(hesap=kasa, tarih=date(2026, 1, 1), yon="CIKIS", tutar_kurus=5000)
         self.assertEqual(bakiye_kurus(cari), -5000)      # sadece cari ödemesi
         self.assertEqual(kasa.bakiye_kurus(), 4000)      # sadece kasa hareketi
-        self.assertEqual(Belge.objects.count(), 1)       # kasa girişi cari belge üretmedi
+        self.assertEqual(Belge.objects.count(), 1)       # kasa hareketi cari belge üretmedi
 
 
 def _ornek_excel(yol, ikinci_odeme_fazla=False, mutabakat=False):

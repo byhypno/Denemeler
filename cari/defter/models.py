@@ -234,7 +234,7 @@ class KasaKategori(models.Model):
 
 
 class KasaHareketi(KdvliTutar):
-    """Kasa hareketi cari ödemesinden BAĞIMSIZDIR; ilgili ödeme alanı yalnızca isteğe bağlı referanstır."""
+    """Ofis Kasa hareketi. Cari defterinden TAMAMEN BAĞIMSIZDIR: cari ile hiçbir bağı yoktur."""
 
     class Yon(models.TextChoices):
         GIRIS = "GIRIS", "Giriş"
@@ -244,11 +244,6 @@ class KasaHareketi(KdvliTutar):
     tarih = models.DateField()
     yon = models.CharField("Yön", max_length=5, choices=Yon.choices)
     kategori = models.ForeignKey(KasaKategori, null=True, blank=True, on_delete=models.PROTECT)
-    cari = models.ForeignKey(Cari, null=True, blank=True, on_delete=models.PROTECT,
-                             related_name="kasa_hareketleri")
-    ilgili_odeme = models.ForeignKey(
-        Belge, null=True, blank=True, on_delete=models.PROTECT, related_name="kasa_hareketleri",
-        limit_choices_to={"tur": Belge.Tur.ODEME}, verbose_name="İlgili cari ödemesi (isteğe bağlı)")
     makbuz_no = models.CharField("Makbuz / fiş no", max_length=40, blank=True)
     aciklama = models.CharField("Açıklama", max_length=250, blank=True)
     iptal = models.BooleanField("İptal", default=False)

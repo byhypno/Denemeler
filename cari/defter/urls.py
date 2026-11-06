@@ -10,5 +10,4 @@ urlpatterns = [
     path("kasa/", kasa_views.kasa_ana, name="kasa"),
     path("kasa/hareket/<int:pk>/iptal/", kasa_views.kasa_hareket_iptal, name="kasa_hareket_iptal"),
     path("kasa/gun-sonu/", kasa_views.kasa_gun_sonu, name="kasa_gun_sonu"),
-    path("kasa/kontrol/", kasa_views.kasa_kontrol, name="kasa_kontrol"),
 ]

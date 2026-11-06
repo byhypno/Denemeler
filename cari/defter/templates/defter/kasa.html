@@ -8,7 +8,6 @@
 <h1>Kasa · {{ hesap.ad }}</h1>
 <p class="yazdirma-gizle">
   <a class="dugme ikincil" href="{% url 'kasa_gun_sonu' %}?hesap={{ hesap.pk }}">Gün sonu kapanışı</a>
-  <a class="dugme ikincil" href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">Cari ödemesi kontrolü{% if kontrol_adet %} ({{ kontrol_adet }}){% endif %}</a>
   <a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>
   {% if hesaplar|length > 1 %}{% for h in hesaplar %}<a class="dugme ikincil" href="?hesap={{ h.pk }}">{{ h.ad }}</a>{% endfor %}{% endif %}
 </p>
@@ -23,8 +22,8 @@
   <div class="kart"><div class="etiket">Son kapanış</div>
     <div class="deger" style="font-size:22px">{% if ozet.kilit_siniri %}{{ ozet.kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div>
     <div class="alt">{% if ozet.acik_gunler %}⚠ {{ ozet.acik_gunler|length }} gün kapanış bekliyor{% else %}✓ Bekleyen gün yok{% endif %}</div></div>
-  <div class="kart"><div class="etiket">Cari ödemesi kontrolü</div><div class="deger">{{ kontrol_adet }}</div>
-    <div class="alt">{% if kontrol_adet %}⚠ <a href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">İncele</a>{% else %}✓ Sorun yok{% endif %}</div></div>
+  <div class="kart"><div class="etiket">{{ yil }} toplam çıkış</div><div class="deger">{{ yil_cikis|kurus_tl }}</div>
+    <div class="alt">Cari defterinden bağımsız</div></div>
 </section>
 
 <section class="kart yazdirma-gizle" style="margin-bottom:12px">
@@ -64,7 +63,7 @@
   <div class="kart"><h2>{{ yil }} · En büyük çıkışlar</h2>
     <div class="tablo-kaydir"><table><thead><tr><th>Tarih</th><th>Kategori</th><th>Açıklama</th><th class="sayi">Tutar</th></tr></thead><tbody>
       {% for h in en_buyuk %}<tr><td>{{ h.tarih|date:"d.m.Y" }}</td><td>{{ h.kategori|default:"—" }}</td>
-        <td>{{ h.aciklama|default:h.cari|default:"—" }}</td><td class="sayi">{{ h.tutar_kurus|kurus_tl }}</td></tr>
+        <td>{{ h.aciklama|default:"—" }}</td><td class="sayi">{{ h.tutar_kurus|kurus_tl }}</td></tr>
       {% empty %}<tr><td colspan="4" class="not">Çıkış yok.</td></tr>{% endfor %}</tbody></table></div></div>
 </section>
 
@@ -83,7 +82,7 @@
     <button type="submit">Filtrele</button>
   </form>
   <div class="tablo-kaydir"><table>
-    <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Cari</th><th>Açıklama</th><th>Makbuz</th>
+    <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Açıklama</th><th>Makbuz</th>
       <th class="sayi">Tutar</th><th class="sayi">Bakiye</th><th class="yazdirma-gizle">İşlem</th></tr></thead>
     <tbody>
     {% for h in sayfa_nesnesi %}
@@ -91,7 +90,6 @@
         <td>{{ h.tarih|date:"d.m.Y" }}</td>
         <td>{% if h.yon == "GIRIS" %}▲ Giriş{% else %}▼ Çıkış{% endif %}</td>
         <td>{{ h.kategori|default:"—" }}</td>
-        <td>{{ h.cari|default:"—" }}{% if h.ilgili_odeme_id %} <span class="chip tamam" title="İlgili cari ödemesi bağlı">↔</span>{% endif %}</td>
         <td>{{ h.aciklama|default:"" }}{% if h.iptal %} <i>(iptal: {{ h.iptal_nedeni }})</i>{% endif %}</td>
         <td>{{ h.makbuz_no|default:"" }}</td>
         <td class="sayi">{{ h.tutar_kurus|kurus_say }}</td>
@@ -103,7 +101,7 @@
             <button class="kucuk ikincil dugme" type="submit">İptal</button></form>{% endif %}
         </td>
       </tr>
-    {% empty %}<tr><td colspan="9" class="not">Kayıt yok.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="8" class="not">Kayıt yok.</td></tr>{% endfor %}
     </tbody>
   </table></div>
   <div class="sayfalama yazdirma-gizle">

@@ -1,20 +1,19 @@
-"""Ofis Kasa hesapları: özet, aylık akış, gün sonu kapanışı ve cari ödemesi eşleştirme kontrolleri.
+"""Ofis Kasa: özet, aylık akış, kategori dağılımı ve gün sonu kapanışı.
 
-Kasa hareketi ile cari ödemesi birbirinden BAĞIMSIZDIR; burada yalnızca tutarsızlıkları listeler
-ve (kullanıcı onayıyla) isteğe bağlı referans bağı kurarız.
+Ofis Kasa, cari defterinden TAMAMEN BAĞIMSIZDIR: kasa hareketleri cari bakiyesini, cari ödemeleri
+kasa bakiyesini hiçbir şekilde etkilemez ve aralarında referans/eşleştirme yoktur.
 """
 import calendar
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
 
-from .models import Belge, GunSonu, Hesap, KasaHareketi, KasaKategori
+from .models import GunSonu, Hesap, KasaHareketi, KasaKategori
 
 KASA_FARKI = "Kasa farkı"
-ESLESME_GUN = 3
 
 
 def varsayilan_hesap(hesap_id=None):
@@ -94,7 +93,7 @@ def kategori_dagilimi(hesap, yil: int, yon=KasaHareketi.Yon.CIKIS, n=8):
 
 def en_buyuk_cikislar(hesap, yil: int, n=10):
     return list(hesap.hareketler.filter(iptal=False, yon=KasaHareketi.Yon.CIKIS, tarih__year=yil)
-                .select_related("kategori", "cari").order_by("-tutar_kurus", "-tarih")[:n])
+                .select_related("kategori").order_by("-tutar_kurus", "-tarih")[:n])
 
 
 def hareketler_bakiyeli(hesap):
@@ -139,59 +138,3 @@ def gun_sonu_kapat(hesap, tarih, sayilan_kurus: int, aciklama="", farki_isle=Fal
     return GunSonu.objects.create(
         hesap=hesap, tarih=tarih, beklenen_kurus=beklenen, sayilan_kurus=sayilan_kurus,
         fark_kurus=fark, fark_islendi=islendi, aciklama=aciklama[:250], kilitli=True)
-
-
-# ---------------------------------------------------------------- Cari ödemesi ↔ kasa kontrolü
-def _yakin(a, b):
-    return abs((a - b).days) <= ESLESME_GUN
-
-
-def kasa_kontrol(hesap=None) -> dict:
-    """
-    1) Nakit ödeme olarak girilmiş ama kasa çıkışı bağlanmamış cari ödemeleri
-    2) Cari seçilmiş ama ilgili cari ödemesi bağlanmamış kasa çıkışları
-    Aynı cari + aynı tutar + ±3 gün eşleşmesi varsa ve tek aday ise 'öneri' olarak verilir.
-    """
-    bagli_odemeler = set(KasaHareketi.objects.filter(iptal=False, ilgili_odeme__isnull=False)
-                         .values_list("ilgili_odeme_id", flat=True))
-    cikislar = list(KasaHareketi.objects.filter(
-        iptal=False, yon=KasaHareketi.Yon.CIKIS, cari__isnull=False, ilgili_odeme__isnull=True)
-        .select_related("cari", "hesap", "kategori"))
-    if hesap:
-        cikislar = [c for c in cikislar if c.hesap_id == hesap.pk]
-    odemeler = list(Belge.objects.filter(tur=Belge.Tur.ODEME, iptal=False).select_related("cari")
-                    .exclude(pk__in=bagli_odemeler))
-
-    def adaylar_odeme(o):
-        return [c for c in cikislar if c.cari_id == o.cari_id and c.tutar_kurus == o.tutar_kurus
-                and _yakin(c.tarih, o.tarih)]
-
-    def adaylar_cikis(c):
-        return [o for o in odemeler if o.cari_id == c.cari_id and o.tutar_kurus == c.tutar_kurus
-                and _yakin(c.tarih, o.tarih)]
-
-    nakit_kasasiz = []
-    for o in odemeler:
-        if o.odeme_sekli != Belge.OdemeSekli.NAKIT:
-            continue
-        a = adaylar_odeme(o)
-        nakit_kasasiz.append({"odeme": o, "oneri": a[0] if len(a) == 1 else None, "aday_sayisi": len(a)})
-    kasa_odemesiz = []
-    for c in cikislar:
-        a = adaylar_cikis(c)
-        kasa_odemesiz.append({"hareket": c, "oneri": a[0] if len(a) == 1 else None, "aday_sayisi": len(a)})
-    return {"nakit_kasasiz": nakit_kasasiz, "kasa_odemesiz": kasa_odemesiz,
-            "adet": len(nakit_kasasiz) + len(kasa_odemesiz)}
-
-
-def eslestir(hareket_id: int, odeme_id: int) -> KasaHareketi:
-    """Yalnızca bir REFERANS bağı kurar; hiçbir tutarı değiştirmez (kapalı günlerde de serbesttir)."""
-    h = KasaHareketi.objects.get(pk=hareket_id, iptal=False)
-    o = Belge.objects.get(pk=odeme_id, tur=Belge.Tur.ODEME, iptal=False)
-    if h.cari_id != o.cari_id:
-        raise ValidationError("Kasa hareketi ve cari ödemesi aynı cariye ait olmalı.")
-    if KasaHareketi.objects.filter(iptal=False, ilgili_odeme=o).exclude(pk=h.pk).exists():
-        raise ValidationError("Bu cari ödemesi başka bir kasa hareketine zaten bağlı.")
-    KasaHareketi.objects.filter(pk=h.pk).update(ilgili_odeme=o)   # save() kilit kontrolünü atlar
-    h.refresh_from_db()
-    return h
