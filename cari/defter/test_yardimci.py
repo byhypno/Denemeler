@@ -17,6 +17,15 @@ def cari_kasa_ac():
     tutar, bakiyesi hep eksidir (geçiş 0013); onu sınayan testler bu yardımcıyı KULLANMAZ."""
     from .models import Hesap
     h = Hesap.objects.get(ad="Cari Kasa")
-    h.aktif, h.sadece_cikis, h.eksiye_dusebilir = True, False, False
+    h.aktif, h.sadece_cikis, h.eksiye_dusebilir, h.on_yuzde_gizli = True, False, False, False
+    h.save()
+    return h
+
+
+def cari_kasa_goster():
+    """Cari Kasa'yı ön yüzde görünür yapar (ayarlar aynen kalır: yalnızca çıkış). Varsayılan GİZLİDİR (geçiş 0014)."""
+    from .models import Hesap
+    h = Hesap.objects.get(ad="Cari Kasa")
+    h.on_yuzde_gizli = False
     h.save()
     return h

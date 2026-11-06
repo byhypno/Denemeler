@@ -3,8 +3,8 @@
 {% block icerik %}
 <h1>Cari ödemesi kontrolü</h1>
 {% if not hesap %}
-  <div class="kart bos"><p>Cari bağlantılı bir kasa hesabı yok.
-    <a href="{% url 'admin:defter_hesap_changelist' %}">Hesaplardan</a> bir kasayı "Cari kasası" olarak işaretleyin.</p></div>
+  <div class="kart bos"><p>Ön yüzde görünen cari bağlantılı bir kasa yok.
+    Cari Kasa arkada tutulur; görünür yapmak için <a href="{% url 'admin:defter_hesap_changelist' %}">Hesaplar</a>'da "Ön yüzde gizle" işaretini kaldırın.</p></div>
 {% else %}
 <p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
 <p class="not">Kasa hareketleri ile cari ödemeleri <b>ayrı tutulur</b>; biri unutulursa bakiyeler ayrışır. Aşağıdaki listeler bu

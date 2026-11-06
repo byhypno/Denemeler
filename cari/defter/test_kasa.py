@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from . import kasa_servisi as ks
 from .models import Belge, Cari, GunSonu, Hesap, KasaHareketi, KasaKategori
-from .test_yardimci import cari_kasa_ac, rol_kullanici
+from .test_yardimci import cari_kasa_ac, cari_kasa_goster, rol_kullanici
 
 GIRIS, CIKIS = KasaHareketi.Yon.GIRIS, KasaHareketi.Yon.CIKIS
 
@@ -569,10 +569,11 @@ class KasaAdminTests(KasaTemel):
 
 
 class CariKasaSadeceCikisTests(TestCase):
-    """Cari Kasa yalnızca tedarikçiye yapılan ödemeyi tutar: giriş yok, bakiye hep eksi (geçiş 0013)."""
+    """Cari Kasa yalnızca tedarikçiye yapılan ödemeyi tutar: giriş yok, bakiye hep eksi (geçiş 0013).
+    Varsayılan olarak ön yüzde GİZLİ olduğundan (0014) bu testler ekranını açıkça görünür yapar."""
 
     def setUp(self):
-        self.ck = Hesap.objects.get(ad="Cari Kasa")
+        self.ck = cari_kasa_goster()
         self.cari = Cari.objects.create(unvan="Tedarik A")
         self.client.force_login(rol_kullanici("m", "Muhasebe"))
         self.url = f"{reverse('kasa')}?hesap={self.ck.pk}"
@@ -586,6 +587,7 @@ class CariKasaSadeceCikisTests(TestCase):
     def test_varsayilan_ayarlar(self):
         self.assertEqual((self.ck.aktif, self.ck.sadece_cikis, self.ck.eksiye_dusebilir, self.ck.cari_bagli),
                          (True, True, True, True))
+        self.assertFalse(Hesap.objects.get(ad="Ofis Kasa").on_yuzde_gizli)
         ofis = Hesap.objects.get(ad="Ofis Kasa")
         self.assertEqual((ofis.sadece_cikis, ofis.cari_bagli), (False, False))      # ofis kasası etkilenmez
 
@@ -651,3 +653,65 @@ class CariKasaSadeceCikisTests(TestCase):
         self.client.force_login(rol_kullanici("k", "Kasiyer"))
         self.assertEqual(self.client.get(self.url).status_code, 403)
         self.assertEqual(self.client.post(self.url, self.form()).status_code, 403)
+
+
+class CariKasaOnYuzdeGizliTests(TestCase):
+    """Cari Kasa bakiyesi hep eksi olacağından ön yüzde görünmez; kayıtlar arkada (yönetim panelinde) durur (geçiş 0014)."""
+
+    def setUp(self):
+        self.ck = Hesap.objects.get(ad="Cari Kasa")
+        self.ofis = Hesap.objects.get(ad="Ofis Kasa")
+        self.cari = Cari.objects.create(unvan="Tedarik A")
+        KasaHareketi.objects.create(hesap=self.ck, yon="CIKIS", cari=self.cari, tarih=date.today(), tutar_kurus=123456, aciklama="arka kayıt")
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+
+    def test_varsayilan_gizli_ama_aktif_ve_veri_duruyor(self):
+        self.assertTrue(self.ck.on_yuzde_gizli)
+        self.assertTrue(self.ck.aktif)
+        self.assertEqual(self.ck.bakiye_kurus(), -123456)
+
+    def test_kasa_sayfasinda_yalniz_ofis_kasa(self):
+        r = self.client.get(reverse("kasa"))
+        self.assertEqual(r.context["hesap"], self.ofis)
+        self.assertEqual(list(r.context["hesaplar"]), [self.ofis])
+        for yok in ("Kasa seçimi", "Cari Kasa", "(cari)", "Cari ödemesi kontrolü", "arka kayıt", "Ödeme yapılan tedarikçi"):
+            self.assertNotContains(r, yok)
+
+    def test_gizli_kasa_istenirse_403_degil_ofise_duser(self):
+        for url in (reverse("kasa"), reverse("kasa_gun_sonu")):
+            r = self.client.get(url, {"hesap": self.ck.pk})
+            self.assertEqual(r.status_code, 200, url)
+            self.assertEqual(r.context["hesap"], self.ofis, url)
+
+    def test_gizli_kasaya_ondan_kayit_girilemez(self):
+        n = KasaHareketi.objects.count()
+        r = self.client.post(f"{reverse('kasa')}?hesap={self.ck.pk}", {
+            "tarih": date.today().isoformat(), "yon": "CIKIS", "tutar_kurus": "10,00", "kdv_modu": "BILINMIYOR",
+            "cari": self.cari.pk, "aciklama": "x"})
+        self.assertEqual(r.status_code, 403)                  # sessizce Ofis Kasa'ya yazılmaz
+        self.assertEqual(KasaHareketi.objects.count(), n)
+
+    def test_front_iptal_gizli_kasa_icin_kapali(self):
+        h = KasaHareketi.objects.get(hesap=self.ck)
+        r = self.client.post(reverse("kasa_hareket_iptal", args=[h.pk]), {"neden": "x"})
+        self.assertEqual(r.status_code, 403)
+        h.refresh_from_db(); self.assertFalse(h.iptal)
+
+    def test_kontrol_sayfasi_gizliyken_aciklayici_mesaj(self):
+        r = self.client.get(reverse("kasa_kontrol"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Ön yüzde görünen cari bağlantılı bir kasa yok")
+
+    def test_yonetim_panelinde_gorunur_ve_kayit_girilir(self):
+        y = rol_kullanici("y", is_superuser=True, is_staff=True)
+        self.client.force_login(y)
+        liste = self.client.get(reverse("admin:defter_hesap_changelist"))
+        self.assertContains(liste, "Cari Kasa")
+        r = self.client.get(reverse("admin:defter_kasahareketi_changelist"))
+        self.assertContains(r, "arka kayıt")
+        self.assertEqual(self.client.get(reverse("admin:defter_kasahareketi_add")).status_code, 200)
+
+    def test_gorunur_yapilinca_geri_gelir(self):
+        cari_kasa_goster()
+        r = self.client.get(reverse("kasa"))
+        self.assertContains(r, "Kasa seçimi")

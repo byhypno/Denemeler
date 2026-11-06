@@ -197,6 +197,10 @@ class Hesap(models.Model):
         "Yalnızca çıkış (ödeme) kasası", default=False,
         help_text="İşaretliyse bu kasaya giriş yazılamaz; yalnızca tedarikçiye yapılan ödemeler (çıkış) girilir. "
                   "Para alınmadığı için bakiye hep eksi kalır.")
+    on_yuzde_gizli = models.BooleanField(
+        "Ön yüzde gizle", default=False,
+        help_text="İşaretliyse bu kasa Kasa sayfasında, sekmelerde ve kontrol ekranında görünmez; kayıtlar arkada durur "
+                  "ve yalnızca Yönetim panelinden girilir/görülür.")
     aktif = models.BooleanField(default=True)
 
     class Meta:

@@ -24,9 +24,13 @@ def _hesap_veya_yok(request, hesap_id):
     kullanıcının kaydı yanlış kasaya girmesine yol açardı.
     """
     gorunur = gorunur_kasalar(request.user)
-    if hesap_id and str(hesap_id).isdigit() and not gorunur.filter(pk=int(hesap_id)).exists() \
-            and ks.Hesap.objects.filter(pk=int(hesap_id), aktif=True).exists():   # pasif kasa yok sayılır (403 yanıltıcı olurdu)
-        raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
+    if hesap_id and str(hesap_id).isdigit() and not gorunur.filter(pk=int(hesap_id)).exists():
+        var = ks.Hesap.objects.filter(pk=int(hesap_id))
+        if var.filter(aktif=True, on_yuzde_gizli=False).exists():
+            raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
+        if var.exists() and request.method == "POST":
+            # Pasif/gizli kasayı GÖRÜNTÜLEMEK Ofis Kasa'ya düşer; ama YAZMA asla başka kasaya düşmez (yanlış kasaya kayıt olmasın)
+            raise PermissionDenied("Bu kasa ön yüzde kapalı; kayıt buradan girilemez.")
     return ks.varsayilan_hesap(hesap_id, hesaplar=gorunur)
 
 
@@ -164,6 +168,6 @@ def kasa_kontrol(request):
         return redirect("kasa_kontrol")
     hesap = _hesap_veya_yok(request, request.GET.get("hesap"))
     if hesap is None or not hesap.cari_bagli:
-        hesap = ks.Hesap.objects.filter(aktif=True, tur="KASA", cari_bagli=True).order_by("id").first()
+        hesap = gorunur_kasalar(request.user).filter(cari_bagli=True).first()
     return render(request, "defter/kasa_kontrol.html",
                   {"hesap": hesap, "kontrol": ks.kasa_kontrol(hesap) if hesap else None, "sayfa": "kasa"})

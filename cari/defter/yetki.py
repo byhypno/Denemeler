@@ -76,9 +76,10 @@ def yetki_gerekli(okuma: str, yazma: str | None = None):
 
 
 def gorunur_kasalar(user):
-    """Kullanıcının görebildiği kasa hesapları (Cari Kasa yalnızca 'cari_kasa' yeteneği olanlara)."""
+    """Kullanıcının ÖN YÜZDE görebildiği kasa hesapları: aktif ve gizlenmemiş olanlar
+    (Cari Kasa ayrıca yalnızca 'cari_kasa' yeteneği olanlara)."""
     from .models import Hesap
-    qs = Hesap.objects.filter(aktif=True, tur=Hesap.Tur.KASA).order_by("id")
+    qs = Hesap.objects.filter(aktif=True, on_yuzde_gizli=False, tur=Hesap.Tur.KASA).order_by("id")
     return qs if var_mi(user, "cari_kasa") else qs.filter(cari_bagli=False)
 
 
