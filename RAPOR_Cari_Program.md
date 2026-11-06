@@ -29,7 +29,11 @@ Bu nedenle aşağıdaki "GÜNCELLEME" bölümündeki Paraşüt maddeleri (salt o
 | `GunSonu` | hesap→, tarih, beklenen bakiye, sayılan tutar, fark, not, kilitli_mi |
 | `Transfer` | kaynak hesap→, hedef hesap→, tutar, tarih (kasa↔banka) |
 
-**Kritik kural: tek kayıt, iki etki.** Tedarikçiye nakit ödeme yapıldığında bu **tek işlem** hem cari bakiyeyi azaltır hem kasadan çıkış olur. Ödemeyi cari tarafına ve kasa tarafına ayrı ayrı girmek çift sayım yaratır. [Kesin]
+**KARAR (kullanıcı): Cari ödemesi ve kasa AYRI tutulur.** Eski "tek kayıt, iki etki" önerisi geçersizdir.
+- Cari ödemesi sadece **cari bakiyeyi** etkiler; kasa hareketi sadece **Ofis Kasa bakiyesini** etkiler. İki modül birbirini otomatik değiştirmez.
+- Bilinen risk: bir tedarikçiye kasadan nakit ödeme yapılırsa iki yere ayrı girilir; biri unutulursa bakiyeler ayrışır. Azaltmak için: kasa hareketinde **isteğe bağlı** "ilgili cari ödemesi" referansı ve bir **kontrol listesi** ekranı ("nakit ödeme olup kasa çıkışı olmayanlar" / "kasa çıkışı olup cari ödemesi olmayanlar"). Zorunlu bağ yoktur.
+- **Hesap:** başlangıçta tek hesap, adı **"Ofis Kasa"**, para birimi **TL**. Model çoklu hesaba hazır kalır (ileride ikinci kasa/banka eklenebilir), ama şimdi arayüzde yalnızca Ofis Kasa görünür.
+- Döviz kasası yok; para birimi alanı sabit TL olarak tutulur.
 
 **Diğer kurallar:**
 - Kasa bakiyesi **eksiye düşemez** (uyarı veya engel; ayardan seçilir).
@@ -50,7 +54,7 @@ Bu nedenle aşağıdaki "GÜNCELLEME" bölümündeki Paraşüt maddeleri (salt o
 | 5 | Giriş/rol, otomatik yedek, geri yükleme testi, Windows paketleme |
 | 6 | (İsteğe bağlı) çok kullanıcı, genel gider raporu, PDF ekstre |
 
-### Kalan sorular (kasa için)
+### Kalan sorular (kasa için) — 1 ve 4 cevaplandı: TL; ödeme/kasa ayrı
 1. Kasa sadece **TL** mi, döviz kasası da var mı?
 2. **Banka hesabı** da takip edilsin mi, yoksa sadece nakit kasa mı?
 3. Kasayı kim kullanıyor, **yetki** ayrımı gerekiyor mu (örn. giriş yapabilen / sadece görebilen)?
