@@ -203,3 +203,40 @@ def yedek_al(request):
     except yd.YedekHatasi as e:
         messages.error(request, str(e))
     return redirect("yedek_sayfasi")
+
+
+@yonetici_gerekli
+def gunluk_sayfasi(request):
+    from datetime import date as _date
+
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+
+    from .models import IslemGunlugu
+    qs = IslemGunlugu.objects.all()
+    f = {k: request.GET.get(k, "").strip() for k in ("q", "kullanici", "model", "islem", "bas", "bit", "nesne")}
+    if f["q"]:
+        qs = qs.filter(Q(nesne_ozeti__icontains=f["q"]) | Q(ayrinti__icontains=f["q"]) | Q(model__icontains=f["q"]))
+    if f["kullanici"]:
+        qs = qs.filter(kullanici=f["kullanici"])
+    if f["model"]:
+        qs = qs.filter(model=f["model"])
+    if f["islem"] in IslemGunlugu.Islem.values:
+        qs = qs.filter(islem=f["islem"])
+    if f["nesne"].isdigit():
+        qs = qs.filter(nesne_id=int(f["nesne"]))
+    for anahtar, op in (("bas", "zaman__date__gte"), ("bit", "zaman__date__lte")):
+        try:
+            if f[anahtar]:
+                qs = qs.filter(**{op: _date.fromisoformat(f[anahtar])})
+        except ValueError:
+            f[anahtar] = ""
+    sayfa = Paginator(qs, 50).get_page(request.GET.get("sayfa"))
+    sorgu = request.GET.copy()
+    sorgu.pop("sayfa", None)
+    return render(request, "defter/gunluk.html", {
+        "sayfa_nesnesi": sayfa, "filtre": f, "sorgu": sorgu.urlencode(), "sayfa": "gunluk",
+        "kullanicilar": IslemGunlugu.objects.order_by().values_list("kullanici", flat=True).distinct(),
+        "modeller": IslemGunlugu.objects.order_by().exclude(model="").values_list("model", flat=True).distinct(),
+        "islemler": IslemGunlugu.Islem.choices,
+    })

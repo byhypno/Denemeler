@@ -4,8 +4,19 @@ from django.utils.html import format_html
 from django.core.exceptions import ValidationError
 
 from .fields import kurus_bicimle
-from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, EkstreSatiri, GunSonu, Hesap,
+from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, IslemGunlugu, EkstreSatiri, GunSonu, Hesap,
                      KasaHareketi, KasaKategori)
+
+
+def gecmis_baglantisi(model_adi):
+    """Yönetim formlarında kaydın değişiklik geçmişine (işlem günlüğü) bağlantı."""
+    def _bag(self, obj):
+        if not obj or not obj.pk:
+            return "—"
+        return format_html('<a href="{}?model={}&nesne={}">🕘 Değişiklik geçmişi</a>',
+                           reverse("gunluk_sayfasi"), model_adi, obj.pk)
+    _bag.short_description = "Geçmiş"
+    return _bag
 
 
 def ekler_baglantisi(tur):
@@ -28,7 +39,11 @@ class SilmeKapali:
 
 @admin.action(description="Seçili kayıtları iptal et (neden: 'Toplu iptal')")
 def iptal_et(modeladmin, request, queryset):
-    n = queryset.filter(iptal=False).update(iptal=True, iptal_nedeni="Toplu iptal")
+    n = 0
+    for obj in queryset.filter(iptal=False):          # tek tek kaydedilir: değişiklik işlem günlüğüne düşer
+        obj.iptal, obj.iptal_nedeni = True, "Toplu iptal"
+        obj.save()
+        n += 1
     messages.info(request, f"{n} kayıt iptal edildi.")
 
 
@@ -42,8 +57,9 @@ class CariAdmin(admin.ModelAdmin):
     list_display = ("unvan", "kisa_kod", "bakiye", "vade_gun", "aktif")
     search_fields = ("unvan", "kisa_kod", "vergi_bilgisi")
     list_filter = ("aktif",)
-    readonly_fields = ("ekler_bag",)
+    readonly_fields = ("ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("cari")
+    gecmis_bag = gecmis_baglantisi("Cari")
 
     @admin.display(description="Güncel borcumuz (₺)")
     def bakiye(self, obj):
@@ -58,11 +74,12 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
     date_hierarchy = "tarih"
     inlines = [KalemInline]
     actions = [iptal_et]
-    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag")
+    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("belge")
+    gecmis_bag = gecmis_baglantisi("Belge")
     fieldsets = (
         (None, {"fields": ("cari", "tur", "tarih", "evrak_no", "harici_evrak_no", "aciklama",
-                           "odeme_sekli", "kaynak_notu", "ekler_bag")}),
+                           "odeme_sekli", "kaynak_notu", "ekler_bag", "gecmis_bag")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),
         ("İptal", {"fields": ("iptal", "iptal_nedeni")}),
@@ -124,11 +141,12 @@ class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
     search_fields = ("aciklama", "makbuz_no", "cari__unvan")
     date_hierarchy = "tarih"
     actions = [kasa_iptal_et]
-    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag")
+    readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("kasa")
+    gecmis_bag = gecmis_baglantisi("KasaHareketi")
     fieldsets = (
         (None, {"fields": ("hesap", "tarih", "yon", "kategori", "cari", "ilgili_odeme", "makbuz_no",
-                           "aciklama", "ekler_bag")}),
+                           "aciklama", "ekler_bag", "gecmis_bag")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),
         ("İptal", {"fields": ("iptal", "iptal_nedeni")}),
@@ -220,4 +238,23 @@ class EkAdmin(SilmeKapali, admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(IslemGunlugu)
+class IslemGunlugAdmin(admin.ModelAdmin):
+    """Salt okunur: günlük eklenmez, değiştirilmez, silinmez. Asıl görünüm: Günlük sayfası."""
+
+    list_display = ("zaman", "kullanici", "islem", "model", "nesne_ozeti")
+    list_filter = ("islem", "model", "kullanici")
+    search_fields = ("nesne_ozeti", "ayrinti", "kullanici")
+    readonly_fields = [f.name for f in IslemGunlugu._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False

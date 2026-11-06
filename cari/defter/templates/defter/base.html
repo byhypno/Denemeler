@@ -16,7 +16,8 @@
     <a href="{% url 'kasa' %}" class="{% if sayfa == 'kasa' %}aktif{% endif %}">Kasa</a>
     <a href="{% url 'mutabakat_liste' %}" class="{% if sayfa == 'mutabakat' %}aktif{% endif %}">Ekstre Mutabakatı</a>
     <a href="{% url 'admin:index' %}">Veri Girişi (Yönetim)</a>
-    {% if request.user.is_superuser %}<a href="{% url 'yedek_sayfasi' %}" class="{% if sayfa == 'yedek' %}aktif{% endif %}">Yedek</a>{% endif %}
+    {% if request.user.is_superuser %}<a href="{% url 'gunluk_sayfasi' %}" class="{% if sayfa == 'gunluk' %}aktif{% endif %}">Günlük</a>
+    <a href="{% url 'yedek_sayfasi' %}" class="{% if sayfa == 'yedek' %}aktif{% endif %}">Yedek</a>{% endif %}
   </nav>
   <span class="sag">{{ request.user.get_username }} · <a href="{% url 'admin:logout' %}">Çıkış</a></span>
 </header>

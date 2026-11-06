@@ -519,3 +519,44 @@ class YedekKaydi(models.Model):
 
     def __str__(self):
         return f"{self.zaman:%d.%m.%Y %H:%M} · {self.hedef} · {self.get_durum_display()}"
+
+
+class IslemGunlugu(models.Model):
+    """Kim, ne zaman, neyi, eskiden yeniye nasıl değiştirdi. EKLENİR, DEĞİŞTİRİLMEZ, SİLİNMEZ
+    (uygulama düzeyinde engellenir; ayrıca veritabanı tetikleyicileri UPDATE/DELETE'i reddeder)."""
+
+    class Islem(models.TextChoices):
+        OLUSTURDU = "OLUSTURDU", "Oluşturdu"
+        DEGISTI = "DEGISTI", "Değiştirdi"
+        IPTAL = "IPTAL", "İptal/Kaldırma"
+        SILINDI = "SILINDI", "Sildi"
+        GIRIS = "GIRIS", "Giriş yaptı"
+        CIKIS = "CIKIS", "Çıkış yaptı"
+        GIRIS_HATASI = "GIRIS_HATASI", "Hatalı giriş denemesi"
+        OZEL = "OZEL", "Toplu/özel işlem"
+
+    zaman = models.DateTimeField(auto_now_add=True, db_index=True)
+    kullanici = models.CharField(max_length=150, default="sistem", db_index=True)
+    islem = models.CharField(max_length=14, choices=Islem.choices, db_index=True)
+    model = models.CharField("Kayıt türü", max_length=60, blank=True, db_index=True)
+    nesne_id = models.BigIntegerField(null=True, blank=True)
+    nesne_ozeti = models.CharField(max_length=300, blank=True)
+    degisiklik = models.JSONField(default=dict, blank=True)
+    ayrinti = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "İşlem günlüğü"
+        verbose_name_plural = "İşlem günlüğü"
+        ordering = ["-zaman", "-id"]
+        indexes = [models.Index(fields=["model", "nesne_id"])]
+
+    def __str__(self):
+        return f"{self.zaman:%d.%m.%Y %H:%M} · {self.kullanici} · {self.get_islem_display()} · {self.model}"
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise ValidationError("İşlem günlüğü kayıtları değiştirilemez.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("İşlem günlüğü kayıtları silinemez.")

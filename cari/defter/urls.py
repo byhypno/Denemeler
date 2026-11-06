@@ -9,6 +9,7 @@ urlpatterns = [
     path("cari/<int:pk>/ekstre/", views.cari_ekstre, name="cari_ekstre"),
     path("odemeler/", views.odeme_listesi, name="odeme_listesi"),
     path("yedek/", views.yedek_sayfasi, name="yedek_sayfasi"),
+    path("gunluk/", views.gunluk_sayfasi, name="gunluk_sayfasi"),
     path("yedek/al/", views.yedek_al, name="yedek_al"),
     path("ekler/", ek_views.ek_depo, name="ek_depo"),
     path("ekler/<str:tur>/<int:pk>/", ek_views.ek_sahip, name="ek_sahip"),

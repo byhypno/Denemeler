@@ -3,6 +3,7 @@
 Tutarlar önbellekteki (Excel'in hesapladığı) değerlerden okunur ve kuruşa çevrilir.
 Hiçbir şey sessizce atlanmaz: sorunlar `uyarilar` / `hatalar` listesinde döner.
 """
+import os
 import re
 import unicodedata
 from datetime import date, datetime
@@ -10,6 +11,8 @@ from decimal import Decimal
 
 import openpyxl
 from django.db import transaction
+
+from . import gunluk
 
 from .models import Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri
 
@@ -86,8 +89,23 @@ def excel_beklenen_bakiyeler(yol) -> dict:
     return sonuc
 
 
-@transaction.atomic
 def ice_aktar(yol, sifirla: bool = False) -> dict:
+    """Excel'den içe aktarır. Binlerce kaydı tek tek günlüğe yazmak yerine tek bir özet kaydı yazılır."""
+    ad = os.path.basename(str(yol))
+    with gunluk.sessiz(f"Excel içe aktarma: {ad}") as g:
+        sonuc = _ice_aktar(yol, sifirla)
+        if sonuc["hatalar"]:
+            g["metin"] = (f"Excel içe aktarma BAŞARISIZ, geri alındı: {ad} · {len(sonuc['hatalar'])} hata "
+                          f"(sıfırla={sifirla}).")
+        else:
+            g["metin"] = (f"Excel içe aktarma: {ad} · cari {sonuc['cari']}, belge {sonuc['belge']}, "
+                          f"kalem {sonuc['kalem']}, mutabakat satırı {sonuc['mutabakat_satiri']}; "
+                          f"uyarı {len(sonuc['uyarilar'])} (sıfırla={sifirla}).")
+    return sonuc
+
+
+@transaction.atomic
+def _ice_aktar(yol, sifirla: bool = False) -> dict:
     if Belge.objects.exists():
         if not sifirla:
             raise RuntimeError("Veritabanında zaten belge var. Üzerine yazmak için --sifirla kullanın.")

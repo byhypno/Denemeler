@@ -201,4 +201,7 @@ def eslestir(hareket_id: int, odeme_id: int) -> KasaHareketi:
         raise ValidationError("Bu cari ödemesi başka bir kasa hareketine zaten bağlı.")
     KasaHareketi.objects.filter(pk=h.pk).update(ilgili_odeme=o)   # save() kilit kontrolünü atlar
     h.refresh_from_db()
+    from . import gunluk
+    gunluk.yaz("DEGISTI", "KasaHareketi", h, {"İlgili cari ödemesi (isteğe bağlı)": [None, str(o)]},
+               ayrinti="Cari ödemesi ile kasa hareketi eşleştirildi (yalnızca referans).")
     return h

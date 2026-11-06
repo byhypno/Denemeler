@@ -1,0 +1,38 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}İşlem Günlüğü · Cari Program{% endblock %}
+{% block icerik %}
+<h1>İşlem günlüğü</h1>
+<p class="not">Kim, ne zaman, neyi değiştirdi. Kayıtlar <b>eklenir, değiştirilemez ve silinemez</b> (veritabanı düzeyinde de engellidir).
+Toplu içe aktarmalar tek özet kaydı olarak görünür.</p>
+<form class="filtre" method="get">
+  <label>Ara <input type="text" name="q" value="{{ filtre.q }}" placeholder="kayıt, açıklama…"></label>
+  <label>Kullanıcı <select name="kullanici"><option value="">Tümü</option>{% for k in kullanicilar %}<option value="{{ k }}" {% if filtre.kullanici == k %}selected{% endif %}>{{ k }}</option>{% endfor %}</select></label>
+  <label>Kayıt türü <select name="model"><option value="">Tümü</option>{% for m in modeller %}<option value="{{ m }}" {% if filtre.model == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></label>
+  <label>İşlem <select name="islem"><option value="">Tümü</option>{% for k, e in islemler %}<option value="{{ k }}" {% if filtre.islem == k %}selected{% endif %}>{{ e }}</option>{% endfor %}</select></label>
+  <label>Başlangıç <input type="date" name="bas" value="{{ filtre.bas }}"></label>
+  <label>Bitiş <input type="date" name="bit" value="{{ filtre.bit }}"></label>
+  {% if filtre.nesne %}<input type="hidden" name="nesne" value="{{ filtre.nesne }}">{% endif %}
+  <button type="submit">Filtrele</button>
+</form>
+{% if filtre.nesne %}<p><span class="chip">Tek kaydın geçmişi: {{ filtre.model }} #{{ filtre.nesne }}</span> <a href="{% url 'gunluk_sayfasi' %}">tümünü göster</a></p>{% endif %}
+<div class="kart"><div class="tablo-kaydir"><table>
+  <thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Kayıt</th><th>Değişiklik</th></tr></thead>
+  <tbody>{% for g in sayfa_nesnesi %}
+    <tr><td>{{ g.zaman|date:"d.m.Y H:i:s" }}</td><td>{{ g.kullanici }}</td>
+      <td>{% if g.islem == "OLUSTURDU" %}<span class="chip tamam">{{ g.get_islem_display }}</span>
+          {% elif g.islem == "DEGISTI" %}<span class="chip uyari">{{ g.get_islem_display }}</span>
+          {% elif g.islem == "IPTAL" or g.islem == "SILINDI" or g.islem == "GIRIS_HATASI" %}<span class="chip hata">{{ g.get_islem_display }}</span>
+          {% else %}<span class="chip">{{ g.get_islem_display }}</span>{% endif %}</td>
+      <td>{% if g.model %}<b>{{ g.model }}</b>{% endif %}{% if g.nesne_ozeti %}<br>{{ g.nesne_ozeti }}{% endif %}</td>
+      <td>{% for alan, v in g.degisiklik.items %}
+            <div><span class="not">{{ alan }}:</span>
+              {% if g.islem == "OLUSTURDU" %}{{ v.1|default:"—" }}{% else %}{{ v.0|default:"—" }} → <b>{{ v.1|default:"—" }}</b>{% endif %}</div>
+          {% endfor %}{% if g.ayrinti %}<div class="not">{{ g.ayrinti }}</div>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="not">Kayıt yok.</td></tr>{% endfor %}</tbody>
+</table></div>
+<div class="sayfalama">
+  {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">← Yeni</a>{% endif %}
+  <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }} · {{ sayfa_nesnesi.paginator.count }} kayıt</span>
+  {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Eski →</a>{% endif %}
+</div></div>
+{% endblock %}
