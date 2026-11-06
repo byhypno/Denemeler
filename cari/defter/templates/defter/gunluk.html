@@ -26,13 +26,13 @@ Toplu içe aktarmalar tek özet kaydı olarak görünür.</p>
       <td>{% if g.model %}<b>{{ g.model }}</b>{% endif %}{% if g.nesne_ozeti %}<br>{{ g.nesne_ozeti }}{% endif %}</td>
       <td>{% for alan, v in g.degisiklik.items %}
             <div><span class="not">{{ alan }}:</span>
-              {% if g.islem == "OLUSTURDU" %}{{ v.1|default:"—" }}{% else %}{{ v.0|default:"—" }} → <b>{{ v.1|default:"—" }}</b>{% endif %}</div>
+              {% if g.islem == "OLUSTURDU" %}{{ v.1|default:"—" }}{% else %}{{ v.0|default:"—" }}{% ikon "ok-sag" "degisim-oku" %}<b>{{ v.1|default:"—" }}</b>{% endif %}</div>
           {% endfor %}{% if g.ayrinti %}<div class="not">{{ g.ayrinti }}</div>{% endif %}</td></tr>
   {% empty %}<tr><td colspan="5" class="not">Kayıt yok.</td></tr>{% endfor %}</tbody>
 </table></div>
 <div class="sayfalama">
-  {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">← Yeni</a>{% endif %}
+  {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">{% ikon "geri" "kucuk" %}Daha yeni</a>{% endif %}
   <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }} · {{ sayfa_nesnesi.paginator.count }} kayıt</span>
-  {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Eski →</a>{% endif %}
+  {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Daha eski{% ikon "ok-sag" "kucuk" %}</a>{% endif %}
 </div></div>
 {% endblock %}

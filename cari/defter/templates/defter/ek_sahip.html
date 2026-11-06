@@ -2,10 +2,11 @@
 {% block baslik %}Ekler · {{ etiket }}{% endblock %}
 {% block icerik %}
 <h1>Ekler</h1>
-<p><b>{{ etiket }}</b> · <a href="{{ geri }}">← Geri dön</a></p>
+<p class="not">{{ etiket }}</p>
+<p><a href="{{ geri }}">{% ikon "geri" "kucuk" %}Geri dön</a></p>
 
 {% if yazabilir %}
-<section class="kart yazdirma-gizle" style="margin-bottom:12px">
+<section class="kart yazdirma-gizle">
   <h2>Dosya ekle</h2>
   <form method="post" enctype="multipart/form-data">{% csrf_token %}
     <div class="form-izgara">

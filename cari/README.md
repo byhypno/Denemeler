@@ -103,6 +103,10 @@ Fiş/fatura görseli, ekstre PDF'i, dekont gibi dosyalar **belgeye, kasa hareket
   Tekrar çalıştırmak güvenlidir (zaten ekli olanlar atlanır).
 - **Depo sağlık kontrolü:** `python manage.py ekleri_dogrula` — eksik dosya, bozuk (hash'i tutmayan) dosya ve kayıtsız dosya var mı?
 
+## Arayüz
+Yan menülü uygulama kabuğu, açık/koyu tema (yan menü altındaki düğme), mobilde çekmece menü, çizgili "defter" tabloları, rakam şeridi.
+Tamamen **çevrimdışı** (yazı tipleri ve simgeler yerel) ve WCAG AA kontrastlı. Ayrıntı: `TASARIM.md`.
+
 ## Giriş, roller ve güvenlik (Aşama 5)
 - **Giriş:** `/giris/`; üst köşede kullanıcı adınıza tıklayarak **parolanızı değiştirebilir**, **Çıkış**'la oturumu kapatabilirsiniz.
   Aynı kullanıcı adına art arda **5 hatalı denemeden sonra giriş 5 dakika kapanır** (yönetim paneli girişi dahil).

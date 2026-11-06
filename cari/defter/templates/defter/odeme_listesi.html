@@ -1,7 +1,7 @@
 {% extends "defter/base.html" %}{% load defter_filtreleri %}
 {% block baslik %}{% if liste == "yapilan" %}Yapılan Ödemeler{% else %}Ödenecekler{% endif %} · Cari Program{% endblock %}
 {% block icerik %}
-<h1 class="yazdirma-gizle">Cari Ödeme Listesi</h1>
+<h1 class="yazdirma-gizle">Ödeme listesi</h1>
 <nav class="sekmeler yazdirma-gizle" aria-label="Liste türü">
   <a href="?liste=odenecek{% if cari %}&cari={{ cari.pk }}{% endif %}" class="{% if liste != 'yapilan' %}aktif{% endif %}">Ödenecekler (açık borç)</a>
   <a href="?liste=yapilan{% if cari %}&cari={{ cari.pk }}{% endif %}" class="{% if liste == 'yapilan' %}aktif{% endif %}">Yapılan ödemeler</a>
@@ -24,7 +24,7 @@
 {% if hata %}<p><span class="chip uyari">{{ hata }}</span></p>{% endif %}
 
 <div class="sadece-yazdir">
-  <h1>{% if liste == "yapilan" %}YAPILAN ÖDEMELER{% else %}ÖDENECEKLER LİSTESİ{% endif %}</h1>
+  <p class="yazdirma-baslik">{% if liste == "yapilan" %}Yapılan ödemeler{% else %}Ödenecekler listesi{% endif %}</p>
   <p>{% if liste == "yapilan" %}Dönem: {{ bas|date:"d.m.Y" }} – {{ bit|date:"d.m.Y" }}{% else %}Tarih: {{ bugun|date:"d.m.Y" }}{% endif %}
     {% if cari %} · Cari: {{ cari.unvan }}{% endif %}</p>
 </div>
@@ -36,7 +36,7 @@
     {% for e, t in veri.sekil_toplamlari %}<div class="kart"><div class="not">{{ e }}</div><div class="deger">{{ t|kurus_tl }}</div></div>{% endfor %}
   </section>
   {% for g in veri.gruplar %}
-  <div class="kart" style="margin-bottom:12px"><h2>{{ g.cari.unvan }}</h2>
+  <div class="kart"><h2>{{ g.cari.unvan }}</h2>
     <div class="tablo-kaydir"><table>
       <thead><tr><th>Tarih</th><th>Ödeme şekli</th><th>Evrak no</th><th>Açıklama</th><th class="sayi">Tutar</th></tr></thead>
       <tbody>{% for b in g.belgeler %}

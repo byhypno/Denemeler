@@ -1,7 +1,7 @@
 {% extends "defter/base.html" %}{% load static defter_filtreleri %}
-{% block baslik %}Genel Bakış · Cari Program{% endblock %}
+{% block baslik %}Genel bakış · Cari Program{% endblock %}
 {% block icerik %}
-<h1>Genel Bakış{% if cari %} · {{ cari.unvan }}{% endif %}</h1>
+<h1>Genel bakış{% if cari %}: {{ cari.unvan }}{% endif %}</h1>
 
 <form class="filtre" method="get">
   <label>Yıl
@@ -30,14 +30,14 @@
   <div class="kart"><div class="etiket">{{ yil }} iadeleri</div><div class="deger">{{ yil_iade|kurus_tl }}</div></div>
   <div class="kart"><div class="etiket">Açık mutabakat farkı</div>
     <div class="deger">{{ acik_fark|kurus_tl }}</div>
-    <div class="alt">{% if acik_fark %}⚠ Tedarikçiyle netleştirilmeli{% else %}✓ Fark yok{% endif %}</div></div>
+    <div class="alt">{% if acik_fark %}<span class="chip uyari">Tedarikçiyle netleştirilmeli</span>{% else %}<span class="chip tamam">Fark yok</span>{% endif %}</div></div>
   <div class="kart"><div class="etiket">Kontrol bekleyen</div>
     <div class="deger">{{ kontrol.adet }}</div>
-    <div class="alt">{% if kontrol.adet %}Aşağıdaki listeye bakın{% else %}✓ Sorun yok{% endif %}</div></div>
+    <div class="alt">{% if kontrol.adet %}<span class="chip uyari">Aşağıdaki listeye bakın</span>{% else %}<span class="chip tamam">Sorun yok</span>{% endif %}</div></div>
 </section>
 
-<section class="kart" style="margin-bottom:12px">
-  <h2>{{ yil }} · Aylık alış, iade, ödeme ve ay sonu bakiye</h2>
+<section class="kart">
+  <h2>{{ yil }} yılı aylık alış, iade, ödeme ve ay sonu bakiye</h2>
   <div class="grafik uzun"><canvas id="g-aylik" role="img"
     aria-label="Aylık alış, iade, ödeme sütunları ve ay sonu bakiye çizgisi"></canvas></div>
 </section>
@@ -60,14 +60,14 @@
 
 <section class="izgara iki">
   <div class="kart">
-    <h2>{{ yil }} · En çok alınan kalemler</h2>
+    <h2>{{ yil }} yılında en çok alınan kalemler</h2>
     {% if grafik.kalem_etiket %}
     <div class="grafik"><canvas id="g-kalem" role="img" aria-label="En çok alınan kalemler"></canvas></div>
     {% else %}<p class="not">Bu yıl için kalem detayı girilmiş alış yok.</p>{% endif %}
   </div>
   <div class="kart kontrol">
     <h2>Kontrol gerektirenler</h2>
-    {% if not kontrol.adet %}<p><span class="chip tamam">✓ Sorun yok</span></p>{% endif %}
+    {% if not kontrol.adet %}<p><span class="chip tamam">Sorun yok</span></p>{% endif %}
     {% if kontrol.mutabakat %}<b>Ekstre farkı</b><ul>
       {% for oz in kontrol.mutabakat %}<li><a href="{% url 'mutabakat_detay' oz.mutabakat.pk %}">{{ oz.mutabakat.cari }}</a>:
         bakiye farkı {{ oz.fark_kurus|kurus_tl }}, {{ oz.farkli_satirlar|length }} satır farklı</li>{% endfor %}</ul>{% endif %}
@@ -78,7 +78,7 @@
     {% if kontrol.tekrar_evrak_no %}<b>Aynı tedarikçi evrak numarası birden çok kayıtta</b><ul>
       {% for grup in kontrol.tekrar_evrak_no|slice:":6" %}<li>{{ grup.0.cari }} · no {{ grup.0.harici_evrak_no }}:
         {% for b in grup %}{{ b.get_tur_display }} {{ b.tarih|date:"d.m.Y" }}{% if not forloop.last %}; {% endif %}{% endfor %}</li>{% endfor %}</ul>{% endif %}
-    {% if kontrol.kdv_bilinmeyen %}<p class="not">ℹ {{ kontrol.kdv_bilinmeyen }} alış belgesinde KDV bilgisi girilmemiş.</p>{% endif %}
+    {% if kontrol.kdv_bilinmeyen %}<p><span class="chip bilgi">{{ kontrol.kdv_bilinmeyen }} alış belgesinde KDV bilgisi girilmemiş</span></p>{% endif %}
   </div>
 </section>
 

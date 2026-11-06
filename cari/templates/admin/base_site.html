@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{# Uygulamadaki tema seçimi (cari_tema) panele de uygulanır; panelin kendi theme.js'inden ÖNCE çalışmalı. #}
+{% block dark-mode-vars %}
+<script>try { var t = localStorage.getItem('cari_tema'); if (t === 'koyu') localStorage.setItem('theme', 'dark'); else if (t === 'acik') localStorage.setItem('theme', 'light'); } catch (e) {}</script>
+{{ block.super }}
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'defter/css/fontlar.css' %}">
+<link rel="stylesheet" href="{% static 'defter/css/admin_tema.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

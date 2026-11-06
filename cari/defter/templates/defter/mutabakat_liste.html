@@ -12,9 +12,9 @@
       <td>{{ oz.mutabakat.ekstre_tarihi|date:"d.m.Y" }}</td>
       <td class="sayi">{{ oz.bizim_bakiye_kurus|kurus_tl }}</td><td class="sayi">{{ oz.ekstre_bakiye_kurus|kurus_tl }}</td>
       <td class="sayi">{{ oz.fark_kurus|kurus_tl }}</td><td class="sayi">{{ oz.aciklanamayan_kurus|kurus_tl }}</td>
-      <td>{% if oz.fark_kurus == 0 and not oz.farkli_satirlar %}<span class="chip tamam">✓ Uyumlu</span>
-          {% elif oz.aciklanamayan_kurus %}<span class="chip hata">✕ Açıklanamayan fark</span>
-          {% else %}<span class="chip uyari">⚠ Fark var, nedeni biliniyor</span>{% endif %}</td></tr>
+      <td>{% if oz.fark_kurus == 0 and not oz.farkli_satirlar %}<span class="chip tamam">Uyumlu</span>
+          {% elif oz.aciklanamayan_kurus %}<span class="chip hata">Açıklanamayan fark</span>
+          {% else %}<span class="chip uyari">Fark var, nedeni biliniyor</span>{% endif %}</td></tr>
   {% empty %}<tr><td colspan="7" class="not">Henüz mutabakat kaydı yok.</td></tr>{% endfor %}</tbody>
 </table></div></div>
 {% endblock %}

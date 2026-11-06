@@ -388,7 +388,7 @@ class KasaEkranTests(KasaTemel):
         ck = Hesap.objects.get(ad="Cari Kasa")
         cari = Cari.objects.create(unvan="EKRAN CARI")
         r = self.client.get(reverse("kasa"), {"hesap": ck.pk})
-        self.assertContains(r, "Kasa · Cari Kasa")
+        self.assertContains(r, "<h1>Cari Kasa</h1>", html=False)
         self.assertContains(r, 'name="cari"')
         self.assertContains(r, "Ofis Kasa")                         # sekme
         r = self.client.post(f"{reverse('kasa')}?hesap={ck.pk}", {

@@ -6,7 +6,7 @@
   <div class="kart"><div class="not">Aktif ek</div><div class="deger">{{ adet }}</div></div>
   <div class="kart"><div class="not">Toplam boyut</div><div class="deger">{{ toplam_bayt|boyut }}</div></div>
 </section>
-<p class="not">Dosya eklemek için ilgili kaydın ekler sayfasını açın: cari ekstresinde belge satırındaki <b>📎</b>, kasada hareket satırındaki <b>📎</b>
+<p class="not">Dosya eklemek için ilgili kaydın ekler sayfasını açın: cari ekstresinde belge satırındaki <b>ataç simgesi</b>, kasada hareket satırındaki <b>ataç simgesi</b>
 veya mutabakat sayfasındaki <b>Ekler</b> bağlantısı. Yedek alırken veri klasöründeki <code>ekler</code> klasörünü de alın.</p>
 
 <form class="filtre" method="get">
@@ -33,8 +33,8 @@ veya mutabakat sayfasındaki <b>Ekler</b> bağlantısı. Yedek alırken veri kla
   {% empty %}<tr><td colspan="5" class="not">Ek yok.</td></tr>{% endfor %}</tbody>
 </table></div>
 <div class="sayfalama">
-  {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">← Önceki</a>{% endif %}
+  {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">{% ikon "geri" "kucuk" %}Önceki</a>{% endif %}
   <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }} · {{ sayfa_nesnesi.paginator.count }} kayıt</span>
-  {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Sonraki →</a>{% endif %}
+  {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Sonraki{% ikon "ok-sag" "kucuk" %}</a>{% endif %}
 </div></div>
 {% endblock %}

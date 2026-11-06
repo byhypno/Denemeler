@@ -154,7 +154,7 @@ class EkranTests(ListeTemel):
         self.assertContains(r, "A TEDARİK")
         self.assertContains(r, "1.100,00 ₺")             # 1.500 − 400
         self.assertContains(r, "Planlanan ödeme")        # yazdırma sütunu
-        self.assertContains(r, "ÖDENECEKLER LİSTESİ")
+        self.assertContains(r, "Ödenecekler listesi")
 
     def test_yapilan_ekrani_ve_filtre(self):
         r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "bas": "2026-01-01",

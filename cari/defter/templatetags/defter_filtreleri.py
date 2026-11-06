@@ -1,8 +1,14 @@
 from django import template
+from django.utils.html import format_html
 
 from ..fields import kurus_bicimle
 
 register = template.Library()
+
+
+def _tutar(metin, kurus):
+    """Eksi tutarlar kırmızı (renge ek olarak '-' işareti de durur: yalnızca renge güvenilmez)."""
+    return format_html('<span class="eksi">{}</span>', metin) if kurus < 0 else metin
 
 
 @register.filter
@@ -10,7 +16,7 @@ def kurus_tl(deger):
     """123450 -> '1.234,50 ₺'"""
     if deger in (None, ""):
         return "—"
-    return f"{kurus_bicimle(int(deger))} ₺"
+    return _tutar(f"{kurus_bicimle(int(deger))} ₺", int(deger))
 
 
 @register.filter
@@ -18,7 +24,13 @@ def kurus_say(deger):
     """123450 -> '1.234,50' (simgesiz)"""
     if deger in (None, ""):
         return "—"
-    return kurus_bicimle(int(deger))
+    return _tutar(kurus_bicimle(int(deger)), int(deger))
+
+
+@register.simple_tag
+def ikon(ad, sinif=""):
+    """Sprite'tan SVG simgesi: {% ikon "kasa" %}. Dekoratiftir (ekran okuyucudan gizli); anlamı yanındaki metin taşır."""
+    return format_html('<svg class="ikon {}" aria-hidden="true" focusable="false"><use href="#i-{}"/></svg>', sinif, ad)
 
 
 @register.filter

@@ -1,33 +1,71 @@
-{% load static %}<!doctype html>
+{% load static defter_filtreleri %}<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{% block baslik %}Cari Program{% endblock %}</title>
+  <script>/* tema, sayfa çizilmeden önce uygulanır (yanıp sönme olmasın) */
+    (function () { try { var t = localStorage.getItem('cari_tema'); if (t === 'koyu' || t === 'acik') document.documentElement.dataset.tema = t; } catch (e) {} })();
+  </script>
+  <link rel="stylesheet" href="{% static 'defter/css/fontlar.css' %}">
   <link rel="stylesheet" href="{% static 'defter/css/cari.css' %}">
 </head>
 <body>
-<header class="ust">
-  <span class="marka">Cari Program</span>
-  {% if request.user.is_authenticated %}
-  <nav>
-    {% if "goruntule" in yetkiler %}<a href="{% url 'dashboard' %}" class="{% if sayfa == 'dashboard' %}aktif{% endif %}">Genel Bakış</a>
-    <a href="{% url 'odeme_listesi' %}" class="{% if sayfa == 'odemeler' %}aktif{% endif %}">Ödeme Listesi</a>
-    <a href="{% url 'ek_depo' %}" class="{% if sayfa == 'ekler' %}aktif{% endif %}">Ekler</a>{% endif %}
-    {% if "kasa_goruntule" in yetkiler %}<a href="{% url 'kasa' %}" class="{% if sayfa == 'kasa' %}aktif{% endif %}">Kasa</a>{% endif %}
-    {% if "goruntule" in yetkiler %}<a href="{% url 'mutabakat_liste' %}" class="{% if sayfa == 'mutabakat' %}aktif{% endif %}">Ekstre Mutabakatı</a>{% endif %}
-    {% if request.user.is_staff %}<a href="{% url 'admin:index' %}">Veri Girişi (Yönetim)</a>{% endif %}
-    {% if "yonetim" in yetkiler %}<a href="{% url 'gunluk_sayfasi' %}" class="{% if sayfa == 'gunluk' %}aktif{% endif %}">Günlük</a>
-    <a href="{% url 'yedek_sayfasi' %}" class="{% if sayfa == 'yedek' %}aktif{% endif %}">Yedek</a>{% endif %}
-  </nav>
-  <span class="sag"><a href="{% url 'parola' %}" title="Parolamı değiştir">{{ request.user.get_username }}</a> · {{ rol_etiketi }} ·
-    <form method="post" action="{% url 'cikis' %}" style="display:inline">{% csrf_token %}<button type="submit" class="baglanti">Çıkış</button></form></span>
-  {% endif %}
-</header>
-<main>
-  {% if yedek_durumu.uyari and sayfa != 'yedek' %}<div class="mesaj error" role="alert">⚠ {{ yedek_durumu.mesaj }} <a href="{% url 'yedek_sayfasi' %}">Yedek sayfası</a></div>{% endif %}
-  {% for m in messages %}<div class="mesaj {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
-  {% block icerik %}{% endblock %}
-</main>
+<a class="atla" href="#icerik">İçeriğe geç</a>
+{% include "defter/_ikonlar.html" %}
+{% if request.user.is_authenticated %}
+<div class="kabuk" id="kabuk">
+  <div class="ust-serit">
+    <button type="button" id="yan-ac" aria-controls="yan" aria-expanded="false" aria-label="Menüyü aç">{% ikon "menu" %}</button>
+    <a class="yan-marka" href="{% url 'dashboard' %}">{% ikon "defter" %}Cari <span>Program</span></a>
+  </div>
+  <div class="yan-perde" data-yan-kapat></div>
+  <aside class="yan" id="yan" aria-label="Ana menü">
+    <a class="yan-marka" href="{% url 'dashboard' %}">{% ikon "defter" %}Cari <span>Program</span></a>
+    <nav aria-label="Sayfalar">
+      <ul class="yan-menu">
+        {% if "goruntule" in yetkiler %}
+        <li><a href="{% url 'dashboard' %}" {% if sayfa == 'dashboard' %}aria-current="page"{% endif %}>{% ikon "genel" %}Genel bakış</a></li>
+        <li><a href="{% url 'odeme_listesi' %}" {% if sayfa == 'odemeler' %}aria-current="page"{% endif %}>{% ikon "odeme" %}Ödeme listesi</a></li>
+        {% endif %}
+        {% if "kasa_goruntule" in yetkiler %}
+        <li><a href="{% url 'kasa' %}" {% if sayfa == 'kasa' %}aria-current="page"{% endif %}>{% ikon "kasa" %}Kasa</a></li>
+        {% endif %}
+        {% if "goruntule" in yetkiler %}
+        <li><a href="{% url 'mutabakat_liste' %}" {% if sayfa == 'mutabakat' %}aria-current="page"{% endif %}>{% ikon "mutabakat" %}Ekstre mutabakatı</a></li>
+        <li><a href="{% url 'ek_depo' %}" {% if sayfa == 'ekler' %}aria-current="page"{% endif %}>{% ikon "ek" %}Ekler</a></li>
+        {% endif %}
+      </ul>
+      {% if request.user.is_staff or "yonetim" in yetkiler %}
+      <hr class="yan-ayrac">
+      <ul class="yan-menu">
+        {% if request.user.is_staff %}<li><a href="{% url 'admin:index' %}">{% ikon "yonetim" %}Veri girişi</a></li>{% endif %}
+        {% if "yonetim" in yetkiler %}
+        <li><a href="{% url 'gunluk_sayfasi' %}" {% if sayfa == 'gunluk' %}aria-current="page"{% endif %}>{% ikon "gunluk" %}Günlük</a></li>
+        <li><a href="{% url 'yedek_sayfasi' %}" {% if sayfa == 'yedek' %}aria-current="page"{% endif %}>{% ikon "yedek" %}Yedek</a></li>
+        {% endif %}
+      </ul>
+      {% endif %}
+    </nav>
+    <div class="yan-alt">
+      <div class="yan-kisi"><strong>{{ request.user.get_username }}</strong><span>{{ rol_etiketi }}</span></div>
+      <div class="yan-araclar">
+        <a href="{% url 'parola' %}">{% ikon "kullanici" %}Parolamı değiştir</a>
+        <button type="button" id="tema-dugme" aria-label="Koyu temaya geç">{% ikon "ay" %}<span class="tema-etiket">Koyu tema</span></button>
+        <form method="post" action="{% url 'cikis' %}">{% csrf_token %}<button type="submit">{% ikon "cikis" %}Çıkış</button></form>
+      </div>
+    </div>
+  </aside>
+  <main class="icerik" id="icerik" tabindex="-1">
+{% else %}
+  <main class="giris-sayfasi" id="icerik" tabindex="-1">
+{% endif %}
+    {% if yedek_durumu.uyari and sayfa != 'yedek' %}<div class="mesaj error" role="alert">{{ yedek_durumu.mesaj }} <a href="{% url 'yedek_sayfasi' %}">Yedek sayfasına git</a></div>{% endif %}
+    {% for m in messages %}<div class="mesaj {{ m.tags }}" role="{% if m.level >= 40 %}alert{% else %}status{% endif %}">{{ m }}</div>{% endfor %}
+    {% block icerik %}{% endblock %}
+  </main>
+{% if request.user.is_authenticated %}</div>{% endif %}
+<script src="{% static 'defter/js/arayuz.js' %}"></script>
 </body>
 </html>

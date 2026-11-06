@@ -2,13 +2,14 @@
 {% block baslik %}Gün sonu kapanışı · Cari Program{% endblock %}
 {% block icerik %}
 {% if not hesap %}<div class="kart bos">Aktif kasa hesabı yok.</div>{% else %}
-<h1>Gün sonu kapanışı · {{ hesap.ad }}</h1>
+<h1>Gün sonu kapanışı</h1>
+<p class="not">{{ hesap.ad }}</p>
 {% url 'kasa_gun_sonu' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
-<p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">← Kasa</a></p>
+<p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
 
 <section class="ozet">
   <div class="kart"><div class="not">Son kapanış</div>
-    <div class="deger">{% if kilit_siniri %}{{ kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div></div>
+    <div class="deger orta">{% if kilit_siniri %}{{ kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div></div>
   <div class="kart"><div class="not">Kapanış bekleyen gün</div>
     <div class="deger">{{ acik_gunler|length }}</div>
     {% if acik_gunler %}<div class="not">{% for g in acik_gunler|slice:":6" %}{{ g|date:"d.m" }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if acik_gunler|length > 6 %} …{% endif %}</div>{% endif %}</div>
@@ -17,7 +18,7 @@
 </section>
 
 {% if "kasa_yaz" in yetkiler %}
-<section class="kart" style="margin-bottom:12px">
+<section class="kart">
   <h2>Kasayı kapat</h2>
   <p class="not">Kasadaki nakdi sayıp yazın. Kapatılan gün <b>ve öncesi kilitlenir</b>: o günlere kayıt eklenemez,
     değiştirilemez, iptal edilemez. Yanlış varsa güncel tarihli bir ters kayıt girilir.</p>
@@ -44,9 +45,9 @@
       <tr {% if g.fark_kurus %}class="vurgu"{% endif %}><td>{{ g.tarih|date:"d.m.Y" }}</td>
         <td class="sayi">{{ g.beklenen_kurus|kurus_tl }}</td><td class="sayi">{{ g.sayilan_kurus|kurus_tl }}</td>
         <td class="sayi">{{ g.fark_kurus|kurus_tl }}</td>
-        <td>{% if not g.fark_kurus %}<span class="chip tamam">✓ Tuttu</span>
-            {% elif g.fark_kurus > 0 %}<span class="chip uyari">⚠ Kasa fazlası</span>{% else %}<span class="chip hata">✕ Kasa noksanı</span>{% endif %}
-            {% if g.fark_islendi %}<span class="not">· hareket olarak işlendi</span>{% endif %}
+        <td>{% if not g.fark_kurus %}<span class="chip tamam">Tuttu</span>
+            {% elif g.fark_kurus > 0 %}<span class="chip uyari">Kasa fazlası</span>{% else %}<span class="chip hata">Kasa noksanı</span>{% endif %}
+            {% if g.fark_islendi %}<span class="not">Hareket olarak işlendi.</span>{% endif %}
             {% if not g.kilitli %}<span class="chip">kilit açık</span>{% endif %}</td>
         <td>{{ g.aciklama|default:"" }}</td></tr>
     {% empty %}<tr><td colspan="6" class="not">Henüz kapanış yok.</td></tr>{% endfor %}</tbody>

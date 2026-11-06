@@ -1,8 +1,9 @@
-{% extends "defter/base.html" %}
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
 {% block baslik %}Giriş · Cari Program{% endblock %}
 {% block icerik %}
 <div class="kart giris-kutusu">
-  <h1>Giriş</h1>
+  <a class="yan-marka" href="{% url 'giris' %}">{% ikon "defter" %}Cari <span>Program</span></a>
+  <h1>Giriş yap</h1>
   <form method="post" class="form-izgara" style="grid-template-columns:1fr">{% csrf_token %}
     {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <label>Kullanıcı adı {{ form.username }}</label>

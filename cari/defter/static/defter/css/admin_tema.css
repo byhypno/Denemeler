@@ -1,0 +1,158 @@
+/* Yönetim paneli teması: panelin kendi değişkenlerini Cari Program token'larıyla eşler.
+   Renk değerleri cari.css ile AYNI paletten gelir (kontrast cari.css için test edilir). */
+
+html[data-theme="light"], :root {
+  --primary: #1D5C3C;
+  --secondary: #123A25;
+  --accent: #D9AE2E;
+  --primary-fg: #FFFFFF;
+  --body-fg: #16241B;
+  --body-bg: #FBFCF9;
+  --body-quiet-color: #46574C;
+  --body-medium-color: #2F3E35;
+  --body-loud-color: #0B140F;
+  --header-color: #E4EEE2;
+  --header-branding-color: #FFFFFF;
+  --header-bg: #123A25;
+  --header-link-color: #FFFFFF;
+  --breadcrumbs-fg: #CFE1D4;
+  --breadcrumbs-link-fg: #FFFFFF;
+  --breadcrumbs-bg: #1D5C3C;
+  --link-fg: #1D5C3C;
+  --link-hover-color: #123A25;
+  --link-selected-fg: #1D5C3C;
+  --hairline-color: #D5DDD0;
+  --border-color: #B4C2AF;
+  --error-fg: #A61B1B;
+  --message-debug-bg: #F2F5EE;
+  --message-info-bg: #E0EBF6;
+  --message-success-bg: #DDECDD;
+  --message-warning-bg: #FAEECE;
+  --message-error-bg: #FBE5E1;
+  --darkened-bg: #F2F5EE;
+  --selected-bg: #DDECDD;
+  --selected-row: #FAEECE;
+  --button-fg: #FFFFFF;
+  --button-bg: #1D5C3C;
+  --button-hover-bg: #174A31;
+  --default-button-bg: #123A25;
+  --default-button-hover-bg: #1D5C3C;
+  --close-button-bg: #46574C;
+  --close-button-hover-bg: #16241B;
+  --delete-button-bg: #A61B1B;
+  --delete-button-hover-bg: #8B1515;
+  --object-tools-bg: #46574C;
+  --font-family-primary: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #1E3A29;
+    --secondary: #091009;
+    --accent: #D9AE2E;
+    --primary-fg: #E4ECE1;
+    --body-fg: #E4ECE1;
+    --body-bg: #131E17;
+    --body-quiet-color: #A7B8AB;
+    --body-medium-color: #CBD8CE;
+    --body-loud-color: #FFFFFF;
+    --header-color: #E4ECE1;
+    --header-bg: #091009;
+    --breadcrumbs-fg: #A7B8AB;
+    --breadcrumbs-link-fg: #E4ECE1;
+    --breadcrumbs-bg: #1E3A29;
+    --link-fg: #6FC490;
+    --link-hover-color: #8AD3A8;
+    --link-selected-fg: #6FC490;
+    --hairline-color: #263629;
+    --border-color: #36503E;
+    --error-fg: #FF9A90;
+    --message-debug-bg: #19271E;
+    --message-info-bg: #172A40;
+    --message-success-bg: #1E3A29;
+    --message-warning-bg: #33290F;
+    --message-error-bg: #3A1B18;
+    --darkened-bg: #19271E;
+    --selected-bg: #1E3A29;
+    --selected-row: #33290F;
+    --button-fg: #0D1610;
+    --button-bg: #6FC490;
+    --button-hover-bg: #8AD3A8;
+    --default-button-bg: #6FC490;
+    --default-button-hover-bg: #8AD3A8;
+    --close-button-bg: #A7B8AB;
+    --close-button-hover-bg: #CBD8CE;
+    --delete-button-bg: #FF9A90;
+    --delete-button-hover-bg: #FFB3AB;
+    --object-tools-fg: #0D1610;
+    --object-tools-bg: #A7B8AB;
+    --object-tools-hover-bg: #CBD8CE;
+    color-scheme: dark;
+  }
+}
+
+html[data-theme="dark"] {
+  --primary: #1E3A29;
+  --secondary: #091009;
+  --accent: #D9AE2E;
+  --primary-fg: #E4ECE1;
+  --body-fg: #E4ECE1;
+  --body-bg: #131E17;
+  --body-quiet-color: #A7B8AB;
+  --body-medium-color: #CBD8CE;
+  --body-loud-color: #FFFFFF;
+  --header-color: #E4ECE1;
+  --header-bg: #091009;
+  --breadcrumbs-fg: #A7B8AB;
+  --breadcrumbs-link-fg: #E4ECE1;
+  --breadcrumbs-bg: #1E3A29;
+  --link-fg: #6FC490;
+  --link-hover-color: #8AD3A8;
+  --link-selected-fg: #6FC490;
+  --hairline-color: #263629;
+  --border-color: #36503E;
+  --error-fg: #FF9A90;
+  --message-debug-bg: #19271E;
+  --message-info-bg: #172A40;
+  --message-success-bg: #1E3A29;
+  --message-warning-bg: #33290F;
+  --message-error-bg: #3A1B18;
+  --darkened-bg: #19271E;
+  --selected-bg: #1E3A29;
+  --selected-row: #33290F;
+  --button-fg: #0D1610;
+  --button-bg: #6FC490;
+  --button-hover-bg: #8AD3A8;
+  --default-button-bg: #6FC490;
+  --default-button-hover-bg: #8AD3A8;
+  --close-button-bg: #A7B8AB;
+  --close-button-hover-bg: #CBD8CE;
+  --delete-button-bg: #FF9A90;
+  --delete-button-hover-bg: #FFB3AB;
+  --object-tools-fg: #0D1610;
+  --object-tools-bg: #A7B8AB;
+  --object-tools-hover-bg: #CBD8CE;
+  color-scheme: dark;
+}
+
+/* Tema tek yerden (uygulamadaki düğmeyle) değişir; panelin kendi düğmesi gizlenir. */
+.theme-toggle { display: none !important; }
+
+body { background: var(--body-bg); }
+#header { border-bottom: 3px solid var(--accent); }
+#site-name a { font-family: "Barlow Semi Condensed", "IBM Plex Sans", system-ui, sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: .01em; }
+h1, #content h1 { font-family: "Barlow Semi Condensed", "IBM Plex Sans", system-ui, sans-serif; font-weight: 700; font-size: 1.75rem; color: var(--body-fg); }
+.module h2, .module caption, .inline-group h2 { font-weight: 600; letter-spacing: 0; }
+/* defter tablosu: başlık altında çift çizgi, sayısal sütunlar sabit genişlikte */
+#changelist table, .module table { font-variant-numeric: tabular-nums; }
+#changelist table thead th { background: transparent; border-bottom: 3px double var(--border-color); color: var(--body-quiet-color); }
+#changelist table thead th a, #changelist table thead th a:link, #changelist table thead th a:visited { color: var(--body-quiet-color); }
+#changelist tbody tr:hover td, #changelist tbody tr:hover th { background: var(--darkened-bg); }
+.button, input[type=submit], input[type=button], .submit-row input, a.button { border-radius: 6px; font-weight: 600; }
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=url], input[type=date], textarea, select {
+  border-radius: 6px; border-color: var(--border-color); background: var(--body-bg); color: var(--body-fg); }
+:focus-visible { outline: 2px solid #0B63CE; outline-offset: 2px; }
+html[data-theme="dark"] :focus-visible { outline-color: #8CB9FF; }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) :focus-visible { outline-color: #8CB9FF; } }
+.messagelist li { border-radius: 8px; }
+.object-tools a { border-radius: 6px; }

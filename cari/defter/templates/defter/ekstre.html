@@ -1,15 +1,16 @@
 {% extends "defter/base.html" %}{% load defter_filtreleri %}
 {% block baslik %}{{ cari.unvan }} · Ekstre{% endblock %}
 {% block icerik %}
-<h1>{{ cari.unvan }} · Cari ekstresi</h1>
-<p class="yazdirma-gizle"><a href="{% url 'ek_sahip' 'cari' cari.pk %}">📎 Cari dosyaları ({{ cari_ek_sayisi }})</a>
-  <span class="not">(sözleşme, vergi levhası vb.) · belge satırlarındaki 📎 o belgenin fiş/fatura görselidir</span></p>
+<h1>{{ cari.unvan }}</h1>
+<p class="not">Cari ekstresi</p>
+<p class="yazdirma-gizle"><a href="{% url 'ek_sahip' 'cari' cari.pk %}">{% ikon "ek" "kucuk" %}Cari dosyaları ({{ cari_ek_sayisi }})</a>
+  <span class="not">Sözleşme, vergi levhası gibi dosyalar. Belge satırlarındaki ataç simgesi o belgenin fiş veya fatura görselidir.</span></p>
 <form class="filtre" method="get">
   <label>Başlangıç <input type="text" name="bas" placeholder="gg.aa.yyyy" value="{{ bas|date:'d.m.Y' }}"></label>
   <label>Bitiş <input type="text" name="bit" placeholder="gg.aa.yyyy" value="{{ bit|date:'d.m.Y' }}"></label>
   <button type="submit">Göster</button>
   <button type="button" class="ikincil dugme" onclick="window.print()">Yazdır</button>
-  <a class="dugme ikincil" href="{% url 'dashboard' %}?cari={{ cari.pk }}">← Genel bakış</a>
+  <a class="dugme ikincil" href="{% url 'dashboard' %}?cari={{ cari.pk }}">{% ikon "geri" "kucuk" %}Genel bakış</a>
 </form>
 {% if hata %}<p><span class="chip hata">{{ hata }}</span></p>{% endif %}
 <div class="kart"><div class="tablo-kaydir"><table>
@@ -18,7 +19,7 @@
   <tbody>
     {% if bas %}<tr><td colspan="6"><i>Dönem başı bakiye</i></td><td class="sayi">{{ onceki|kurus_tl }}</td></tr>{% endif %}
     {% for b, bakiye in satirlar %}
-    <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_tur_display }}</td><td>{{ b.evrak_no|default:"—" }}<a class="ek-bag yazdirma-gizle" href="{% url 'ek_sahip' 'belge' b.pk %}" title="Ekler">📎{% with n=ek_sayi|sozluk_al:b.pk %}{% if n %} {{ n }}{% else %}<span class="not">+</span>{% endif %}{% endwith %}</a></td>
+    <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_tur_display }}</td><td>{{ b.evrak_no|default:"—" }}<a class="ek-bag yazdirma-gizle" href="{% url 'ek_sahip' 'belge' b.pk %}" title="Ekler">{% ikon "ek" "kucuk" %}{% with n=ek_sayi|sozluk_al:b.pk %}{% if n %} {{ n }}{% else %}<span class="not">+</span>{% endif %}{% endwith %}</a></td>
       <td>{{ b.aciklama|default:"" }}</td>
       <td class="sayi">{% if b.etki > 0 %}{{ b.tutar_kurus|kurus_say }}{% endif %}</td>
       <td class="sayi">{% if b.etki < 0 %}{{ b.tutar_kurus|kurus_say }}{% endif %}</td>
