@@ -5,11 +5,13 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.views.decorators.http import require_POST
+from django.db.models import Max
 from django.shortcuts import get_object_or_404, redirect, render
 
 from . import ek_servisi as es
 from . import odeme_listesi as ol
-from . import services, trend
+from . import metin, services, trend
+from .forms import CariForm
 from .models import Belge, Cari, EkstreMutabakat
 from .yetki import oturum_gerekli, var_mi, yetki_gerekli
 
@@ -245,3 +247,46 @@ def gunluk_sayfasi(request):
         "modeller": IslemGunlugu.objects.order_by().exclude(model="").values_list("model", flat=True).distinct(),
         "islemler": IslemGunlugu.Islem.choices,
     })
+
+
+SIRALAR = {"borc": "Borca göre", "unvan": "Ada göre", "son": "Son hareket"}
+
+
+@yetki_gerekli("goruntule")
+def tedarikciler(request):
+    """Tedarikçi kartları: arama, durum süzgeci, sıralama. Karta tıklayınca ekstre açılır."""
+    q = request.GET.get("q", "").strip()
+    sira = request.GET.get("sira", "borc")
+    sira = sira if sira in SIRALAR else "borc"
+    pasifler = request.GET.get("pasif") == "1"
+    son = dict(Belge.objects.filter(iptal=False).values("cari").annotate(t=Max("tarih")).values_list("cari", "t"))
+    satirlar = []
+    for c, bakiye in services.cari_bakiyeleri():
+        if not pasifler and not c.aktif:
+            continue
+        if not metin.eslesir(q, c.unvan, c.kisa_kod, c.vergi_bilgisi, c.yetkili, c.telefon, c.eposta):
+            continue
+        satirlar.append({"cari": c, "bakiye": bakiye, "son": son.get(c.pk)})
+    if sira == "unvan":
+        satirlar.sort(key=lambda r: metin.katla(r["cari"].unvan))
+    elif sira == "son":
+        satirlar.sort(key=lambda r: r["son"] or date.min, reverse=True)
+    toplam_borc = sum(r["bakiye"] for r in satirlar if r["bakiye"] > 0)
+    return render(request, "defter/tedarikciler.html", {
+        "satirlar": satirlar, "q": q, "sira": sira, "siralar": SIRALAR, "pasifler": pasifler,
+        "toplam_borc": toplam_borc, "toplam_cari": Cari.objects.count(), "sayfa": "tedarikciler",
+    })
+
+
+@yetki_gerekli("veri_gir")
+def tedarikci_form(request, pk=None):
+    """Tedarikçi ekle (pk yok) veya düzenle. Kayıt işlem günlüğüne düşer; silme yoktur (pasif yapılır)."""
+    cari = get_object_or_404(Cari, pk=pk) if pk else None
+    form = CariForm(request.POST or None, instance=cari)
+    if not pk:
+        del form.fields["aktif"]
+    if request.method == "POST" and form.is_valid():
+        kayit = form.save()
+        messages.success(request, f"{kayit.unvan} {'güncellendi' if pk else 'eklendi'}.")
+        return redirect("cari_ekstre", pk=kayit.pk) if not pk else redirect("tedarikciler")
+    return render(request, "defter/tedarikci_form.html", {"form": form, "cari": cari, "sayfa": "tedarikciler"})

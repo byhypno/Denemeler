@@ -1,6 +1,7 @@
 from django import forms
 
 from .fields import KurusFormField, kurus_bicimle
+from . import metin
 from .models import Belge, Cari, KasaHareketi, KasaKategori
 
 
@@ -48,3 +49,31 @@ class GunSonuForm(forms.Form):
     aciklama = forms.CharField(label="Açıklama", required=False, max_length=250)
     farki_isle = forms.BooleanField(
         label="Fark varsa kasa hareketi olarak işle (kategori: Kasa farkı)", required=False)
+
+
+class CariForm(forms.ModelForm):
+    """Tedarikçi ekleme/düzenleme. Ünvan, büyük/küçük harf ve aksan farkı yok sayılarak da benzersiz olmalı
+    ('ERÖZ' ile 'Eroz' aynı tedarikçidir; iki ayrı cari açılıp bakiyeler bölünmesin)."""
+
+    class Meta:
+        model = Cari
+        fields = ["unvan", "kisa_kod", "vergi_bilgisi", "yetkili", "telefon", "eposta",
+                  "vade_gun", "tedarikcideki_kodumuz", "not_metni", "aktif"]
+        widgets = {"not_metni": forms.Textarea(attrs={"rows": 3}), "vade_gun": forms.NumberInput(attrs={"min": 0, "max": 365})}
+        labels = {"unvan": "Ünvan", "kisa_kod": "Kısa kod", "vergi_bilgisi": "Vergi dairesi / no", "yetkili": "Yetkili kişi",
+                  "telefon": "Telefon", "eposta": "E-posta", "vade_gun": "Ödeme vadesi (gün)",
+                  "tedarikcideki_kodumuz": "Tedarikçideki cari kodumuz", "not_metni": "Not", "aktif": "Aktif tedarikçi"}
+        help_texts = {"vade_gun": "Boş bırakılırsa vade takibi yapılmaz.", "aktif": "Pasif tedarikçi yeni kayıt seçeneklerinde çıkmaz; geçmişi durur."}
+
+    def clean_unvan(self):
+        unvan = " ".join(self.cleaned_data["unvan"].split())
+        ayni = [c for c in Cari.objects.exclude(pk=self.instance.pk) if metin.katla(c.unvan) == metin.katla(unvan)]
+        if ayni:
+            raise forms.ValidationError(f"Bu tedarikçi zaten kayıtlı: {ayni[0].unvan}")
+        return unvan
+
+    def clean_vade_gun(self):
+        v = self.cleaned_data.get("vade_gun")
+        if v is not None and v > 365:
+            raise forms.ValidationError("Vade en fazla 365 gün olabilir.")
+        return v

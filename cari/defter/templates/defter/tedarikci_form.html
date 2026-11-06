@@ -1,0 +1,20 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}{% if cari %}{{ cari.unvan }} · Düzenle{% else %}Yeni tedarikçi{% endif %} · Cari Program{% endblock %}
+{% block icerik %}
+<h1>{% if cari %}Tedarikçiyi düzenle{% else %}Yeni tedarikçi{% endif %}</h1>
+<p class="not">{% if cari %}Değişiklikler işlem günlüğüne yazılır. Tedarikçi silinmez; kullanılmayacaksa "Aktif" işaretini kaldırın.{% else %}Ünvanı fatura ve ekstredeki gibi yazın. Kaydedince ekstre sayfası açılır.{% endif %}</p>
+<form method="post" class="kart" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="hata-kutu" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-izgara">
+    {% for alan in form %}
+    <label class="{% if alan.name == 'unvan' or alan.name == 'not_metni' %}genis{% endif %}" for="{{ alan.id_for_label }}"><span>{{ alan.label }}{% if alan.field.required %} <span class="zorunlu" aria-hidden="true">*</span>{% endif %}</span>
+      {{ alan }}
+      {% if alan.help_text %}<span class="not">{{ alan.help_text }}</span>{% endif %}
+      {% for h in alan.errors %}<span class="hata" role="alert">{{ h }}</span>{% endfor %}
+    </label>
+    {% endfor %}
+  </div>
+  <p class="form-dugmeler"><button type="submit">{% if cari %}Kaydet{% else %}Tedarikçiyi ekle{% endif %}</button>
+    <a class="dugme ikincil" href="{% if cari %}{% url 'cari_ekstre' cari.pk %}{% else %}{% url 'tedarikciler' %}{% endif %}">Vazgeç</a></p>
+</form>
+{% endblock %}

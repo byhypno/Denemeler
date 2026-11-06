@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.core.exceptions import ValidationError
 
+from . import metin
 from .fields import kurus_bicimle
 from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, IslemGunlugu, EkstreSatiri, GunSonu, Hesap,
                      KasaHareketi, KasaKategori)
@@ -59,6 +60,21 @@ class CariAdmin(admin.ModelAdmin):
     list_filter = ("aktif",)
     readonly_fields = ("ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("cari")
+
+    def get_search_results(self, request, queryset, search_term):
+        """Arama (liste ve aramalı seçim kutuları): büyük/küçük harf ve aksan farkını yok sayar ('eroz' -> 'ERÖZ').
+        SQLite'ın LIKE'ı 'İ'/'i' eşleştirmez, bu yüzden Python'da süzülür (cari sayısı küçük)."""
+        if not search_term.strip():
+            return queryset, False
+        idler = [c.pk for c in queryset if metin.eslesir(search_term, c.unvan, c.kisa_kod, c.vergi_bilgisi, c.yetkili)]
+        return queryset.filter(pk__in=idler), False
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # aramalı seçim kutusunda pasif tedarikçiler çıkmasın (yeni kayıt için seçilmesin); listede görünürler
+        if request.path.endswith("/autocomplete/"):
+            qs = qs.filter(aktif=True)
+        return qs
     gecmis_bag = gecmis_baglantisi("Cari")
 
     @admin.display(description="Güncel borcumuz (₺)")
@@ -72,6 +88,7 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
     list_filter = ("tur", "cari", "iptal", "kdv_modu", "odeme_sekli")
     search_fields = ("evrak_no", "harici_evrak_no", "aciklama", "cari__unvan")
     date_hierarchy = "tarih"
+    autocomplete_fields = ("cari",)
     inlines = [KalemInline]
     actions = [iptal_et]
     readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag", "gecmis_bag")
@@ -146,6 +163,7 @@ class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
     list_filter = ("hesap", "yon", "kategori", "iptal")
     search_fields = ("aciklama", "makbuz_no", "cari__unvan")
     date_hierarchy = "tarih"
+    autocomplete_fields = ("cari",)
     actions = [kasa_iptal_et]
     readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("kasa")
@@ -195,6 +213,7 @@ class EkstreSatiriInline(admin.TabularInline):
 @admin.register(EkstreMutabakat)
 class EkstreMutabakatAdmin(admin.ModelAdmin):
     list_display = ("cari", "ekstre_tarihi", "ekstre_bakiye")
+    autocomplete_fields = ("cari",)
     inlines = [EkstreSatiriInline]
     readonly_fields = ("ekler_bag",)
     ekler_bag = ekler_baglantisi("mutabakat")

@@ -1,0 +1,42 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Tedarikçiler · Cari Program{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik">
+  <div><h1>Tedarikçiler</h1>
+    <p class="not">{{ satirlar|length }} tedarikçi{% if q %} ("{{ q }}" için){% endif %} · toplam borç <b>{{ toplam_borc|kurus_tl }}</b></p></div>
+  {% if "veri_gir" in yetkiler %}<a class="dugme" href="{% url 'tedarikci_yeni' %}">{% ikon "arti" "kucuk" %}Yeni tedarikçi</a>{% endif %}
+</div>
+
+<form class="filtre" method="get" role="search">
+  <label class="ara-kutu">Ara <input type="search" name="q" value="{{ q }}" placeholder="ünvan, kod, vergi no, yetkili…" autocomplete="off"></label>
+  <label>Sıralama
+    <select name="sira">{% for k, ad in siralar.items %}<option value="{{ k }}" {% if k == sira %}selected{% endif %}>{{ ad }}</option>{% endfor %}</select>
+  </label>
+  <label class="onay"><input type="checkbox" name="pasif" value="1" {% if pasifler %}checked{% endif %}> Pasifleri de göster</label>
+  <button type="submit">Ara</button>
+  {% if q or pasifler or sira != "borc" %}<a class="dugme ikincil" href="{% url 'tedarikciler' %}">Temizle</a>{% endif %}
+</form>
+
+{% if satirlar %}
+<ul class="tedarikci-izgara">
+  {% for r in satirlar %}
+  <li class="kart tedarikci-kart{% if not r.cari.aktif %} pasif{% endif %}">
+    <div class="tk-ust">{% avatar r.cari.unvan "buyuk" %}
+      <div class="tk-ad"><a class="tk-bag" href="{% url 'cari_ekstre' r.cari.pk %}">{{ r.cari.unvan }}</a>
+        <span class="not">{% if r.cari.kisa_kod %}{{ r.cari.kisa_kod }}{% else %}Kod yok{% endif %}{% if r.cari.yetkili %} · {{ r.cari.yetkili }}{% endif %}</span></div>
+      {% if not r.cari.aktif %}<span class="chip">Pasif</span>{% endif %}</div>
+    <div class="tk-borc-satir"><div class="tk-borc"><span class="not">Güncel borcumuz</span><span class="deger">{{ r.bakiye|kurus_tl }}</span></div>
+      {% if r.cari.vade_gun %}<span class="chip bilgi">Vade {{ r.cari.vade_gun }} gün</span>{% endif %}</div>
+    <div class="tk-alt">
+      <span class="not">{% if r.son %}Son hareket {{ r.son|date:"d.m.Y" }}{% else %}Hareket yok{% endif %}</span>
+      {% if "veri_gir" in yetkiler %}<a class="tk-duzenle" href="{% url 'tedarikci_duzenle' r.cari.pk %}">Düzenle<span class="sr-only">: {{ r.cari.unvan }}</span></a>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="kart bos"><h2>{% if q %}Eşleşen tedarikçi yok{% else %}Henüz tedarikçi yok{% endif %}</h2>
+  <p>{% if q %}Aramayı değiştirin ya da "Temizle"ye basın.{% else %}İlk tedarikçiyi ekleyerek başlayın.{% endif %}</p>
+  {% if "veri_gir" in yetkiler and not q %}<p><a class="dugme" href="{% url 'tedarikci_yeni' %}">{% ikon "arti" "kucuk" %}Yeni tedarikçi</a></p>{% endif %}</div>
+{% endif %}
+{% endblock %}
