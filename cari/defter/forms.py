@@ -59,3 +59,55 @@ class CariForm(forms.ModelForm):
         if v is not None and v > 365:
             raise forms.ValidationError("Vade en fazla 365 gün olabilir.")
         return v
+
+
+GIRILEBILIR_TURLER = [Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI, Belge.Tur.ODEME, Belge.Tur.IADE,
+                      Belge.Tur.DUZELTME_ARTI, Belge.Tur.DUZELTME_EKSI]       # Açılış/Devir yalnızca yönetim panelinden
+
+
+class BelgeForm(forms.ModelForm):
+    """Cari ekstresinden yeni cari hareketi (alış fişi/faturası, ödeme, iade, düzeltme). Cari URL'den gelir, formda seçilmez.
+
+    Kayıt, yönetim panelindeki ile AYNI model kurallarına tabidir (KDV, tutar > 0). Ek olarak:
+    - aynı cari + tür + evrak no ikinci kez girilemez (veritabanı kısıtı da vardır);
+    - aynı gün + aynı tür + aynı tutar zaten varsa uyarılır ve 'yine de kaydet' onayı istenir (çift giriş koruması)."""
+
+    yine_de = forms.BooleanField(required=False, label="Benzer kayıt var; yine de kaydet")
+
+    class Meta:
+        model = Belge
+        fields = ["tur", "tarih", "evrak_no", "harici_evrak_no", "aciklama", "odeme_sekli",
+                  "tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani"]
+        widgets = {"tarih": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"})}
+        labels = {"evrak_no": "Fiş / evrak no", "harici_evrak_no": "Tedarikçi evrak no", "odeme_sekli": "Ödeme şekli (ödemelerde)"}
+
+    def __init__(self, *args, cari, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cari = cari
+        self.instance.cari = cari
+        self.yinelenme = False
+        self.fields["tur"].choices = [(t.value, t.label) for t in GIRILEBILIR_TURLER]
+        self.fields["tutar_kurus"].label = "Tutar (₺)"
+        self.fields["tutar_kurus"].help_text = ""
+        self.fields["tutar_kurus"].widget.attrs.update({"placeholder": "1.234,50", "inputmode": "decimal"})
+        self.fields["kdv_modu"].label = "KDV"
+        self.fields["odeme_sekli"].required = False
+
+    def clean(self):
+        d = super().clean()
+        tur, no = d.get("tur"), (d.get("evrak_no") or "").strip()
+        if tur != Belge.Tur.ODEME:
+            d["odeme_sekli"] = ""                      # ödeme şekli yalnızca ödemede anlamlı
+            self.instance.odeme_sekli = ""
+        if tur and no:
+            if Belge.objects.filter(cari=self.cari, tur=tur, evrak_no=no, iptal=False).exists():
+                self.add_error("evrak_no", f"Bu tedarikçide {no} numaralı {dict(Belge.Tur.choices)[tur].lower()} zaten kayıtlı.")
+        if tur and d.get("tarih") and d.get("tutar_kurus") and not self.errors:
+            benzer = Belge.objects.filter(cari=self.cari, tur=tur, tarih=d["tarih"], iptal=False)
+            if any(b.tutar_kurus == self.instance.efektif_tutar_kurus() or b.tutar_kurus == d["tutar_kurus"] for b in benzer) \
+                    and not d.get("yine_de"):
+                self.yinelenme = True
+                raise forms.ValidationError(
+                    "Aynı gün aynı türde aynı tutarda bir kayıt zaten var. Çift giriş olmadığından eminseniz "
+                    "'Benzer kayıt var; yine de kaydet' kutusunu işaretleyip tekrar kaydedin.")
+        return d

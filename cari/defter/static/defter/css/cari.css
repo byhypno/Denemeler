@@ -373,6 +373,12 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .form-dugmeler { display: flex; gap: var(--b-3); flex-wrap: wrap; margin: var(--b-4) 0 0; }
 .form-izgara .genis { grid-column: 1 / -1; }
 .form-izgara textarea { width: 100%; }
+.satir-iptal { margin-top: 4px; font-size: var(--t-xs); }
+.satir-iptal summary { cursor: pointer; color: var(--metin-3); }
+.satir-iptal summary:hover { color: var(--negatif); }
+.satir-iptal[open] { padding: var(--b-2) 0; }
+.onay-kutu { background: var(--uyari-zemin); border-radius: var(--r-kontrol); padding: var(--b-3) var(--b-4); }
+.onay-kutu .onay { color: var(--uyari); font-weight: 600; display: flex; gap: var(--b-2); align-items: center; }
 .cari-bilgi { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-2) var(--b-4); margin: var(--b-1) 0 0; font-size: var(--t-sm); }
 .dosya-kart { display: flex; align-items: center; gap: var(--b-4); flex-wrap: wrap; padding: var(--b-4) var(--b-5); }
 .dosya-kart > div { flex: 1 1 280px; min-width: 0; }

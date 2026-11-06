@@ -7,11 +7,13 @@ from django.http import HttpResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Max
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from . import ek_servisi as es
 from . import odeme_listesi as ol
 from . import metin, services, trend
-from .forms import CariForm
+from .fields import kurus_bicimle
+from .forms import GIRILEBILIR_TURLER, BelgeForm, CariForm
 from .models import Belge, Cari, EkstreMutabakat
 from .yetki import oturum_gerekli, var_mi, yetki_gerekli
 
@@ -305,3 +307,42 @@ def odeme_takvimi(request):
         "t": t, "bugun": bugun, "cari": cari, "cariler": Cari.objects.filter(aktif=True), "sayfa": "takvim",
         "g": {g["anahtar"]: g for g in t["gruplar"]},
     })
+
+
+@yetki_gerekli("veri_gir")
+def belge_yeni(request, pk):
+    """Cari ekstresinden yeni hareket. `?tur=ODEME|ALIS_FISI|...` türü önceden seçer."""
+    cari = get_object_or_404(Cari, pk=pk)
+    tur = request.GET.get("tur", "")
+    gecerli = {t.value for t in GIRILEBILIR_TURLER}
+    if request.method == "POST":
+        form = BelgeForm(request.POST, cari=cari)
+        if form.is_valid():
+            b = form.save()
+            messages.success(request, f"Kaydedildi: {b.get_tur_display()} · {kurus_bicimle(b.tutar_kurus)} ₺ ({cari.unvan}).")
+            if "_yenisi" in request.POST:
+                return redirect(f"{reverse('belge_yeni', args=[cari.pk])}?tur={b.tur}")
+            return redirect("cari_ekstre", pk=cari.pk)
+    else:
+        form = BelgeForm(cari=cari, initial={"tarih": date.today(), "tur": tur if tur in gecerli else Belge.Tur.ALIS_FISI})
+    return render(request, "defter/belge_form.html", {
+        "form": form, "cari": cari, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "sayfa": "tedarikciler",
+        "yinelenme": getattr(form, "yinelenme", False),
+    })
+
+
+@yetki_gerekli("veri_gir")
+@require_POST
+def belge_iptal(request, pk):
+    """Silme yok, iptal var: neden zorunlu, kayıt bakiyeden düşer, işlem günlüğüne yazılır."""
+    b = get_object_or_404(Belge, pk=pk)
+    neden = request.POST.get("neden", "").strip()
+    if not neden:
+        messages.error(request, "İptal için neden yazın.")
+    elif b.iptal:
+        messages.info(request, "Kayıt zaten iptal edilmiş.")
+    else:
+        b.iptal, b.iptal_nedeni = True, neden[:250]
+        b.save()
+        messages.success(request, f"İptal edildi: {b.get_tur_display()} {b.tarih:%d.%m.%Y}.")
+    return redirect("cari_ekstre", pk=b.cari_id)

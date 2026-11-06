@@ -11,6 +11,14 @@
       {% if cari.eposta %}<span>{{ cari.eposta }}</span>{% endif %}</p></div>
 </div>
 
+{% if "veri_gir" in yetkiler %}
+<p class="form-dugmeler yazdirma-gizle">
+  <a class="dugme" href="{% url 'belge_yeni' cari.pk %}?tur=ALIS_FISI">{% ikon "arti" "kucuk" %}Yeni alış</a>
+  <a class="dugme ikincil" href="{% url 'belge_yeni' cari.pk %}?tur=ODEME">{% ikon "gonder" "kucuk" %}Yeni ödeme</a>
+  <a class="dugme ikincil" href="{% url 'belge_yeni' cari.pk %}?tur=IADE">{% ikon "geri-al" "kucuk" %}Yeni iade</a>
+  <a class="dugme ikincil" href="{% url 'tedarikci_duzenle' cari.pk %}">Tedarikçiyi düzenle</a>
+</p>
+{% endif %}
 <section class="kpi dort" aria-label="Cari özeti">
   <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "cuzdan" %}</span><span class="etiket">Güncel borcumuz</span></div>
     <div class="deger">{{ guncel_borc|kurus_tl }}</div>
@@ -57,7 +65,11 @@
     {% for b, bakiye in g.satirlar %}
     <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_tur_display }}</td>
       <td>{{ b.evrak_no|default:"—" }}{% with n=ek_sayi|sozluk_al:b.pk %}<a class="ek-bag yazdirma-gizle{% if n %} dolu{% endif %}" href="{% url 'ek_sahip' 'belge' b.pk %}" title="Ekler">{% ikon "ek" "kucuk" %}{% if n %}<span>{{ n }}</span>{% else %}<span class="sr-only">Ek ekle</span>{% endif %}</a>{% endwith %}</td>
-      <td>{{ b.aciklama|default:"" }}</td>
+      <td>{{ b.aciklama|default:"" }}{% if "veri_gir" in yetkiler %}
+        <details class="satir-iptal yazdirma-gizle"><summary>İptal</summary>
+          <form method="post" action="{% url 'belge_iptal' b.pk %}" class="satir-form">{% csrf_token %}
+            <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">
+            <button class="kucuk ikincil dugme" type="submit">Onayla</button></form></details>{% endif %}</td>
       <td class="sayi">{% if b.etki > 0 %}{{ b.tutar_kurus|kurus_say }}{% endif %}</td>
       <td class="sayi">{% if b.etki < 0 %}{{ b.tutar_kurus|kurus_say }}{% endif %}</td>
       <td class="sayi">{{ bakiye|kurus_say }}</td></tr>

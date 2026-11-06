@@ -1,0 +1,28 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Yeni cari hareket · {{ cari.unvan }} · Cari Program{% endblock %}
+{% block icerik %}
+<div class="baslik-kisi">{% avatar cari.unvan "buyuk" %}
+  <div><h1>Yeni cari hareket</h1><p class="cari-bilgi not">{{ cari.unvan }}{% if cari.vade_gun %} <span class="chip bilgi">Vade {{ cari.vade_gun }} gün</span>{% endif %}</p></div></div>
+<form method="post" class="kart" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="hata-kutu" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-izgara">
+    {% for f in form %}{% if f.name not in kdv_alanlari and f.name != "yine_de" %}
+    <label for="{{ f.id_for_label }}"><span>{{ f.label }}{% if f.field.required %} <span class="zorunlu" aria-hidden="true">*</span>{% endif %}</span>{{ f }}
+      {% for e in f.errors %}<span class="hata" role="alert">{{ e }}</span>{% endfor %}</label>
+    {% endif %}{% endfor %}
+  </div>
+  <details class="ek" {% if form.kdv_orani.errors or form.tevkifat_orani.errors %}open{% endif %}><summary>KDV (isteğe bağlı)</summary>
+    <p class="not">KDV girerseniz tutar, seçtiğiniz KDV'li/KDV'siz biçime göre "ödenecek tutar"a çevrilir (tevkifat yalnızca KDV hariç girişte).</p>
+    <div class="form-izgara">
+      {% for f in form %}{% if f.name in kdv_alanlari %}
+      <label for="{{ f.id_for_label }}"><span>{{ f.label }}</span>{{ f }}{% for e in f.errors %}<span class="hata" role="alert">{{ e }}</span>{% endfor %}</label>
+      {% endif %}{% endfor %}
+    </div>
+  </details>
+  {% if yinelenme %}<p class="onay-kutu"><label class="onay"><input type="checkbox" name="yine_de" value="on"> {{ form.yine_de.label }}</label></p>{% endif %}
+  <p class="form-dugmeler"><button type="submit">Kaydet</button>
+    <button type="submit" name="_yenisi" value="1" class="ikincil">Kaydet ve yenisini ekle</button>
+    <a class="dugme ikincil" href="{% url 'cari_ekstre' cari.pk %}">Vazgeç</a></p>
+  <p class="not">Kayıt silinmez; yanlış girilirse ekstrede <b>İptal</b> edilir (neden yazılır, bakiyeden düşer, işlem günlüğünde kalır).</p>
+</form>
+{% endblock %}
