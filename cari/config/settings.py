@@ -1,0 +1,108 @@
+"""Cari program ayarları — tek bilgisayarda, yerelde çalışacak şekilde."""
+import os
+import secrets
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Veritabanı, ekler ve gizli anahtar BURADA tutulur. Bu klasör depoya girmez (.gitignore).
+VERI_DIZINI = Path(os.environ.get("CARI_VERI_DIZINI", BASE_DIR / "veri"))
+VERI_DIZINI.mkdir(parents=True, exist_ok=True)
+
+
+def _gizli_anahtar() -> str:
+    if os.environ.get("CARI_SECRET_KEY"):
+        return os.environ["CARI_SECRET_KEY"]
+    dosya = VERI_DIZINI / "secret.key"
+    if not dosya.exists():
+        dosya.write_text(secrets.token_urlsafe(50))
+        try:
+            dosya.chmod(0o600)
+        except OSError:
+            pass
+    return dosya.read_text().strip()
+
+
+SECRET_KEY = _gizli_anahtar()
+DEBUG = os.environ.get("CARI_DEBUG", "0") == "1"
+# Sadece bu bilgisayardan erişim. Ağdan erişim ileride bilinçli olarak açılacak.
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "defter",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": VERI_DIZINI / "cari.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+            "transaction_mode": "IMMEDIATE",
+            # WAL: okuma/yazma çakışmasını azaltır; yabancı anahtar kontrolü açık.
+            "init_command": (
+                "PRAGMA journal_mode=WAL;"
+                "PRAGMA synchronous=NORMAL;"
+                "PRAGMA foreign_keys=ON;"
+            ),
+        },
+    }
+}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+     "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+FORMAT_MODULE_PATH = ["config.formats"]
+LANGUAGE_CODE = "tr"
+TIME_ZONE = "Europe/Istanbul"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+WHITENOISE_USE_FINDERS = True  # collectstatic olmadan da admin dosyalarını sunar
+
+SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 saat
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

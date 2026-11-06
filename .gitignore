@@ -1,2 +1,13 @@
 __pycache__/
 *.pyc
+
+# Cari program: gerçek veri ve gizli anahtar ASLA depoya girmez
+cari/veri/
+cari/staticfiles/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+secret.key
+*.xlsx
+*.xlsm
+*.zip
