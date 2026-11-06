@@ -121,7 +121,7 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
 
 @admin.register(Hesap)
 class HesapAdmin(SilmeKapali, admin.ModelAdmin):
-    list_display = ("ad", "tur", "cari_bagli", "bakiye", "aktif")
+    list_display = ("ad", "tur", "cari_bagli", "sadece_cikis", "bakiye", "aktif")
 
     def has_change_permission(self, request, obj=None):
         return request.user.is_superuser          # kasa ayarları (eksiye düşme, cari bağlantısı) yalnızca yönetici

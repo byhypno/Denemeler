@@ -12,10 +12,11 @@ def rol_kullanici(ad, rol=None, parola="Guclu-Parola-9", **kw):
 
 
 def cari_kasa_ac():
-    """Cari Kasa varsayılan olarak PASİFTİR (şirket kasası bu programda tutulmuyor; geçiş 0012).
-    Cari bağlantılı kasa özelliği hâlâ desteklenir; bunu sınayan testler hesabı açıkça etkinleştirir."""
+    """Cari bağlantılı kasanın GENEL mekaniğini (giriş+çıkış, eksiye düşememe, kontrol sayfası) sınayan testler için:
+    Cari Kasa'yı bu mekaniğe döndürür. Gerçek varsayılan farklıdır: Cari Kasa yalnızca tedarikçi ödemesi (çıkış)
+    tutar, bakiyesi hep eksidir (geçiş 0013); onu sınayan testler bu yardımcıyı KULLANMAZ."""
     from .models import Hesap
     h = Hesap.objects.get(ad="Cari Kasa")
-    h.aktif = True
+    h.aktif, h.sadece_cikis, h.eksiye_dusebilir = True, False, False
     h.save()
     return h

@@ -193,6 +193,10 @@ class Hesap(models.Model):
         "Cari kasası", default=False,
         help_text="İşaretliyse bu kasanın hareketlerinde cari ve ilgili cari ödemesi seçilebilir. "
                   "İşaretli değilse (ör. Ofis Kasa) kasa cari defterinden tamamen bağımsızdır.")
+    sadece_cikis = models.BooleanField(
+        "Yalnızca çıkış (ödeme) kasası", default=False,
+        help_text="İşaretliyse bu kasaya giriş yazılamaz; yalnızca tedarikçiye yapılan ödemeler (çıkış) girilir. "
+                  "Para alınmadığı için bakiye hep eksi kalır.")
     aktif = models.BooleanField(default=True)
 
     class Meta:
@@ -296,6 +300,12 @@ class KasaHareketi(KdvliTutar):
         if self.hesap_id and not self.hesap.cari_bagli and (self.cari_id or self.ilgili_odeme_id):
             raise ValidationError(
                 f"'{self.hesap}' cari defterinden bağımsızdır; bu kasada cari veya cari ödemesi seçilemez.")
+        if self.hesap_id and self.hesap.sadece_cikis and self._state.adding:
+            # yalnızca yeni kayıtta: eskiden girilmiş kayıtlar (ör. iptal edilirken) bu kuraldan etkilenmesin
+            if self.yon != self.Yon.CIKIS:
+                raise ValidationError({"yon": f"'{self.hesap}' yalnızca ödeme (çıkış) kasasıdır; giriş yazılamaz."})
+            if not self.cari_id:
+                raise ValidationError({"cari": "Tedarikçiye yapılan ödeme için tedarikçi (cari) seçin."})
         if self.ilgili_odeme_id:
             if not self.cari_id:
                 raise ValidationError({"cari": "İlgili cari ödemesi seçildiyse cari de seçilmeli."})

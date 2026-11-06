@@ -6,7 +6,7 @@
       data: {
         labels: veri.aylar,
         datasets: [
-          { type: 'bar', label: 'Giriş', data: veri.giris.map(G.lira), backgroundColor: G.renk('--g-alis'), borderRadius: 5, borderSkipped: false, maxBarThickness: 18 },
+          ...(veri.giris.some((v) => v) ? [{ type: 'bar', label: 'Giriş', data: veri.giris.map(G.lira), backgroundColor: G.renk('--g-alis'), borderRadius: 5, borderSkipped: false, maxBarThickness: 18 }] : []),   // yalnızca çıkış kasasında giriş serisi çizilmez
           { type: 'bar', label: 'Çıkış', data: veri.cikis.map(G.lira), backgroundColor: G.renk('--g-iade'), borderRadius: 5, borderSkipped: false, maxBarThickness: 18 },
           { type: 'line', label: 'Ay sonu kasa bakiyesi', data: veri.ay_sonu.map(G.lira),
             borderColor: G.renk('--g-bakiye'), borderWidth: 2.5,

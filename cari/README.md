@@ -51,14 +51,23 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 **Yaşlandırma varsayımı:** ödeme ve iadeler *en eski borca* mahsup edilir (FIFO), çünkü ödemeler tek tek faturalara bağlanmıyor.
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
-## Kasa (Aşama 3) — yalnızca ofis içi küçük harcamalar
-**Şirketin asıl kasası bu programda tutulmaz.** Üst menüdeki **Kasa**, yalnızca ofis içi küçük harcamalar (çay, kırtasiye, kargo vb.) içindir
-ve hazır gelen tek aktif hesap **Ofis Kasa**'dır (TL). Ofis Kasa **cari defterinden tamamen bağımsızdır**: hareketinde cari seçilemez
-(form alanı yoktur; kod düzeyinde de engellenir). **Kasa hiçbir cari bakiyesini, cari ödemesi de hiçbir kasayı değiştirmez.**
+## Kasa (Aşama 3) — iki kasa
+Üst menüde **Kasa**; iki hesap hazır gelir (TL). Şirketin asıl kasası bu programda tutulmaz.
 
-*Cari Kasa* (cari bağlantılı ikinci kasa) kodda durur ama **varsayılan olarak pasiftir**; silinmedi, geri dönüş kolay kalsın diye.
-İstenirse Yönetim > Hesaplar'dan "Aktif" işaretlenerek açılır; açılınca kasa sayfasında sekme, hareketlerde cari/ilgili ödeme alanları ve
-*Cari ödemesi kontrolü* sayfası geri gelir. Yeni kasa eklemek için Yönetim > Hesaplar; "Cari kasası" kutusu o kasanın cari bağlantılı olup olmadığını belirler.
+| Kasa | Ne için | Kurallar |
+|---|---|---|
+| **Ofis Kasa** | Ofis içi küçük harcamalar (çay, kırtasiye, kargo vb.) | **Cari defterinden tamamen bağımsızdır**; giriş ve çıkış, gün sonu kapanışı, eksiye düşemez. |
+| **Cari Kasa** | **Yalnızca tedarikçiye ödenen ücret** | Sadece **çıkış** yazılır (yön formda yoktur, kod düzeyinde de engellenir); **tedarikçi seçmek zorunlu**. Para alınmadığı için bakiye **hep eksi** kalır ve toplam ödenen ücreti gösterir. Gün sonu kapanışı yoktur (nakit sayımı anlamsız). |
+
+Cari Kasa için yönetimde "Yalnızca çıkış (ödeme) kasası" ve "Bakiye eksiye düşebilir" işaretlidir (Yönetim > Hesaplar).
+Cari Kasa'da ayrıca isteğe bağlı **ilgili cari ödemesi** seçilebilir; bu yalnızca bilgi/referanstır.
+
+**Hiçbir kasa cari bakiyesini, cari ödemesi de hiçbir kasayı otomatik değiştirmez.**
+Bir tedarikçiye kasadan nakit öderseniz **iki yere ayrı girersiniz** (cari ödemesi + Cari Kasa çıkışı). Biri unutulursa bakiyeler ayrışır:
+bunu yakalamak için **Cari Kasa**'da *Cari ödemesi kontrolü* sayfası vardır ("nakit ödendi ama kasadan çıkışı yok" /
+"kasadan cariye çıkış var ama cari ödemesi yok"; aynı cari + aynı tutar + en çok 3 gün farkla tek aday varsa *Eşleştir* önerir,
+eşleştirme yalnızca referans bağıdır). Ofis Kasa bu kontrolün dışındadır.
+Yeni kasa eklemek için Yönetim > Hesaplar; "Cari kasası" kutusu o kasanın cari bağlantılı olup olmadığını belirler.
 
 - **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV (Cari Kasa açıksa ayrıca cari / ilgili ödeme). Kategorileri *Kategoriler* bağlantısından ekleyin.
 - **Kasa eksiye düşemez** (Hesap ayarından değiştirilebilir). Bir girişi iptal etmek de kasayı eksiye düşürüyorsa reddedilir.

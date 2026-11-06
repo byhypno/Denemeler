@@ -35,6 +35,13 @@ class KasaHareketiForm(forms.ModelForm):
             # Ofis Kasa cari defterinden bağımsızdır: bu alanlar formda hiç görünmez.
             del self.fields["cari"]
             del self.fields["ilgili_odeme"]
+        if hesap.sadece_cikis:
+            # tedarikçi ödeme kasası: yön sabit (çıkış), tedarikçi zorunlu
+            del self.fields["yon"]
+            self.instance.yon = KasaHareketi.Yon.CIKIS
+            if "cari" in self.fields:
+                self.fields["cari"].required = True
+                self.fields["cari"].label = "Ödeme yapılan tedarikçi"
         self.fields["tutar_kurus"].label = "Tutar (₺)"
         self.fields["tutar_kurus"].help_text = ""
         self.fields["tutar_kurus"].widget.attrs.update({"placeholder": "1.234,50", "inputmode": "decimal"})
