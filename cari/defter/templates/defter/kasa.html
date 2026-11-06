@@ -12,7 +12,7 @@
   {% if hesap.cari_bagli and "goruntule" in yetkiler %}<a class="dugme ikincil" href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">Cari ödemesi kontrolü{% if kontrol_adet %} ({{ kontrol_adet }}){% endif %}</a>{% endif %}
   {% if request.user.is_staff %}<a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>{% endif %}
 </p>
-{% if not hesap.cari_bagli %}<p class="not">Bu kasa cari defterinden tamamen bağımsızdır.</p>{% endif %}
+{% if not hesap.cari_bagli %}<p class="not">Ofis içi küçük harcamalar için kasa. Şirketin asıl kasası burada tutulmaz; bu kasa cari defterinden tamamen bağımsızdır.</p>{% endif %}
 
 <section class="kpi" aria-label="Kasa göstergeleri">
   <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kasa" %}</span><span class="etiket">Güncel kasa bakiyesi</span></div><div class="deger">{{ ozet.bakiye_kurus|kurus_tl }}</div>

@@ -10,6 +10,7 @@ from django.urls import reverse
 
 from . import gunluk
 from . import kasa_servisi as ks
+from .test_yardimci import cari_kasa_ac
 from .excel_aktar import ice_aktar
 from .models import Belge, Cari, Ek, GunSonu, Hesap, IslemGunlugu, KasaHareketi
 from .tests import _ornek_excel
@@ -99,7 +100,7 @@ class KayitGunluguTests(GunlukTemel):
             self.assertTrue(any("nedeni" in alan and v[1] == "yanlış dosya" for alan, v in g.degisiklik.items()))
 
     def test_eslestirme_acikca_kaydedilir(self):
-        ck = Hesap.objects.get(ad="Cari Kasa")
+        ck = cari_kasa_ac()
         c = Cari.objects.create(unvan="K")
         KasaHareketi.objects.create(hesap=ck, yon="GIRIS", tutar_kurus=9000, tarih=date(2026, 1, 1))
         o = Belge.objects.create(cari=c, tur="ODEME", tarih=date(2026, 1, 3), tutar_kurus=500, odeme_sekli="NAKIT")

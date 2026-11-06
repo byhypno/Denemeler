@@ -25,7 +25,7 @@ def _hesap_veya_yok(request, hesap_id):
     """
     gorunur = gorunur_kasalar(request.user)
     if hesap_id and str(hesap_id).isdigit() and not gorunur.filter(pk=int(hesap_id)).exists() \
-            and ks.Hesap.objects.filter(pk=int(hesap_id)).exists():
+            and ks.Hesap.objects.filter(pk=int(hesap_id), aktif=True).exists():   # pasif kasa yok sayılır (403 yanıltıcı olurdu)
         raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
     return ks.varsayilan_hesap(hesap_id, hesaplar=gorunur)
 

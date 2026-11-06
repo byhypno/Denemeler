@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from . import kasa_servisi as ks
 from .models import Belge, Cari, GunSonu, Hesap, KasaHareketi, KasaKategori
-from .test_yardimci import rol_kullanici
+from .test_yardimci import cari_kasa_ac, rol_kullanici
 
 GIRIS, CIKIS = KasaHareketi.Yon.GIRIS, KasaHareketi.Yon.CIKIS
 
@@ -233,7 +233,7 @@ class CariKasaTests(TestCase):
 
     def setUp(self):
         self.ofis = Hesap.objects.get(ad="Ofis Kasa")
-        self.ckasa = Hesap.objects.get(ad="Cari Kasa")
+        self.ckasa = cari_kasa_ac()
         self.cari = Cari.objects.create(unvan="K")
 
     def h(self, hesap, yon, tutar, tarih, **kw):
@@ -290,7 +290,7 @@ class CariKasaTests(TestCase):
 
 class KasaKontrolTests(TestCase):
     def setUp(self):
-        self.kasa = Hesap.objects.get(ad="Cari Kasa")
+        self.kasa = cari_kasa_ac()
         self.cari = Cari.objects.create(unvan="K")
         self.hareket(GIRIS, 1000000, date(2026, 1, 1))
 
@@ -385,7 +385,7 @@ class KasaEkranTests(KasaTemel):
 
     def test_cari_kasa_ekrani_cari_alani_ve_kontrol_sayfasi(self):
         self.giris()
-        ck = Hesap.objects.get(ad="Cari Kasa")
+        ck = cari_kasa_ac()
         cari = Cari.objects.create(unvan="EKRAN CARI")
         r = self.client.get(reverse("kasa"), {"hesap": ck.pk})
         self.assertContains(r, "<h1>Cari Kasa</h1>", html=False)
@@ -409,7 +409,7 @@ class KasaEkranTests(KasaTemel):
 
     def test_kontrol_eslestirme_ekrandan(self):
         self.giris()
-        ck = Hesap.objects.get(ad="Cari Kasa")
+        ck = cari_kasa_ac()
         cari = Cari.objects.create(unvan="EKRAN CARI")
         KasaHareketi.objects.create(hesap=ck, yon=GIRIS, tutar_kurus=1000000, tarih=self.bugun)
         o = Belge.objects.create(cari=cari, tur="ODEME", tutar_kurus=5000, tarih=self.bugun, odeme_sekli="NAKIT")
@@ -566,3 +566,49 @@ class KasaAdminTests(KasaTemel):
         eski.refresh_from_db(); yeni.refresh_from_db()
         self.assertFalse(eski.iptal)
         self.assertTrue(yeni.iptal)
+
+
+class SirketKasasiTutulmuyorTests(TestCase):
+    """Şirket kasası programda tutulmaz: yalnızca Ofis Kasa aktif gelir; Cari Kasa silinmeden pasiftir."""
+
+    def setUp(self):
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+
+    def test_varsayilan_yalniz_ofis_kasa_aktif(self):
+        self.assertEqual(list(Hesap.objects.filter(aktif=True).values_list("ad", flat=True)), ["Ofis Kasa"])
+        ck = Hesap.objects.get(ad="Cari Kasa")           # silinmedi: geri açılabilir
+        self.assertFalse(ck.aktif)
+        self.assertTrue(ck.cari_bagli)
+
+    def test_kasa_sayfasi_sekmesiz_ve_cari_alanlari_yok(self):
+        r = self.client.get(reverse("kasa"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Ofis Kasa")
+        self.assertNotContains(r, "Kasa seçimi")                 # tek kasa: sekme yok
+        self.assertNotContains(r, "(cari)")
+        self.assertNotContains(r, "Cari ödemesi kontrolü")
+        self.assertNotContains(r, 'name="cari"')
+        self.assertContains(r, "küçük harcamalar")
+
+    def test_pasif_cari_kasa_istenirse_ofise_dusmez(self):
+        ck = Hesap.objects.get(ad="Cari Kasa")
+        r = self.client.get(reverse("kasa"), {"hesap": ck.pk})
+        self.assertNotEqual(r.context["hesap"].pk, ck.pk)        # pasif kasa seçilemez
+
+    def test_kontrol_sayfasi_cari_kasa_yokken_bozulmaz(self):
+        r = self.client.get(reverse("kasa_kontrol"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Cari bağlantılı bir kasa hesabı yok")
+
+    def test_ofis_kasaya_hareket_girilir(self):
+        ofis = Hesap.objects.get(ad="Ofis Kasa")
+        r = self.client.post(f"{reverse('kasa')}?hesap={ofis.pk}", {
+            "tarih": date.today().isoformat(), "yon": "GIRIS", "tutar_kurus": "250,00", "kdv_modu": "BILINMIYOR",
+            "aciklama": "avans"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(KasaHareketi.objects.filter(hesap=ofis).count(), 1)
+
+    def test_cari_kasa_acilinca_ozellik_geri_gelir(self):
+        cari_kasa_ac()
+        r = self.client.get(reverse("kasa"))
+        self.assertContains(r, "Kasa seçimi")

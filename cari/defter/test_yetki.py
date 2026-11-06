@@ -15,7 +15,7 @@ from . import ek_servisi as es
 from . import yetki
 from .models import Belge, Cari, EkstreMutabakat, Hesap, IslemGunlugu, KasaHareketi
 from .roller import MUHASEBE_OKUR, MUHASEBE_YAZAR, rolleri_kur
-from .test_yardimci import rol_kullanici
+from .test_yardimci import cari_kasa_ac, rol_kullanici
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 30
 GIRIS, CIKIS = "GIRIS", "CIKIS"
@@ -46,7 +46,7 @@ class YetkiTemel(TestCase):
         self.mut = EkstreMutabakat.objects.create(cari=self.cari, ekstre_tarihi=date(2026, 1, 31),
                                                   ekstre_bakiye_kurus=10000)
         self.ofis = Hesap.objects.get(ad="Ofis Kasa")
-        self.ckasa = Hesap.objects.get(ad="Cari Kasa")
+        self.ckasa = cari_kasa_ac()
         self.h_ofis = KasaHareketi.objects.create(hesap=self.ofis, yon=GIRIS, tutar_kurus=900000, tarih=date(2026, 1, 5))
         self.h_cari = KasaHareketi.objects.create(hesap=self.ckasa, yon=GIRIS, tutar_kurus=900000, tarih=date(2026, 1, 5))
         png = lambda n: SimpleUploadedFile(f"{n}.png", PNG + n.encode())

@@ -9,3 +9,13 @@ def rol_kullanici(ad, rol=None, parola="Guclu-Parola-9", **kw):
         u.groups.add(Group.objects.get(name=rol))
         u.refresh_from_db()
     return u
+
+
+def cari_kasa_ac():
+    """Cari Kasa varsayılan olarak PASİFTİR (şirket kasası bu programda tutulmuyor; geçiş 0012).
+    Cari bağlantılı kasa özelliği hâlâ desteklenir; bunu sınayan testler hesabı açıkça etkinleştirir."""
+    from .models import Hesap
+    h = Hesap.objects.get(ad="Cari Kasa")
+    h.aktif = True
+    h.save()
+    return h
