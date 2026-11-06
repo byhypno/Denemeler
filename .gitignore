@@ -11,3 +11,8 @@ secret.key
 *.xlsx
 *.xlsm
 *.zip
+
+# Windows: yerel ayarlar ve sanal ortam
+cari/ayarlar.bat
+cari/.venv/
+cari/veri/
