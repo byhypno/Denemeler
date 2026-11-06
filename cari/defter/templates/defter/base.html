@@ -11,11 +11,15 @@
   <span class="marka">Cari Program</span>
   <nav>
     <a href="{% url 'dashboard' %}" class="{% if sayfa == 'dashboard' %}aktif{% endif %}">Genel Bakış</a>
+    <a href="{% url 'kasa' %}" class="{% if sayfa == 'kasa' %}aktif{% endif %}">Kasa</a>
     <a href="{% url 'mutabakat_liste' %}" class="{% if sayfa == 'mutabakat' %}aktif{% endif %}">Ekstre Mutabakatı</a>
     <a href="{% url 'admin:index' %}">Veri Girişi (Yönetim)</a>
   </nav>
   <span class="sag">{{ request.user.get_username }} · <a href="{% url 'admin:logout' %}">Çıkış</a></span>
 </header>
-<main>{% block icerik %}{% endblock %}</main>
+<main>
+  {% for m in messages %}<div class="mesaj {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
+  {% block icerik %}{% endblock %}
+</main>
 </body>
 </html>

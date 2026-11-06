@@ -1,7 +1,8 @@
 from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 
 from .fields import kurus_bicimle
-from .models import (Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri, Hesap,
+from .models import (Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri, GunSonu, Hesap,
                      KasaHareketi, KasaKategori)
 
 
@@ -82,13 +83,31 @@ class KasaKategoriAdmin(admin.ModelAdmin):
     list_display = ("ad", "tur", "genel_gider_grubu", "aktif")
 
 
+@admin.action(description="Seçili kasa hareketlerini iptal et (neden: 'Toplu iptal')")
+def kasa_iptal_et(modeladmin, request, queryset):
+    """Toplu iptal; kapalı gün ve eksi bakiye kuralları tek tek uygulanır."""
+    iptal, reddedilen = 0, []
+    for h in queryset.filter(iptal=False):
+        h.iptal, h.iptal_nedeni = True, "Toplu iptal"
+        try:
+            h.full_clean()
+            h.save()
+            iptal += 1
+        except ValidationError as e:
+            reddedilen.append(f"{h}: {' '.join(e.messages)}")
+    if iptal:
+        messages.info(request, f"{iptal} kasa hareketi iptal edildi.")
+    for r in reddedilen:
+        messages.error(request, f"İptal edilemedi — {r}")
+
+
 @admin.register(KasaHareketi)
 class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
     list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "cari", "aciklama", "iptal")
     list_filter = ("hesap", "yon", "kategori", "iptal")
     search_fields = ("aciklama", "makbuz_no", "cari__unvan")
     date_hierarchy = "tarih"
-    actions = [iptal_et]
+    actions = [kasa_iptal_et]
     readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl")
     fieldsets = (
         (None, {"fields": ("hesap", "tarih", "yon", "kategori", "cari", "ilgili_odeme",
@@ -140,3 +159,30 @@ class EkstreMutabakatAdmin(admin.ModelAdmin):
     @admin.display(description="Ekstre bakiyesi (₺)")
     def ekstre_bakiye(self, obj):
         return kurus_bicimle(obj.ekstre_bakiye_kurus)
+
+
+@admin.register(GunSonu)
+class GunSonuAdmin(SilmeKapali, admin.ModelAdmin):
+    """Kapanışlar Kasa > Gün sonu ekranından yapılır. Burada yalnızca görülür; kilit kaldırma (kilitli
+    kutusu) bilinçli ve nadir bir işlemdir."""
+
+    list_display = ("tarih", "hesap", "beklenen", "sayilan", "fark", "kilitli", "fark_islendi")
+    list_filter = ("hesap", "kilitli")
+    readonly_fields = ("hesap", "tarih", "beklenen_kurus", "sayilan_kurus", "fark_kurus", "fark_islendi",
+                       "aciklama")
+    fields = readonly_fields + ("kilitli",)
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(description="Kayıtlı bakiye (₺)")
+    def beklenen(self, obj):
+        return kurus_bicimle(obj.beklenen_kurus)
+
+    @admin.display(description="Sayılan (₺)")
+    def sayilan(self, obj):
+        return kurus_bicimle(obj.sayilan_kurus)
+
+    @admin.display(description="Fark (₺)")
+    def fark(self, obj):
+        return kurus_bicimle(obj.fark_kurus)

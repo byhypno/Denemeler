@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, Sum
+from django.db.models import Max, Q, Sum
 
 from .fields import KurusField
 from .kdv import KdvModu, kdv_hesapla
@@ -199,10 +199,16 @@ class Hesap(models.Model):
     def __str__(self):
         return self.ad
 
-    def bakiye_kurus(self, haric_hareket_id=None) -> int:
+    def kilit_siniri(self):
+        """Gün sonu kapanışı yapılmış en son tarih (bu tarihe ve öncesine kayıt girilemez)."""
+        return self.gun_sonlari.filter(kilitli=True).aggregate(m=Max("tarih"))["m"]
+
+    def bakiye_kurus(self, haric_hareket_id=None, tarih_kadar=None) -> int:
         qs = self.hareketler.filter(iptal=False)
         if haric_hareket_id:
             qs = qs.exclude(pk=haric_hareket_id)
+        if tarih_kadar:
+            qs = qs.filter(tarih__lte=tarih_kadar)
         giris = qs.filter(yon=KasaHareketi.Yon.GIRIS).aggregate(t=Sum("tutar_kurus"))["t"] or 0
         cikis = qs.filter(yon=KasaHareketi.Yon.CIKIS).aggregate(t=Sum("tutar_kurus"))["t"] or 0
         return self.acilis_bakiye_kurus + giris - cikis
@@ -260,12 +266,39 @@ class KasaHareketi(KdvliTutar):
     def __str__(self):
         return f"{self.hesap} · {self.get_yon_display()} · {self.tarih:%d.%m.%Y}"
 
+    def kilit_kontrol(self):
+        """Kapatılmış güne kayıt eklenemez; kapatılmış güne ait kayıt değiştirilemez/iptal edilemez."""
+        if not self.hesap_id:
+            return
+        sinir = self.hesap.kilit_siniri()
+        if not sinir:
+            return
+        if self.pk:
+            eski = KasaHareketi.objects.filter(pk=self.pk).values_list("tarih", flat=True).first()
+            if eski and eski <= sinir:
+                raise ValidationError(
+                    "Bu kayıt kapatılmış bir güne ait; değiştirilemez veya iptal edilemez. "
+                    "Düzeltme için güncel tarihli bir ters kayıt girin.")
+        if self.tarih and self.tarih <= sinir:
+            raise ValidationError({"tarih": (
+                f"Kasa {sinir:%d.%m.%Y} tarihine kadar kapatıldı; bu tarihe kayıt girilemez. "
+                "Düzeltme için güncel tarihli bir ters kayıt girin.")})
+
+    def save(self, *args, **kwargs):
+        self.kilit_kontrol()
+        super().save(*args, **kwargs)
+
     def clean(self):
         if self.tutar_kurus is not None and self.tutar_kurus <= 0:
             raise ValidationError({"tutar_kurus": "Tutar sıfırdan büyük olmalı. Yön ayrı seçilir."})
         if self.iptal and not self.iptal_nedeni:
             raise ValidationError({"iptal_nedeni": "İptal için neden yazın."})
         self.clean_kdv()
+        self.kilit_kontrol()
+        if (self.iptal and self.pk and self.yon == self.Yon.GIRIS and not self.hesap.eksiye_dusebilir
+                and KasaHareketi.objects.filter(pk=self.pk, iptal=False).exists()
+                and self.hesap.bakiye_kurus(haric_hareket_id=self.pk) < 0):
+            raise ValidationError("Bu girişi iptal etmek kasa bakiyesini eksiye düşürür.")
         if (self.hesap_id and self.tutar_kurus and not self.iptal
                 and self.yon == self.Yon.CIKIS and not self.hesap.eksiye_dusebilir):
             mevcut = self.hesap.bakiye_kurus(haric_hareket_id=self.pk)
@@ -349,3 +382,28 @@ class EkstreSatiri(models.Model):
     @property
     def durum_etiketi(self) -> str:
         return self.Durum(self.durum).label
+
+
+class GunSonu(models.Model):
+    """Gün sonu kasa kapanışı: sayılan nakit ile kayıtlı bakiyenin karşılaştırması. Kilitler."""
+
+    hesap = models.ForeignKey(Hesap, on_delete=models.PROTECT, related_name="gun_sonlari")
+    tarih = models.DateField("Kapanış günü")
+    beklenen_kurus = KurusField("Kayıtlara göre bakiye (₺)")
+    sayilan_kurus = KurusField("Sayılan nakit (₺)")
+    fark_kurus = KurusField("Fark (₺)", help_text="Sayılan − beklenen. Pozitif: kasa fazlası, negatif: kasa noksanı.")
+    fark_islendi = models.BooleanField("Fark kasa hareketi olarak işlendi", default=False)
+    aciklama = models.CharField("Açıklama", max_length=250, blank=True)
+    kilitli = models.BooleanField("Kilitli", default=True)
+    olusturma = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Gün sonu kapanışı"
+        verbose_name_plural = "Gün sonu kapanışları"
+        ordering = ["-tarih"]
+        constraints = [
+            models.UniqueConstraint(fields=["hesap", "tarih"], name="gun_sonu_tekil"),
+        ]
+
+    def __str__(self):
+        return f"{self.hesap} · {self.tarih:%d.%m.%Y}"

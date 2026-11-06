@@ -19,3 +19,12 @@ def kurus_say(deger):
     if deger in (None, ""):
         return "—"
     return kurus_bicimle(int(deger))
+
+
+@register.filter
+def sozluk_al(sozluk, anahtar):
+    """{{ sozluk|sozluk_al:anahtar }} — şablonda sözlükten değer okur."""
+    try:
+        return sozluk.get(anahtar)
+    except AttributeError:
+        return None

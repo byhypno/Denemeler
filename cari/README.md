@@ -1,4 +1,4 @@
-# Cari Program (Aşama 1 + 2)
+# Cari Program (Aşama 1 + 2 + 3)
 
 Tek bilgisayarda, yerelde çalışan cari (tedarikçi) ve **Ofis Kasa** takip programı.
 Tutarlar veritabanında **tamsayı kuruş** olarak saklanır; kayıt silinmez, **iptal** edilir.
@@ -51,12 +51,22 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 **Yaşlandırma varsayımı:** ödeme ve iadeler *en eski borca* mahsup edilir (FIFO), çünkü ödemeler tek tek faturalara bağlanmıyor.
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
-## Kasa
-- **Ofis Kasa** (TL) hazır gelir. Kasa hareketleri **cari ödemesinden bağımsızdır**.
-- Kasa varsayılan olarak eksiye düşemez (Hesap ayarından değiştirilebilir).
-- "İlgili cari ödemesi" alanı yalnızca isteğe bağlı referanstır.
+## Kasa (Aşama 3)
+Üst menüde **Kasa**. Varsayılan hesap **Ofis Kasa** (TL) hazır gelir. Kasa hareketleri **cari ödemesinden bağımsızdır**.
+- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, isteğe bağlı cari / KDV. Kategorileri *Kategoriler* bağlantısından ekleyin.
+- **Kasa eksiye düşemez** (Hesap ayarından değiştirilebilir). Bir girişi iptal etmek de kasayı eksiye düşürüyorsa reddedilir.
+- **Silme yok, iptal var:** satırdaki iptal kutusuna neden yazılır; iptal kayıtlar bakiyeye girmez, "iptaller: göster" ile görülür.
+- **Gün sonu kapanışı:** nakdi sayıp yazarsınız; program kayıtlı bakiyeyle farkı saklar. İsterseniz fark, kapanış gününe
+  "Kasa farkı" kategorili bir hareket olarak işlenir. **Kapatılan gün ve öncesi kilitlenir**: o günlere kayıt eklenemez,
+  o günlerin kayıtları değiştirilemez/iptal edilemez. Yanlış için güncel tarihli *ters kayıt* girilir.
+  (Kilidi kaldırmak yalnızca Yönetim > Gün sonu kapanışları > "Kilitli" kutusundandır; bilinçli ve nadir bir işlemdir.)
+- **Kasa dashboard'u:** güncel bakiye, bugün/bu ay giriş-çıkış, aylık giriş/çıkış ve ay sonu bakiye grafiği,
+  kategoriye göre çıkışlar, en büyük çıkışlar, kapanış bekleyen günler.
+- **Cari ödemesi kontrolü:** "nakit ödendi ama kasadan çıkışı yok" ve "kasadan cariye çıkış var ama cari ödemesi yok"
+  listeleri. Aynı cari + aynı tutar + en çok 3 gün farkla **tek aday** varsa *Eşleştir* önerilir.
+  Eşleştirme yalnızca referans bağıdır; hiçbir tutarı değiştirmez.
 
 ## Henüz YOK (sonraki aşamalar)
-Kasa için ekranlar/dashboard, gün sonu kapanışı ve kasa kontrol listesi (3), ek dosya/fiş OCR (4),
-otomatik yedek, rol/yetki ve işlem günlüğü, Windows paketleme (5).
+Ek dosya/fiş OCR (4); otomatik yedek, rol/yetki, **işlem günlüğü** (kim ne değiştirdi) ve Windows paketleme (5).
+Kasada banka hesabı ve kasa↔banka transferi yoktur (yalnızca Ofis Kasa istendi).
 **Şimdilik yedek için `veri/` klasörünü düzenli olarak başka bir diske kopyalayın.**

@@ -1,0 +1,121 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}Kasa · Cari Program{% endblock %}
+{% block icerik %}
+{% if not hesap %}
+  <div class="kart bos"><h2>Aktif kasa hesabı yok</h2>
+    <p><a href="{% url 'admin:defter_hesap_add' %}">Yönetim panelinden</a> bir kasa hesabı ekleyin.</p></div>
+{% else %}
+<h1>Kasa · {{ hesap.ad }}</h1>
+<p class="yazdirma-gizle">
+  <a class="dugme ikincil" href="{% url 'kasa_gun_sonu' %}?hesap={{ hesap.pk }}">Gün sonu kapanışı</a>
+  <a class="dugme ikincil" href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">Cari ödemesi kontrolü{% if kontrol_adet %} ({{ kontrol_adet }}){% endif %}</a>
+  <a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>
+  {% if hesaplar|length > 1 %}{% for h in hesaplar %}<a class="dugme ikincil" href="?hesap={{ h.pk }}">{{ h.ad }}</a>{% endfor %}{% endif %}
+</p>
+
+<section class="kpi" aria-label="Kasa göstergeleri">
+  <div class="kart"><div class="etiket">Güncel kasa bakiyesi</div><div class="deger">{{ ozet.bakiye_kurus|kurus_tl }}</div>
+    <div class="alt">{% if hesap.eksiye_dusebilir %}Eksiye düşebilir{% else %}Eksiye düşemez{% endif %}</div></div>
+  <div class="kart"><div class="etiket">Bugün giriş</div><div class="deger">{{ ozet.bugun_giris|kurus_tl }}</div></div>
+  <div class="kart"><div class="etiket">Bugün çıkış</div><div class="deger">{{ ozet.bugun_cikis|kurus_tl }}</div></div>
+  <div class="kart"><div class="etiket">Bu ay giriş / çıkış</div>
+    <div class="deger" style="font-size:20px">{{ ozet.ay_giris|kurus_say }} / {{ ozet.ay_cikis|kurus_say }}</div><div class="alt">₺</div></div>
+  <div class="kart"><div class="etiket">Son kapanış</div>
+    <div class="deger" style="font-size:22px">{% if ozet.kilit_siniri %}{{ ozet.kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div>
+    <div class="alt">{% if ozet.acik_gunler %}⚠ {{ ozet.acik_gunler|length }} gün kapanış bekliyor{% else %}✓ Bekleyen gün yok{% endif %}</div></div>
+  <div class="kart"><div class="etiket">Cari ödemesi kontrolü</div><div class="deger">{{ kontrol_adet }}</div>
+    <div class="alt">{% if kontrol_adet %}⚠ <a href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">İncele</a>{% else %}✓ Sorun yok{% endif %}</div></div>
+</section>
+
+<section class="kart yazdirma-gizle" style="margin-bottom:12px">
+  <h2>Yeni kasa hareketi</h2>
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="form-izgara">
+      {% for f in form %}{% if f.name not in kdv_alanlari %}
+      <label>{{ f.label }}{{ f }}{% for e in f.errors %}<span class="hata">{{ e }}</span>{% endfor %}</label>
+      {% endif %}{% endfor %}
+    </div>
+    <details class="ek"><summary>KDV (isteğe bağlı)</summary>
+      <div class="form-izgara">
+        {% for f in form %}{% if f.name in kdv_alanlari %}
+        <label>{{ f.label }}{{ f }}{% for e in f.errors %}<span class="hata">{{ e }}</span>{% endfor %}</label>
+        {% endif %}{% endfor %}
+      </div>
+    </details>
+    <button type="submit">Kaydet</button>
+    {% if kilit_siniri %}<span class="not">{{ kilit_siniri|date:"d.m.Y" }} ve öncesi kapalı: bu günlere kayıt girilemez.</span>{% endif %}
+  </form>
+</section>
+
+<section class="kart" style="margin-bottom:12px">
+  <h2>{{ yil }} · Aylık giriş, çıkış ve ay sonu kasa bakiyesi
+    <form method="get" style="display:inline-block; margin-left:12px">
+      <input type="hidden" name="hesap" value="{{ hesap.pk }}">
+      <select name="yil" onchange="this.form.submit()" aria-label="Yıl">{% for y in yillar %}<option value="{{ y }}" {% if y == yil %}selected{% endif %}>{{ y }}</option>{% endfor %}</select>
+    </form></h2>
+  <div class="grafik"><canvas id="g-kasa-aylik" role="img" aria-label="Aylık kasa girişi, çıkışı ve ay sonu bakiyesi"></canvas></div>
+</section>
+
+<section class="izgara iki">
+  <div class="kart"><h2>{{ yil }} · Kategoriye göre çıkışlar</h2>
+    {% if grafik.kat_etiket %}<div class="grafik"><canvas id="g-kasa-kategori" role="img" aria-label="Kategoriye göre kasa çıkışları"></canvas></div>
+    {% else %}<p class="not">Bu yıl için çıkış kaydı yok.</p>{% endif %}</div>
+  <div class="kart"><h2>{{ yil }} · En büyük çıkışlar</h2>
+    <div class="tablo-kaydir"><table><thead><tr><th>Tarih</th><th>Kategori</th><th>Açıklama</th><th class="sayi">Tutar</th></tr></thead><tbody>
+      {% for h in en_buyuk %}<tr><td>{{ h.tarih|date:"d.m.Y" }}</td><td>{{ h.kategori|default:"—" }}</td>
+        <td>{{ h.aciklama|default:h.cari|default:"—" }}</td><td class="sayi">{{ h.tutar_kurus|kurus_tl }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="not">Çıkış yok.</td></tr>{% endfor %}</tbody></table></div></div>
+</section>
+
+<section class="kart">
+  <h2>Hareketler</h2>
+  <form class="filtre" method="get">
+    <input type="hidden" name="hesap" value="{{ hesap.pk }}"><input type="hidden" name="yil" value="{{ yil }}">
+    <label>Başlangıç <input type="date" name="bas" value="{{ filtre.bas }}"></label>
+    <label>Bitiş <input type="date" name="bit" value="{{ filtre.bit }}"></label>
+    <label>Yön <select name="yon"><option value="">Tümü</option>
+      <option value="GIRIS" {% if filtre.yon == "GIRIS" %}selected{% endif %}>Giriş</option>
+      <option value="CIKIS" {% if filtre.yon == "CIKIS" %}selected{% endif %}>Çıkış</option></select></label>
+    <label>Kategori <select name="kategori"><option value="">Tümü</option>
+      {% for k in kategoriler %}<option value="{{ k.pk }}" {% if filtre.kategori == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.ad }}</option>{% endfor %}</select></label>
+    <label><span>İptaller</span><span><input type="checkbox" name="iptal" value="1" {% if filtre.iptal == "1" %}checked{% endif %}> göster</span></label>
+    <button type="submit">Filtrele</button>
+  </form>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Cari</th><th>Açıklama</th><th>Makbuz</th>
+      <th class="sayi">Tutar</th><th class="sayi">Bakiye</th><th class="yazdirma-gizle">İşlem</th></tr></thead>
+    <tbody>
+    {% for h in sayfa_nesnesi %}
+      <tr class="{% if h.iptal %}iptal-satir{% endif %}">
+        <td>{{ h.tarih|date:"d.m.Y" }}</td>
+        <td>{% if h.yon == "GIRIS" %}▲ Giriş{% else %}▼ Çıkış{% endif %}</td>
+        <td>{{ h.kategori|default:"—" }}</td>
+        <td>{{ h.cari|default:"—" }}{% if h.ilgili_odeme_id %} <span class="chip tamam" title="İlgili cari ödemesi bağlı">↔</span>{% endif %}</td>
+        <td>{{ h.aciklama|default:"" }}{% if h.iptal %} <i>(iptal: {{ h.iptal_nedeni }})</i>{% endif %}</td>
+        <td>{{ h.makbuz_no|default:"" }}</td>
+        <td class="sayi">{{ h.tutar_kurus|kurus_say }}</td>
+        <td class="sayi">{% if not h.iptal %}{{ bakiyeler|sozluk_al:h.pk|kurus_say }}{% endif %}</td>
+        <td class="islem yazdirma-gizle">
+          {% if h.iptal %}—{% elif kilit_siniri and h.tarih <= kilit_siniri %}<span class="chip">🔒 kapalı gün</span>
+          {% else %}<form class="satir-form" method="post" action="{% url 'kasa_hareket_iptal' h.pk %}">{% csrf_token %}
+            <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">
+            <button class="kucuk ikincil dugme" type="submit">İptal</button></form>{% endif %}
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="9" class="not">Kayıt yok.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="sayfalama yazdirma-gizle">
+    {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">← Önceki</a>{% endif %}
+    <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }} · {{ sayfa_nesnesi.paginator.count }} kayıt</span>
+    {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Sonraki →</a>{% endif %}
+  </div>
+</section>
+
+{{ grafik|json_script:"grafik-veri" }}
+<script src="{% static 'defter/vendor/chart.umd.js' %}"></script>
+<script src="{% static 'defter/js/grafik_ortak.js' %}"></script>
+<script src="{% static 'defter/js/kasa.js' %}"></script>
+{% endif %}
+{% endblock %}

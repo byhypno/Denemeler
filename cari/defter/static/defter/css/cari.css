@@ -73,6 +73,22 @@ tr.vurgu td { background: var(--uyari-bg); }
   .ust nav { order: 3; flex-basis: 100%; } .ust nav a { padding: 8px 10px; font-size: 14px; }
   .ust .sag { margin-left: auto; }
 }
+.mesaj { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--line);
+  background: var(--card); }
+.mesaj.success { background: var(--tamam-bg); color: var(--tamam-ink); border-color: transparent; }
+.mesaj.error { background: var(--hata-bg); color: var(--hata-ink); border-color: transparent; }
+.form-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 12px; }
+.form-izgara label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.form-izgara input, .form-izgara select { width: 100%; }
+.form-izgara .hata { color: var(--hata-ink); font-size: 13px; }
+.hata-kutu { background: var(--hata-bg); color: var(--hata-ink); padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; }
+.dugme.kucuk, button.kucuk { padding: 3px 10px; min-height: 28px; font-size: 13px; }
+.iptal-satir td { color: var(--muted); text-decoration: line-through; }
+.iptal-satir td.islem { text-decoration: none; }
+.sayfalama { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+details.ek > summary { cursor: pointer; color: var(--brand); margin: 8px 0; }
+.satir-form { display: inline-flex; gap: 4px; align-items: center; }
+.satir-form input { padding: 3px 6px; min-height: 28px; width: 130px; font-size: 13px; }
 @media print {
   .ust, .filtre, .yazdirma-gizle { display: none !important; }
   body { background: #fff; color: #000; } .kart { border: 0; padding: 0; }
