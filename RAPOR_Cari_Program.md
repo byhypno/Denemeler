@@ -6,6 +6,45 @@ Güven düzeyleri: [Kesin] / [Muhtemel] / [Tahmin].
 
 ---
 
+## GÜNCELLEME (kullanıcı cevapları sonrası)
+
+**Cevaplar:** Windows · yalnızca tedarikçi carisi · ileride çok kullanıcı "olabilir" · KDV seçenekleri olmalı · fiş OCR isteniyor · **işletme zaten Paraşüt kullanıyor.**
+
+### Ana karar: Paraşüt'ün yerine değil, yanında
+- **Paraşüt = resmi kayıt** (e-fatura, KDV, beyanname altyapısı, mali müşavir erişimi). Biz onu **taklit etmeyiz.** [Kesin]
+- **Bizim program = yerel arşiv + analiz + mutabakat katmanı:** fiş görselleri ve belge deposu, tedarikçi ekstre mutabakatı, Paraşüt'te olmayan analizler, fiş OCR.
+- **Çift giriş yasak:** Aynı fatura hem Paraşüt'e hem buraya elle girilmemeli. Çözüm: Paraşüt'ten **salt okunur** senkron (API) veya dışa aktarılmış dosyadan içe aktarma; elle girişi sadece Paraşüt'e girmeyen kayıtlar (fiş, ekstre notu, düzeltme) için yap.
+- **Kontrol ekranı:** "Paraşüt bakiyesi ↔ bizim bakiye ↔ tedarikçi ekstresi" üçlü karşılaştırma. Farklar burada görünür.
+- Paraşüt API (v4, OAuth2; cari ve alış faturası uç noktaları) var gibi görünüyor, ama bunu **üçüncü taraf kaynaklardan** gördüm; resmi dokümanla (apidocs.parasut.com) ve planının API iznini doğrulamak gerekir. [Muhtemel]
+- Bu yüzden önce **Paraşüt'ten alınan dışa aktarma dosyalarıyla** başla, API'yi sonraya bırak.
+
+### Çok kullanıcı "olabilir" → şimdiden alınacak önlem
+- Django kalıyor; tüm sorgular ORM üzerinden, SQLite'a özgü numara yok (PostgreSQL'e geçiş açık kalır).
+- Şimdilik 127.0.0.1. İleride aynı PC "sunucu" olur: ağ erişimi, kullanıcı rolleri ve parola zorunlu hale gelir. Şimdiden kullanıcı/rol tablosu ve işlem günlüğü kurulur.
+
+### KDV modeli (belge ve kalem düzeyinde)
+- Alanlar: matrah, KDV oranı, KDV tutarı, **tevkifat oranı** (işletmede KDV tevkifatı var), toplam; "tutar KDV dahil/hariç" seçeneği; kuruş yuvarlama kuralı tek yerde.
+- KDV oranları **ayar tablosundan** yönetilir (kodda sabit yok): mevzuat değişince kod değişmez.
+- Fişlerde KDV basılı değilse belge "KDV bilinmiyor" işaretlenir; tutarın hariç olduğu varsayımı açıkça belirtilir.
+
+### Fiş OCR (evet) — tasarım
+1. Fiş görseli yüklenir → Claude görsel okuma → **taslak kalemler** üretilir (otomatik kaydedilmez).
+2. **Doğrulama zorunlu:** kalem toplamı ↔ fişteki el yazısı toplam karşılaştırılır; uyuşmazsa kırmızı uyarı. Kullanıcı onaylamadan kayıt oluşmaz. (Mevcut çalışmada aynı yöntem 10/10 tuttu.)
+3. **Gizlilik:** görseller internete (API'ye) gider. Açık onay ayarı, API anahtarı dosyada değil güvenli depoda, kişisel veri/plaka içeren görseller için uyarı. [Kesin]
+4. Yerel OCR (Tesseract vb.) el yazısında zayıf kalır; bu yüzden bulut tabanlı model öneriyoruz. [Muhtemel]
+
+### Güncel yol haritası
+| Aşama | İçerik |
+|---|---|
+| 0 | Paraşüt'ten hangi dışa aktarma/API erişimi var kontrol et |
+| 1 | Şema (KDV/tevkifat dahil), Excel + Paraşüt dosyası içe aktarma, bakiye doğrulama |
+| 2 | Dashboard + üçlü mutabakat ekranı |
+| 3 | Ek dosya deposu + fiş OCR (onaylı taslak akışı) |
+| 4 | Yedek, giriş, paketleme |
+| 5 | (İsteğe bağlı) Paraşüt API senkronu, çok kullanıcı |
+
+---
+
 ## 0. Önce söylenmesi gerekenler (risk ve uyarılar)
 
 1. **Bu program resmi muhasebe yazılımı değildir.** e-Fatura/e-Defter/beyanname üretmez; yönetim amaçlı cari takiptir. Resmi kayıt mali müşavirde kalır. [Kesin]
