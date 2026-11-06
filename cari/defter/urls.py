@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import ek_views, gider_views, giris, kasa_views, views
+from . import ek_views, gider_views, giris, kasa_views, malzeme_views, views
 
 urlpatterns = [
     path("giris/", giris.GirisView.as_view(), name="giris"),
@@ -15,6 +15,8 @@ urlpatterns = [
     path("cari/<int:pk>/belge/yeni/", views.belge_yeni, name="belge_yeni"),
     path("belge/<int:pk>/iptal/", views.belge_iptal, name="belge_iptal"),
     path("cari/<int:pk>/ekstre/", views.cari_ekstre, name="cari_ekstre"),
+    path("malzemeler/", malzeme_views.malzemeler, name="malzemeler"),
+    path("malzemeler/<int:pk>/", malzeme_views.malzeme_detay, name="malzeme_detay"),
     path("giderler/", gider_views.giderler, name="giderler"),
     path("giderler/kategori/", gider_views.gider_kategori_ekle, name="gider_kategori_ekle"),
     path("rapor/", views.aylik_rapor, name="aylik_rapor"),

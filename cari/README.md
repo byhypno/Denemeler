@@ -64,6 +64,20 @@ Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca
 - **Aylık rapor** (menü): seçilen ayın tedarikçi hareketleri (ay başı bakiye + alışlar + devir/düzeltme − iadeler − ödemeler = ay sonu bakiye), net genel gider,
   Ofis Kasa harcamaları; önceki aya göre değişim. **Excel** (Özet, Tedarikçiler, Genel gider, Kasa sayfaları) ve **Yazdır / PDF** (tarayıcının "PDF olarak kaydet"i). Varsayılan ay: önceki tam ay.
 
+## Malzemeler (katalog, kategoriler, fiyat hafızası)
+Menüde **Malzemeler**. Fiş kalemi girilince açıklama bir **malzemeye** bağlanır; aynı ad (büyük/küçük harf ve aksan farkına bakılmadan) aynı malzemedir ve katalog
+kendiliğinden büyür. Mevcut fiş kalemleri geçişle (0018) otomatik gruplandı; **kategoriler tahmin edilmedi**, hazır kategori listesi (Kaynak malzemeleri, El aletleri,
+Elektrikli/akülü aletler, Boya ve yapıştırıcı, Vida ve bağlantı elemanları, Elektrik malzemeleri, Sarf malzeme, Diğer) gelir; ekleyip düzenleyebilirsiniz.
+- **Liste:** malzeme, kategori, **son alış fiyatı**, önceki fiyat, **değişim (zam kırmızı ▲, indirim yeşil ▼)**, son alış (tarih, tedarikçi). Arama, kategori ve "yalnız zamlılar"
+  süzgeci, sıralama (ad, son zam oranı, son alış, toplam tutar). Üstte **son 90 günün zamları**. Kategori tek tek seçilir ya da **listeden seçip toplu atanır**.
+- **Malzeme sayfası:** alış fiyatı geçmişi (tablo + tedarikçiye göre çizgi grafik), son/önceki/en düşük/en yüksek/ortalama fiyat, **tedarikçi karşılaştırması** (en ucuz kim),
+  düzenleme ve **Birleştir** (aynı malzeme iki adla girildiyse; eski ad bundan sonra birleştiği malzemeye gider, geri alma yok).
+- **Fiyat hafızası:** ayrı bir tablo değil, kalemlerden hesaplanır (iptal edilen belgeler sayılmaz). Son fiyat = belge tarihine göre en son alış. Birim fiyat = kalemde girilen
+  birim fiyat, yoksa tutar ÷ miktar. Kalem tutarları fişte yazan tutarlardır.
+- **Fiş girerken:** kalem açıklamasını katalogdan seçince **son alış fiyatı** (tarih, tedarikçi) görünür, "Son fiyatı kullan" düğmesi vardır; yazdığınız fiyat yüksekse anında **▲ %x zam**
+  uyarısı çıkar. Kayıttan sonra her zam için sayfada ayrıca uyarı gösterilir (önceki fiyat ve tarih ile).
+- Fiyat karşılaştırması bir önceki alışa göredir (tedarikçi fark etmez); tedarikçiye göre karşılaştırma malzeme sayfasındadır.
+
 ## Genel giderler (aylık net gider)
 Menüde **Genel giderler**. Şirketin aylık genel giderleri (kira, elektrik, su, mali müşavir, avukat, personel, diğer) her ay **kategori başına tek rakam**
 olarak girilir; **personel tüm çalışanlar için tek kalemdir**. Tutarlar **KDV hariç net** girilir (ör. `12.500,00`).

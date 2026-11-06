@@ -1,0 +1,87 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}{{ m.ad }} · Malzeme · Cari Program{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik">
+  <div><h1>{{ m.ad }}</h1>
+    <p class="not"><a href="{% url 'malzemeler' %}">{% ikon "geri" "kucuk" %}Malzemeler</a> · {{ m.kategori|default:"Kategorisiz" }}{% if m.birim %} · birim: {{ m.birim }}{% endif %}{% if not m.aktif %} · <span class="chip">Pasif{% if m.birlestirildi %}: {{ m.birlestirildi.ad }} ile birleştirildi{% endif %}</span>{% endif %}</p></div>
+</div>
+
+{% if son %}
+<section class="kpi dort" aria-label="Fiyat özeti">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">Son alış fiyatı</span></div>
+    <div class="deger">{{ son.fiyat|birim_tl }}</div>
+    <div class="kpi-alt">{% fiyat_degisim son.degisim %}<span class="alt">{{ son.tarih|date:"d.m.Y" }} · {{ son.cari.unvan }}</span></div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "geri-al" %}</span><span class="etiket">Önceki alış fiyatı</span></div>
+    <div class="deger">{% if onceki %}{{ onceki.fiyat|birim_tl }}{% else %}—{% endif %}</div><div class="alt">{% if onceki %}{{ onceki.tarih|date:"d.m.Y" }} · {{ onceki.cari.unvan }}{% else %}İlk alış{% endif %}</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-asagi" %}</span><span class="etiket">En düşük / en yüksek</span></div>
+    <div class="deger orta">{{ en_dusuk|birim_tl }} / {{ en_yuksek|birim_tl }}</div><div class="alt">Ortalama: {{ ortalama|birim_tl }}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "terazi" %}</span><span class="etiket">Alış sayısı</span></div>
+    <div class="deger">{{ gecmis|length }}</div><div class="alt">{{ tedarikciler|length }} tedarikçiden</div></div>
+</section>
+
+{% if gecmis|length > 1 %}
+<section class="kart">
+  <h2>Alış fiyatı geçmişi</h2>
+  <div class="grafik"><canvas id="g-malzeme" role="img" aria-label="{{ m.ad }} alış fiyatının zaman içindeki değişimi, tedarikçiye göre"></canvas></div>
+</section>
+{% endif %}
+
+{% if tedarikciler|length > 1 %}
+<section class="kart">
+  <h2>Tedarikçi karşılaştırması <span class="not">(her tedarikçinin son fiyatı, ucuzdan pahalıya)</span></h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tedarikçi</th><th class="sayi">Son fiyat</th><th>Tarih</th><th class="sayi">En ucuza göre</th></tr></thead>
+    <tbody>{% for g in tedarikciler %}
+      <tr><td>{{ g.cari.unvan }}{% if forloop.first %} <span class="chip tamam">En ucuz</span>{% endif %}</td><td class="sayi"><b>{{ g.fiyat|birim_tl }}</b></td><td>{{ g.tarih|date:"d.m.Y" }}</td>
+        <td class="sayi">{% if forloop.first %}—{% else %}<span class="not">+%{{ g.ucuza_gore|stringformat:"s"|cevir_virgul }}</span>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+
+<section class="kart">
+  <h2>Tüm alışlar</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Evrak</th><th class="sayi">Miktar</th><th class="sayi">Birim fiyat</th><th class="sayi">Değişim</th><th class="sayi">Tutar</th></tr></thead>
+    <tbody>{% for g in gecmis %}
+      <tr><td>{{ g.tarih|date:"d.m.Y" }}</td><td><a href="{% url 'cari_ekstre' g.cari.pk %}">{{ g.cari.unvan }}</a></td><td>{{ g.belge.evrak_no|default:"—" }}</td>
+        <td class="sayi">{{ g.miktar|miktar }}{% if g.birim %} {{ g.birim }}{% endif %}</td><td class="sayi"><b>{{ g.fiyat|birim_tl }}</b></td>
+        <td class="sayi">{% fiyat_degisim g.degisim %}</td><td class="sayi">{{ g.tutar_kurus|kurus_tl }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <p class="not">Birim fiyat: kalemde girilen birim fiyat; yoksa tutar ÷ miktar. Değişim bir önceki alışa göredir (tedarikçi fark etmez). İptal edilen belgeler dahil değildir.</p>
+</section>
+{% else %}
+<div class="kart bos"><h2>Henüz alış kaydı yok</h2><p>Bu malzeme bir fiş kaleminde kullanılınca fiyat geçmişi burada görünür.</p></div>
+{% endif %}
+
+{% if yazabilir %}
+<section class="kart yazdirma-gizle">
+  <h2>Malzemeyi düzenle</h2>
+  <form method="post" class="filtre">{% csrf_token %}<input type="hidden" name="eylem" value="duzenle">
+    <label class="ara-kutu">Ad <input type="text" name="ad" value="{{ m.ad }}" maxlength="200" required></label>
+    <label>Kategori <select name="kategori"><option value="">— kategorisiz —</option>
+      {% for k in kategoriler %}<option value="{{ k.pk }}" {% if m.kategori_id == k.pk %}selected{% endif %}>{{ k.ad }}</option>{% endfor %}</select></label>
+    <label>Birim <input type="text" name="birim" value="{{ m.birim }}" maxlength="20" placeholder="adet, kg…"></label>
+    <label class="onay"><input type="checkbox" name="aktif" {% if m.aktif %}checked{% endif %}> Aktif</label>
+    <button type="submit">Kaydet</button>
+  </form>
+  {% if m.aktif and digerleri %}
+  <h2>Başka bir malzemeyle birleştir</h2>
+  <form method="post" class="filtre">{% csrf_token %}<input type="hidden" name="eylem" value="birlestir">
+    <label class="ara-kutu">Bu malzemenin alışlarını şuna taşı <select name="hedef" required><option value="">— seçin —</option>
+      {% for d in digerleri %}<option value="{{ d.pk }}">{{ d.ad }}</option>{% endfor %}</select></label>
+    <button type="submit" class="ikincil">Birleştir</button>
+  </form>
+  <p class="not">Aynı malzeme iki farklı adla girildiyse kullanılır. Bu malzemenin tüm alış kayıtları seçtiğiniz malzemeye taşınır, bu malzeme pasif yapılır (silinmez); bundan sonra bu adı yazarsanız seçtiğiniz malzemeye bağlanır. Geri alma yoktur.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{{ grafik|json_script:"malzeme-veri" }}
+{% if gecmis|length > 1 %}
+<script src="{% static 'defter/vendor/chart.umd.js' %}"></script>
+<script src="{% static 'defter/js/grafik_ortak.js' %}"></script>
+<script src="{% static 'defter/js/malzeme.js' %}"></script>
+{% endif %}
+{% endblock %}

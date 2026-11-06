@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from . import metin
 from .fields import kurus_bicimle
 from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, GenelGider, GiderKategori, IslemGunlugu, EkstreSatiri,
-                     GunSonu, Hesap, KasaHareketi, KasaKategori)
+                     GunSonu, Hesap, KasaHareketi, KasaKategori, Malzeme, MalzemeKategori)
 
 
 def gecmis_baglantisi(model_adi):
@@ -51,6 +51,7 @@ def iptal_et(modeladmin, request, queryset):
 class KalemInline(admin.TabularInline):
     model = BelgeKalem
     extra = 0
+    autocomplete_fields = ("malzeme",)       # boş bırakılırsa açıklamadan eşlenir (BelgeKalem.save)
 
 
 @admin.register(Cari)
@@ -314,4 +315,23 @@ class GenelGiderAdmin(SilmeKapali, admin.ModelAdmin):
     @admin.display(description="Net tutar (₺)", ordering="tutar_kurus")
     def tutar(self, obj):
         return kurus_bicimle(obj.tutar_kurus)
+
+
+@admin.register(MalzemeKategori)
+class MalzemeKategoriAdmin(admin.ModelAdmin):
+    """Malzeme kategorileri. Silinmez; kullanılmayacaksa 'aktif' kaldırılır (malzemelerin kategorisi korunur)."""
+    list_display = ("ad", "sira", "aktif")
+    list_editable = ("sira", "aktif")
+    search_fields = ("ad",)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Malzeme)
+class MalzemeAdmin(SilmeKapali, admin.ModelAdmin):
+    """Malzeme kataloğu. Fiyat geçmişi Malzemeler sayfasındadır; burası düzeltme içindir."""
+    list_display = ("ad", "kategori", "birim", "aktif")
+    list_filter = ("kategori", "aktif")
+    search_fields = ("ad",)
 

@@ -11,7 +11,7 @@ from django.urls import reverse
 
 from . import ek_servisi as es
 from . import odeme_listesi as ol
-from . import metin, services, trend
+from . import malzeme_servisi, metin, services, trend
 from .fields import kurus_bicimle
 from .forms import GIRILEBILIR_TURLER, BelgeForm, CariForm
 from .models import Belge, Cari, EkstreMutabakat
@@ -320,6 +320,9 @@ def belge_yeni(request, pk):
         if form.is_valid():
             b = form.save()
             messages.success(request, f"Kaydedildi: {b.get_tur_display()} · {kurus_bicimle(b.tutar_kurus)} ₺ ({cari.unvan}).")
+            for u in malzeme_servisi.zam_uyarilari(form.olusan_kalemler):          # fiyat hafızası: önceki alışa göre ZAM
+                messages.warning(request, f"Zam: {u['malzeme'].ad} {kurus_bicimle(round(u['onceki']))} ₺ → {kurus_bicimle(round(u['yeni']))} ₺ "
+                                          f"(%{malzeme_servisi.yuzde_metni(u['yuzde'])} arttı; önceki alış {u['onceki_tarih']:%d.%m.%Y}, {u['onceki_cari']}).")
             if "_yenisi" in request.POST:
                 return redirect(f"{reverse('belge_yeni', args=[cari.pk])}?tur={b.tur}")
             return redirect("cari_ekstre", pk=cari.pk)
@@ -329,7 +332,7 @@ def belge_yeni(request, pk):
     satirlar += [{k: "" for k in BelgeForm.ALANLAR} for _ in range(max(0, 8 - len(satirlar)))]      # en az 8 satır görünür
     return render(request, "defter/belge_form.html", {
         "form": form, "cari": cari, "kalem_satirlari": list(enumerate(satirlar)), "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "sayfa": "tedarikciler",
-        "yinelenme": getattr(form, "yinelenme", False),
+        "yinelenme": getattr(form, "yinelenme", False), "hafiza": malzeme_servisi.hafiza_verisi(),
     })
 
 

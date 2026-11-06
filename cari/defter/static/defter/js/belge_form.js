@@ -24,12 +24,58 @@
     govde.querySelectorAll('tr').forEach((tr) => { t += satirTutari(tr); });
     toplamEl.textContent = t > 0 ? tl.format(t) + ' ₺' : '—';
   }
-  govde.addEventListener('input', topla);
+  // ---- fiyat hafızası: malzemenin son alış fiyatını hatırlat, yeni fiyat yüksekse uyar (sunucu kayıttan sonra da ayrıca uyarır)
+  const hafizaEl = document.getElementById('malzeme-hafiza');
+  const hafiza = new Map();
+  const katla = (s) => (s || '').replace(/İ/g, 'i').replace(/I/g, 'i').toLowerCase()
+    .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/\s+/g, ' ').trim();
+  if (hafizaEl) JSON.parse(hafizaEl.textContent).forEach((m) => hafiza.set(katla(m.ad), m));
+  const lira = (n) => tl.format(n) + ' ₺';
+  function birimFiyat(tr) {
+    const f = sayi(tr.querySelector('[name^="kalem_fiyat_"]').value);
+    if (f !== null) return f;
+    const t = sayi(tr.querySelector('[name^="kalem_tutar_"]').value);
+    const mk = tr.querySelector('[name^="kalem_miktar_"]').value.trim() === '' ? 1 : sayi(tr.querySelector('[name^="kalem_miktar_"]').value);
+    return t !== null && mk ? t / mk : null;
+  }
+  function ipucu(tr) {
+    const kutu = tr.querySelector('.kalem-ipucu');
+    if (!kutu) return;
+    const m = hafiza.get(katla(tr.querySelector('[name^="kalem_aciklama_"]').value));
+    kutu.replaceChildren();
+    if (!m) return;
+    if (m.fiyat === undefined) { kutu.textContent = 'Katalogda var, henüz alış kaydı yok.'; return; }
+    const son = parseFloat(m.fiyat);        // hafıza verisi LİRA cinsindendir
+    const yazi = document.createElement('span');
+    yazi.textContent = 'Son alış: ' + lira(son) + (m.birim ? ' / ' + m.birim : '') + ' · ' + m.tarih + ' · ' + m.cari + ' ';
+    kutu.appendChild(yazi);
+    const yeni = birimFiyat(tr);
+    if (yeni !== null && Math.abs(yeni - son) >= 0.005) {
+      const oran = ((yeni - son) / son) * 100;
+      const chip = document.createElement('span');
+      chip.className = 'degisim ' + (oran > 0 ? 'kotu' : 'iyi');
+      chip.textContent = (oran > 0 ? '▲ %' : '▼ %') + Math.abs(oran).toFixed(1).replace('.', ',') + (oran > 0 ? ' zam' : ' indirim');
+      kutu.appendChild(chip);
+    } else if (yeni === null) {
+      const d = document.createElement('button');
+      d.type = 'button'; d.className = 'kucuk ikincil dugme'; d.textContent = 'Son fiyatı kullan';
+      d.addEventListener('click', () => {
+        tr.querySelector('[name^="kalem_fiyat_"]').value = tl.format(son);
+        const b = tr.querySelector('[name^="kalem_birim_"]'); if (b && !b.value && m.birim) b.value = m.birim;
+        topla(); ipucu(tr);
+      });
+      kutu.appendChild(d);
+    }
+  }
+  govde.addEventListener('input', (e) => { topla(); ipucu(e.target.closest('tr')); });
+  govde.addEventListener('change', (e) => { ipucu(e.target.closest('tr')); });
+  govde.querySelectorAll('tr').forEach(ipucu);
   document.getElementById('kalem-ekle').addEventListener('click', () => {
     const son = govde.lastElementChild;
     const i = govde.children.length;
     const yeni = son.cloneNode(true);
     yeni.classList.remove('hatali');
+    yeni.querySelector('.kalem-ipucu') && yeni.querySelector('.kalem-ipucu').replaceChildren();
     yeni.querySelectorAll('input').forEach((inp) => {
       inp.value = '';
       inp.name = inp.name.replace(/_\d+$/, '_' + i);

@@ -5,7 +5,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db import transaction
 
 from .fields import KurusFormField, kurus_bicimle, ondalik_ayristir, tl_ayristir
-from . import metin
+from . import malzeme_servisi, metin
 from .models import Belge, BelgeKalem, Cari, KasaHareketi, KasaKategori
 
 
@@ -188,7 +188,10 @@ class BelgeForm(forms.ModelForm):
         """Belge + fiş kalemleri TEK işlemde kaydedilir (biri başarısızsa hiçbiri kalmaz)."""
         with transaction.atomic():
             belge = super().save(commit=True)
+            self.olusan_kalemler = []
             for sira, (aciklama, miktar, birim, fiyat, tutar) in enumerate(self.kalemler_temiz, start=1):
-                BelgeKalem.objects.create(belge=belge, sira=sira, aciklama=aciklama, miktar=miktar, birim=birim,
-                                          birim_fiyat=fiyat, tutar_kurus=tutar)
+                malzeme, _ = malzeme_servisi.malzeme_bul_veya_olustur(aciklama, birim)     # katalog kendiliğinden büyür
+                self.olusan_kalemler.append(BelgeKalem.objects.create(
+                    belge=belge, malzeme=malzeme, sira=sira, aciklama=aciklama, miktar=miktar, birim=birim,
+                    birim_fiyat=fiyat, tutar_kurus=tutar))
         return belge

@@ -136,3 +136,36 @@ def miktar(deger):
     tam, _, kesir = f"{d:f}".partition(".")
     tam = f"{int(tam):,}".replace(",", ".")
     return f"{tam},{kesir}" if kesir else tam
+
+
+@register.filter
+def birim_tl(deger):
+    """Birim fiyat (KURUŞ, Decimal) -> '1.234,50 ₺'; kuruşun altı varsa 4 haneye kadar ('1,005 ₺')."""
+    if deger in (None, ""):
+        return "—"
+    from decimal import Decimal
+    lira = Decimal(deger) / 100
+    metin = f"{lira:,.4f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    tam, _, kesir = metin.partition(",")
+    kesir = kesir.rstrip("0").ljust(2, "0")
+    return f"{tam},{kesir} ₺"
+
+
+@register.simple_tag
+def fiyat_degisim(d):
+    """Malzeme fiyat değişimi etiketi: artış KÖTÜ (kırmızı), azalış iyi (yeşil). Renge ek olarak ok + yüzde + gizli metin vardır."""
+    if not d:
+        return ""
+    yuzde = f"{d['yuzde']}".replace(".", ",")
+    if d["yon"] == "yatay":
+        return format_html('<span class="degisim">{}<span class="sr-only">fiyat değişmedi</span></span>', "—")
+    kotu = d["yon"] == "yukari"
+    ad = "zam" if kotu else "indirim"
+    return format_html('<span class="degisim {}">{}%{}<span class="sr-only"> {}</span></span>',
+                       "kotu" if kotu else "iyi", ikon("ok-yukari" if kotu else "ok-asagi", "kucuk"), yuzde, ad)
+
+
+@register.filter
+def cevir_virgul(deger):
+    """'12.5' -> '12,5' (ondalık ayırıcı virgül)"""
+    return str(deger).replace(".", ",")

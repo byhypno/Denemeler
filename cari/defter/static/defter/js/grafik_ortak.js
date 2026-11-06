@@ -67,5 +67,5 @@ window.CariGrafik = (function () {
   // Web yazı tipi yüklenince yeniden çiz: grafik, yazı tipi gelmeden ölçerse etiketler kesilir.
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (oluşturucular.length) yenidenCiz(); });
 
-  return { renk, saydam, alanDolgu, tl, tam, lira, eksenTL, ipucu, ortak, yatay, ciz };
+  return { renk, saydam, alanDolgu, ipucuStilKullan: ipucuStil, tl, tam, lira, eksenTL, ipucu, ortak, yatay, ciz };
 })();

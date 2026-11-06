@@ -160,8 +160,46 @@ class Belge(KdvliTutar):
         self.clean_kdv()
 
 
+class MalzemeKategori(models.Model):
+    """Alınan malzemelerin kategorisi (Kaynak malzemeleri, El aletleri...). Silinmez; pasif yapılır."""
+
+    ad = models.CharField(max_length=80, unique=True)
+    sira = models.PositiveSmallIntegerField("Sıra", default=100, help_text="Küçük olan üstte görünür.")
+    aktif = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Malzeme kategorisi"
+        verbose_name_plural = "Malzeme kategorileri"
+        ordering = ["sira", "ad"]
+
+    def __str__(self):
+        return self.ad
+
+
+class Malzeme(models.Model):
+    """Satın alınan malzeme (katalog kaydı). Fiş kalemleri bu kayda bağlanır; alış fiyatı geçmişi kalemlerden hesaplanır
+    (ayrı fiyat tablosu yok, bu yüzden fiyat hafızası kalemlerle her zaman tutarlıdır)."""
+
+    ad = models.CharField(max_length=200, unique=True)
+    kategori = models.ForeignKey(MalzemeKategori, null=True, blank=True, on_delete=models.SET_NULL, related_name="malzemeler")
+    birim = models.CharField(max_length=20, blank=True, help_text="Fiyatın hangi birim için olduğu (adet, kg, metre...).")
+    aktif = models.BooleanField(default=True, help_text="Birleştirilen / artık alınmayan malzemeler pasif yapılır.")
+    birlestirildi = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="birlesenler",
+                                      verbose_name="Birleştirildiği malzeme", editable=False)
+    olusturma = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Malzeme"
+        verbose_name_plural = "Malzemeler"
+        ordering = ["ad"]
+
+    def __str__(self):
+        return self.ad
+
+
 class BelgeKalem(models.Model):
     belge = models.ForeignKey(Belge, on_delete=models.CASCADE, related_name="kalemler")
+    malzeme = models.ForeignKey(Malzeme, null=True, blank=True, on_delete=models.PROTECT, related_name="kalemler")
     sira = models.PositiveIntegerField("Sıra", default=1)
     stok_kodu = models.CharField(max_length=60, blank=True)
     aciklama = models.CharField("Açıklama", max_length=250)
@@ -175,6 +213,13 @@ class BelgeKalem(models.Model):
         verbose_name = "Kalem"
         verbose_name_plural = "Kalemler"
         ordering = ["belge", "sira"]
+
+    def save(self, *args, **kwargs):
+        if not self.malzeme_id and self.aciklama.strip():
+            # her yoldan (arayüz, yönetim paneli, içe aktarma) gelen kalem kataloğa bağlanır; fiyat hafızası eksik kalmasın
+            from .malzeme_servisi import malzeme_bul_veya_olustur
+            self.malzeme, _ = malzeme_bul_veya_olustur(self.aciklama, self.birim)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.belge_id}/{self.sira} {self.aciklama}"

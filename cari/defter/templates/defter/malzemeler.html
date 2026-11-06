@@ -1,0 +1,90 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}Malzemeler · Cari Program{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik">
+  <div><h1>Malzemeler</h1>
+    <p class="not">Alınan malzemeler, kategorileri ve alış fiyatları. Fiyat hafızası fiş kalemlerinden gelir: her malzemenin <b>son alış fiyatı</b> ve önceki alışa göre değişimi görünür.</p></div>
+</div>
+
+<section class="kpi dort" aria-label="Malzeme özeti">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kutu" %}</span><span class="etiket">Malzeme</span></div>
+    <div class="deger">{{ toplam }}</div><div class="alt">Katalogdaki aktif malzeme</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">Kategorisiz</span></div>
+    <div class="deger">{{ kategorisiz }}</div><div class="alt">{% if kategorisiz %}<a href="?kategori=yok">Kategorisizleri göster</a>{% else %}Hepsi kategorili{% endif %}</div></div>
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-yukari" %}</span><span class="etiket">Son {{ zam_gun }} günde zam</span></div>
+    <div class="deger">{{ zam_sayisi }}</div><div class="alt">{% if zam_sayisi %}<a href="?zam=1&sira=zam">Zamlı malzemeleri göster</a>{% else %}Zam görülmedi{% endif %}</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">Toplam alış</span></div>
+    <div class="deger">{{ toplam_tutar|kurus_tl }}</div><div class="alt">Kalemli fişlerden</div></div>
+</section>
+
+{% if son_zamlar %}
+<section class="kart">
+  <h2>Son zamlar <span class="not">(son {{ zam_gun }} gün; önceki alışa göre)</span></h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Malzeme</th><th class="sayi">Önceki fiyat</th><th class="sayi">Yeni fiyat</th><th class="sayi">Değişim</th><th>Tedarikçi</th><th>Tarih</th></tr></thead>
+    <tbody>{% for r in son_zamlar %}
+      <tr><td><a href="{% url 'malzeme_detay' r.m.pk %}">{{ r.m.ad }}</a></td><td class="sayi">{{ r.o.onceki.fiyat|birim_tl }}</td><td class="sayi"><b>{{ r.o.son.fiyat|birim_tl }}</b></td>
+        <td class="sayi">{% fiyat_degisim r.o.degisim %}</td><td>{{ r.o.son.cari.unvan }}</td><td>{{ r.o.son.tarih|date:"d.m.Y" }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+
+<form class="filtre" method="get" role="search">
+  <label class="ara-kutu">Ara <input type="search" name="q" value="{{ q }}" placeholder="malzeme veya kategori adı…" autocomplete="off"></label>
+  <label>Kategori
+    <select name="kategori"><option value="">Tümü</option><option value="yok" {% if kategori == "yok" %}selected{% endif %}>Kategorisiz</option>
+      {% for k in kategoriler %}<option value="{{ k.pk }}" {% if kategori == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.ad }}</option>{% endfor %}</select></label>
+  <label>Sıralama <select name="sira">{% for k, ad in siralar.items %}<option value="{{ k }}" {% if k == sira %}selected{% endif %}>{{ ad }}</option>{% endfor %}</select></label>
+  <label class="onay"><input type="checkbox" name="zam" value="1" {% if sadece_zam %}checked{% endif %}> Yalnız zamlılar</label>
+  <label class="onay"><input type="checkbox" name="pasif" value="1" {% if pasifler %}checked{% endif %}> Pasifler de</label>
+  <button type="submit">Süz</button>
+  {% if q or kategori or sadece_zam or pasifler or sira != "ad" %}<a class="dugme ikincil" href="{% url 'malzemeler' %}">Temizle</a>{% endif %}
+</form>
+
+<form method="post" class="kart">{% csrf_token %}
+  <h2>{{ satirlar|length }} malzeme</h2>
+  {% if satirlar %}
+  {% if yazabilir %}<div class="filtre yazdirma-gizle toplu-ata">
+    <label>Seçilenleri şu kategoriye ata <select name="kategori_toplu"><option value="">— kategorisiz —</option>
+      {% for k in kategoriler %}<option value="{{ k.pk }}">{{ k.ad }}</option>{% endfor %}</select></label>
+    <button type="submit" name="eylem" value="toplu_ata" class="ikincil dugme">Seçilenlere ata</button>
+    <label class="onay"><input type="checkbox" id="tumunu-sec"> Listedekilerin hepsini seç</label></div>{% endif %}
+  <div class="tablo-kaydir"><table class="malzeme-tablo">
+    <thead><tr>{% if yazabilir %}<th><span class="sr-only">Seç</span></th>{% endif %}<th>Malzeme</th><th>Kategori</th><th class="sayi">Son alış fiyatı</th><th class="sayi">Önceki</th><th class="sayi">Değişim</th><th>Son alış</th><th class="sayi">Alış sayısı</th></tr></thead>
+    <tbody>{% for r in satirlar %}
+      <tr{% if not r.m.aktif %} class="pasif"{% endif %}>
+        {% if yazabilir %}<td><input type="checkbox" name="sec" value="{{ r.m.pk }}" aria-label="{{ r.m.ad }} seç"></td>{% endif %}
+        <td><input type="hidden" name="idler" value="{{ r.m.pk }}"><a href="{% url 'malzeme_detay' r.m.pk %}">{{ r.m.ad }}</a>{% if not r.m.aktif %} <span class="chip">Pasif</span>{% endif %}</td>
+        <td>{% if yazabilir %}<select name="kategori_{{ r.m.pk }}" aria-label="{{ r.m.ad }} kategorisi"><option value="">— kategorisiz —</option>
+            {% for k in kategoriler %}<option value="{{ k.pk }}" {% if r.m.kategori_id == k.pk %}selected{% endif %}>{{ k.ad }}</option>{% endfor %}</select>
+          {% else %}{{ r.m.kategori|default:"—" }}{% endif %}</td>
+        {% if r.o %}
+        <td class="sayi"><b>{{ r.o.son.fiyat|birim_tl }}</b>{% if r.m.birim %}<span class="not"> / {{ r.m.birim }}</span>{% endif %}</td>
+        <td class="sayi">{% if r.o.onceki %}{{ r.o.onceki.fiyat|birim_tl }}{% else %}—{% endif %}</td>
+        <td class="sayi">{% fiyat_degisim r.o.degisim %}</td>
+        <td>{{ r.o.son.tarih|date:"d.m.Y" }}<br><span class="not">{{ r.o.son.cari.unvan }}</span></td>
+        <td class="sayi">{{ r.o.adet }}</td>
+        {% else %}<td class="sayi not" colspan="5">Henüz alış kaydı yok</td>{% endif %}
+      </tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if yazabilir %}<p class="form-dugmeler"><button type="submit" name="eylem" value="kategori_kaydet">Kategorileri kaydet</button></p>
+    <p class="not">Her satırdaki kategoriyi seçip <b>Kategorileri kaydet</b>'e basın. Süzgeç (ör. Kategorisiz) açıkken kaydederseniz yalnızca görünen satırlar işlenir.</p>{% endif %}
+  {% else %}<p class="not">Eşleşen malzeme yok.</p>{% endif %}
+</form>
+
+{% if yazabilir %}
+<section class="kart yazdirma-gizle">
+  <h2>Yeni kategori</h2>
+  <form method="post" class="filtre">{% csrf_token %}<input type="hidden" name="eylem" value="kategori_ekle">
+    <label class="ara-kutu">Kategori adı <input type="text" name="ad" maxlength="80" required placeholder="ör. Kesici uçlar"></label>
+    <button type="submit">{% ikon "arti" "kucuk" %}Ekle</button>
+    {% if request.user.is_staff %}<a class="dugme ikincil" href="{% url 'admin:defter_malzemekategori_changelist' %}">Kategorileri düzenle</a>{% endif %}
+  </form>
+  <p class="not">Malzemeler fiş girerken kalem açıklamasından <b>kendiliğinden</b> katalogya eklenir (aynı ad büyük/küçük harf ve aksan farkına bakılmadan aynı malzemedir).
+    Aynı malzeme iki farklı adla girildiyse malzemenin sayfasında <b>Birleştir</b> ile tek kayda indirin.</p>
+</section>
+{% endif %}
+<script src="{% static 'defter/js/malzemeler.js' %}"></script>
+{% endblock %}

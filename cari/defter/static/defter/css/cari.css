@@ -378,6 +378,10 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .kalem-tablo td { padding: 4px var(--b-2); }
 .kalem-tablo td input { width: 100%; min-height: 36px; }
 .kalem-tablo td.sayi input { text-align: right; font-variant-numeric: tabular-nums; }
+.kalem-ipucu { display: block; font-size: var(--t-xs); color: var(--metin-2); min-height: 0; margin-top: 2px; }
+.kalem-ipucu .degisim { margin-left: 4px; }
+.malzeme-tablo select { min-height: 34px; padding: 4px 8px; max-width: 230px; }
+.malzeme-tablo tr.pasif td { opacity: .7; }
 .kalem-tablo tr.hatali td input { border-color: var(--negatif); }
 .kalem-tablo tfoot th { background: transparent; border: 0; border-top: 1px solid var(--cizgi-guclu); border-radius: 0; }
 .kalemler, .satir-iptal { display: inline-block; vertical-align: top; margin: 4px var(--b-3) 0 0; font-size: var(--t-xs); }
