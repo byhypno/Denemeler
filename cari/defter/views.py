@@ -2,8 +2,10 @@ from datetime import date
 
 from django import forms
 from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
+from . import odeme_listesi as ol
 from . import services
 from .models import Belge, Cari, EkstreMutabakat
 
@@ -96,4 +98,55 @@ def cari_ekstre(request, pk):
         "bas": bas, "bit": bit, "hata": hata, "sayfa": "ekstre",
         "toplam_artis": sum(b.tutar_kurus for b, _ in satirlar if b.etki > 0),
         "toplam_azalis": sum(b.tutar_kurus for b, _ in satirlar if b.etki < 0),
+    })
+
+
+class _ListeFiltre(forms.Form):
+    liste = forms.ChoiceField(choices=[("odenecek", "Ödenecekler"), ("yapilan", "Yapılan ödemeler")],
+                              required=False)
+    bas = forms.DateField(required=False)
+    bit = forms.DateField(required=False)
+    cari = forms.ModelChoiceField(Cari.objects.all(), required=False)
+    sekil = forms.ChoiceField(choices=[("", "Tümü"), *Belge.OdemeSekli.choices], required=False)
+    indir = forms.ChoiceField(choices=[("", ""), ("xlsx", "xlsx")], required=False)
+
+
+@giris_gerekli
+def odeme_listesi(request):
+    bugun = date.today()
+    f = _ListeFiltre(request.GET)
+    hata = ""
+    if f.is_valid():
+        v = f.cleaned_data
+    else:
+        v = {}
+        hata = "Filtre değerleri geçersiz; varsayılanlar gösteriliyor."
+    liste = v.get("liste") or "odenecek"
+    cari = v.get("cari")
+    bas = v.get("bas") or bugun.replace(day=1)
+    bit = v.get("bit") or bugun
+    if bas > bit:
+        bas, bit = bit, bas
+        hata = hata or "Başlangıç, bitişten sonraydı; tarihler yer değiştirdi."
+    sekil = v.get("sekil") or ""
+
+    if liste == "yapilan":
+        veri = ol.yapilan_odemeler(bas, bit, cari, sekil)
+        xlsx, ad = ol.yapilan_odemeler_xlsx, f"yapilan_odemeler_{bas:%Y%m%d}_{bit:%Y%m%d}.xlsx"
+    else:
+        veri = ol.odenecekler(bugun, cari)
+        xlsx, ad = ol.odenecekler_xlsx, f"odenecekler_{bugun:%Y%m%d}.xlsx"
+
+    if v.get("indir") == "xlsx":
+        yanit = HttpResponse(xlsx(veri), content_type=
+                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        yanit["Content-Disposition"] = f'attachment; filename="{ad}"'
+        return yanit
+
+    sorgu = request.GET.copy()
+    sorgu.pop("indir", None)
+    return render(request, "defter/odeme_listesi.html", {
+        "liste": liste, "veri": veri, "cari": cari, "cariler": Cari.objects.all(), "sekil": sekil,
+        "sekiller": Belge.OdemeSekli.choices, "bas": bas, "bit": bit, "hata": hata, "bugun": bugun,
+        "kova_etiketleri": ol.KOVA_ETIKETLERI, "excel_sorgu": sorgu.urlencode(), "sayfa": "odemeler",
     })

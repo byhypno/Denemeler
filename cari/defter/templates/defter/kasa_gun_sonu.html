@@ -3,6 +3,7 @@
 {% block icerik %}
 {% if not hesap %}<div class="kart bos">Aktif kasa hesabı yok.</div>{% else %}
 <h1>Gün sonu kapanışı · {{ hesap.ad }}</h1>
+{% url 'kasa_gun_sonu' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
 <p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">← Kasa</a></p>
 
 <section class="ozet">

@@ -71,7 +71,7 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
 
 @admin.register(Hesap)
 class HesapAdmin(SilmeKapali, admin.ModelAdmin):
-    list_display = ("ad", "tur", "bakiye", "aktif")
+    list_display = ("ad", "tur", "cari_bagli", "bakiye", "aktif")
 
     @admin.display(description="Güncel bakiye (₺)")
     def bakiye(self, obj):
@@ -103,14 +103,15 @@ def kasa_iptal_et(modeladmin, request, queryset):
 
 @admin.register(KasaHareketi)
 class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
-    list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "aciklama", "iptal")
+    list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "cari", "aciklama", "iptal")
     list_filter = ("hesap", "yon", "kategori", "iptal")
-    search_fields = ("aciklama", "makbuz_no")
+    search_fields = ("aciklama", "makbuz_no", "cari__unvan")
     date_hierarchy = "tarih"
     actions = [kasa_iptal_et]
     readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl")
     fieldsets = (
-        (None, {"fields": ("hesap", "tarih", "yon", "kategori", "makbuz_no", "aciklama")}),
+        (None, {"fields": ("hesap", "tarih", "yon", "kategori", "cari", "ilgili_odeme", "makbuz_no",
+                           "aciklama")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),
         ("İptal", {"fields": ("iptal", "iptal_nedeni")}),

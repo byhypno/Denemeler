@@ -89,7 +89,15 @@ tr.vurgu td { background: var(--uyari-bg); }
 details.ek > summary { cursor: pointer; color: var(--brand); margin: 8px 0; }
 .satir-form { display: inline-flex; gap: 4px; align-items: center; }
 .satir-form input { padding: 3px 6px; min-height: 28px; width: 130px; font-size: 13px; }
+.sekmeler { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.sekmeler a { padding: 8px 14px; text-decoration: none; border-bottom: 3px solid transparent; color: var(--muted); }
+.sekmeler a.aktif { color: var(--ink); border-bottom-color: var(--brand); font-weight: 600; }
+.sadece-yazdir, .yazdirma-sutun { display: none; }
+.imza { justify-content: space-between; margin-top: 40px; }
 @media print {
+  .sadece-yazdir { display: block; } .imza { display: flex; }
+  th.yazdirma-sutun, td.yazdirma-sutun { display: table-cell; min-width: 120px; height: 34px; border: 1px solid #999; }
+  table { font-size: 12px; } th, td { border-bottom: 1px solid #bbb; }
   .ust, .filtre, .yazdirma-gizle { display: none !important; }
   body { background: #fff; color: #000; } .kart { border: 0; padding: 0; }
 }

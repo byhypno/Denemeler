@@ -53,6 +53,48 @@ def _kova(yas_gun: int) -> int:
     return 0 if yas_gun <= 30 else 1 if yas_gun <= 60 else 2 if yas_gun <= 90 else 3
 
 
+def _cari_fifo(belgeler):
+    """Tek carinin (tarih, id) sıralı belgeleri -> (açık kuyruk [[belge, kalan]], avans_kurus)."""
+    kuyruk, avans = deque(), 0
+    for b in belgeler:
+        if b.etki > 0:
+            tutar = b.tutar_kurus
+            kapanan = min(avans, tutar)
+            avans -= kapanan
+            if tutar - kapanan > 0:
+                kuyruk.append([b, tutar - kapanan])
+        else:
+            kalan = b.tutar_kurus
+            while kalan and kuyruk:
+                al = min(kalan, kuyruk[0][1])
+                kuyruk[0][1] -= al
+                kalan -= al
+                if kuyruk[0][1] == 0:
+                    kuyruk.popleft()
+            avans += kalan
+    return kuyruk, avans
+
+
+def _belge_gruplari(cari=None):
+    qs = Belge.objects.filter(iptal=False).select_related("cari").order_by("cari_id", "tarih", "id")
+    if cari:
+        qs = qs.filter(cari=cari)
+    grup = defaultdict(list)
+    for b in qs:
+        grup[b.cari_id].append(b)
+    return grup
+
+
+def _kalem_sozlugu(b, kalan, bugun):
+    yas = max((bugun - b.tarih).days, 0)
+    vade, gecikmis = None, False
+    if b.cari.vade_gun is not None:
+        vade = b.tarih + timedelta(days=b.cari.vade_gun)
+        gecikmis = vade < bugun
+    return {"cari": b.cari, "belge": b, "kalan_kurus": kalan, "yas_gun": yas,
+            "kova": _kova(yas), "vade_tarihi": vade, "gecikmis": gecikmis}
+
+
 def acik_kalemler(bugun=None, cari=None):
     """
     Açık (ödenmemiş) kalemler — FIFO varsayımıyla.
@@ -62,42 +104,43 @@ def acik_kalemler(bugun=None, cari=None):
     Dönüş: (kalemler, avans_kurus)  kalem = dict(cari, belge, kalan_kurus, yas_gun, kova, vade_tarihi, gecikmis)
     """
     bugun = bugun or date.today()
-    qs = Belge.objects.filter(iptal=False).select_related("cari").order_by("cari_id", "tarih", "id")
-    if cari:
-        qs = qs.filter(cari=cari)
     kalemler, avans_toplam = [], 0
-    grup = defaultdict(list)
-    for b in qs:
-        grup[b.cari_id].append(b)
-    for belgeler in grup.values():
-        kuyruk, avans = deque(), 0
-        for b in belgeler:
-            if b.etki > 0:
-                tutar = b.tutar_kurus
-                kapanan = min(avans, tutar)
-                avans -= kapanan
-                if tutar - kapanan > 0:
-                    kuyruk.append([b, tutar - kapanan])
-            else:
-                kalan = b.tutar_kurus
-                while kalan and kuyruk:
-                    al = min(kalan, kuyruk[0][1])
-                    kuyruk[0][1] -= al
-                    kalan -= al
-                    if kuyruk[0][1] == 0:
-                        kuyruk.popleft()
-                avans += kalan
+    for belgeler in _belge_gruplari(cari).values():
+        kuyruk, avans = _cari_fifo(belgeler)
         avans_toplam += avans
-        for b, kalan in kuyruk:
-            yas = max((bugun - b.tarih).days, 0)
-            vade = None
-            gecikmis = False
-            if b.cari.vade_gun is not None:
-                vade = b.tarih + timedelta(days=b.cari.vade_gun)
-                gecikmis = vade < bugun
-            kalemler.append({"cari": b.cari, "belge": b, "kalan_kurus": kalan, "yas_gun": yas,
-                             "kova": _kova(yas), "vade_tarihi": vade, "gecikmis": gecikmis})
+        kalemler.extend(_kalem_sozlugu(b, kalan, bugun) for b, kalan in kuyruk)
     return kalemler, avans_toplam
+
+
+def cari_bazli_acik_borc(bugun=None, cari=None):
+    """
+    Her cari için açık borç özeti (ödeme listesi için):
+    [{cari, toplam_kurus, kovalar[4], en_eski_tarih, en_eski_yas, kalem_sayisi, vade_tanimli, vadesi_gecmis_kurus}]
+    ve ayrıca fazla ödeme (avans) olan cariler [(cari, avans_kurus)].
+    """
+    bugun = bugun or date.today()
+    satirlar, avanslar = [], []
+    for belgeler in _belge_gruplari(cari).values():
+        kuyruk, avans = _cari_fifo(belgeler)
+        c = belgeler[0].cari
+        if avans:
+            avanslar.append((c, avans))
+        if not kuyruk:
+            continue
+        kalemler = [_kalem_sozlugu(b, kalan, bugun) for b, kalan in kuyruk]
+        kovalar = [0, 0, 0, 0]
+        for k in kalemler:
+            kovalar[k["kova"]] += k["kalan_kurus"]
+        en_eski = min(k["belge"].tarih for k in kalemler)
+        vadeli = [k for k in kalemler if k["vade_tarihi"] is not None]
+        satirlar.append({
+            "cari": c, "toplam_kurus": sum(kovalar), "kovalar": kovalar, "en_eski_tarih": en_eski,
+            "en_eski_yas": max((bugun - en_eski).days, 0), "kalem_sayisi": len(kalemler),
+            "vade_tanimli": bool(vadeli),
+            "vadesi_gecmis_kurus": sum(k["kalan_kurus"] for k in vadeli if k["gecikmis"]),
+        })
+    satirlar.sort(key=lambda r: -r["toplam_kurus"])
+    return satirlar, sorted(avanslar, key=lambda x: -x[1])
 
 
 def yaslandirma(bugun=None, cari=None) -> dict:
