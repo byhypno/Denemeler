@@ -231,10 +231,12 @@ def aylik_ozet(yil: int, cari=None, bugun=None) -> dict:
             "onceki_bakiye": onceki}
 
 
-def cari_bakiyeleri():
-    """[(cari, bakiye_kurus)] — tüm cariler, bakiyeye göre çoktan aza."""
-    toplamlar = dict(Belge.objects.filter(iptal=False).values("cari").annotate(t=_etkili_toplam())
-                     .values_list("cari", "t"))
+def cari_bakiyeleri(tarih_kadar=None):
+    """[(cari, bakiye_kurus)] — tüm cariler, bakiyeye göre çoktan aza. `tarih_kadar`: o gün dahil bakiye."""
+    qs = Belge.objects.filter(iptal=False)
+    if tarih_kadar:
+        qs = qs.filter(tarih__lte=tarih_kadar)
+    toplamlar = dict(qs.values("cari").annotate(t=_etkili_toplam()).values_list("cari", "t"))
     sonuc = [(c, toplamlar.get(c.pk, 0) or 0) for c in Cari.objects.all()]
     return sorted(sonuc, key=lambda x: -x[1])
 

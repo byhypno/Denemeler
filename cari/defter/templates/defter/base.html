@@ -29,6 +29,7 @@
         <li><a href="{% url 'dashboard' %}" {% if sayfa == 'dashboard' %}aria-current="page"{% endif %}>{% ikon "genel" %}Genel bakış</a></li>
         <li><a href="{% url 'tedarikciler' %}" {% if sayfa == 'tedarikciler' %}aria-current="page"{% endif %}>{% ikon "tedarikci" %}Tedarikçiler</a></li>
         <li><a href="{% url 'giderler' %}" {% if sayfa == 'giderler' %}aria-current="page"{% endif %}>{% ikon "gider" %}Genel giderler</a></li>
+        <li><a href="{% url 'aylik_rapor' %}" {% if sayfa == 'rapor' %}aria-current="page"{% endif %}>{% ikon "rapor" %}Aylık rapor</a></li>
         <li><a href="{% url 'odeme_takvimi' %}" {% if sayfa == 'takvim' %}aria-current="page"{% endif %}>{% ikon "takvim" %}Ödeme takvimi</a></li>
         <li><a href="{% url 'odeme_listesi' %}" {% if sayfa == 'odemeler' %}aria-current="page"{% endif %}>{% ikon "odeme" %}Ödeme listesi</a></li>
         {% endif %}

@@ -346,3 +346,27 @@ def belge_iptal(request, pk):
         b.save()
         messages.success(request, f"İptal edildi: {b.get_tur_display()} {b.tarih:%d.%m.%Y}.")
     return redirect("cari_ekstre", pk=b.cari_id)
+
+
+@yetki_gerekli("goruntule")
+def aylik_rapor(request):
+    """Ay sonu özeti: tedarikçiler, net genel gider, Ofis Kasa. Yazdır (PDF) ve Excel. Varsayılan: önceki tam ay."""
+    from . import rapor_servisi as rs
+    bugun = date.today()
+    yil, ay = (bugun.year - 1, 12) if bugun.month == 1 else (bugun.year, bugun.month - 1)
+    try:
+        y, a = int(request.GET.get("yil", yil)), int(request.GET.get("ay", ay))
+        if 2000 <= y <= 2100 and 1 <= a <= 12:
+            yil, ay = y, a
+    except ValueError:
+        pass
+    r = rs.aylik_rapor(yil, ay, kasa_dahil=var_mi(request.user, "kasa_goruntule"))
+    if request.GET.get("indir") == "xlsx":
+        yanit = HttpResponse(rs.rapor_xlsx(r), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        yanit["Content-Disposition"] = f'attachment; filename="aylik_ozet_{yil}_{ay:02d}.xlsx"'
+        return yanit
+    yillar = sorted({d.year for d in Belge.objects.filter(iptal=False).dates("tarih", "year")} | {bugun.year, yil})
+    return render(request, "defter/aylik_rapor.html", {
+        "r": r, "yil": yil, "ay": ay, "yillar": yillar, "aylar": list(enumerate(trend.AY_ADLARI, start=1)),
+        "sayfa": "rapor", "bugun": bugun,
+    })

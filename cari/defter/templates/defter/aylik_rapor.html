@@ -1,0 +1,81 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Aylık rapor {{ r.ay_adi }} {{ r.yil }} · Cari Program{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik">
+  <div><h1>Aylık rapor: {{ r.ay_adi }} {{ r.yil }}</h1>
+    <p class="not">{{ r.bas|date:"d.m.Y" }} – {{ r.son|date:"d.m.Y" }} dönemi, ay sonu ({{ r.son|date:"d.m.Y" }}) itibarıyla. Hazırlanma: {{ bugun|date:"d.m.Y" }}.
+      Veriler programdaki kayıtlardan hesaplanır; iptal edilen kayıtlar dahil değildir.</p></div>
+  <form method="get" class="filtre yazdirma-gizle">
+    <label>Ay <select name="ay" onchange="this.form.submit()">{% for no, ad in aylar %}<option value="{{ no }}" {% if no == ay %}selected{% endif %}>{{ ad }}</option>{% endfor %}</select></label>
+    <label>Yıl <select name="yil" onchange="this.form.submit()">{% for y in yillar %}<option value="{{ y }}" {% if y == yil %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></label>
+    <a class="dugme ikincil" href="?yil={{ yil }}&ay={{ ay }}&indir=xlsx">{% ikon "indir" "kucuk" %}Excel</a>
+    <button type="button" class="ikincil dugme" onclick="window.print()">{% ikon "yazdir" "kucuk" %}Yazdır / PDF</button>
+  </form>
+</div>
+
+<section class="kpi dort" aria-label="Ayın özeti">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gider" %}</span><span class="etiket">Net genel gider</span></div>
+    <div class="deger">{{ r.gider.secili|kurus_tl }}</div>
+    <div class="kpi-alt">{% if r.gider.degisim %}{% degisim_etiketi r.gider.degisim "yuksek_kotu" %}<span class="alt">önceki aya göre</span>{% else %}<span class="alt">KDV hariç</span>{% endif %}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">Tedarikçi alışları</span></div>
+    <div class="deger">{{ r.ted_toplam.alis|kurus_tl }}</div>
+    <div class="kpi-alt">{% if r.ted_degisim.alis %}{% degisim_etiketi r.ted_degisim.alis "notr" %}<span class="alt">önceki aya göre</span>{% else %}<span class="alt">Ay içinde</span>{% endif %}</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gonder" %}</span><span class="etiket">Tedarikçilere ödenen</span></div>
+    <div class="deger">{{ r.ted_toplam.odeme|kurus_tl }}</div>
+    <div class="kpi-alt">{% if r.ted_degisim.odeme %}{% degisim_etiketi r.ted_degisim.odeme "notr" %}<span class="alt">önceki aya göre</span>{% else %}<span class="alt">Ay içinde</span>{% endif %}</div></div>
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "cuzdan" %}</span><span class="etiket">Ay sonu tedarikçi borcu</span></div>
+    <div class="deger">{{ r.ay_sonu_borc|kurus_tl }}</div>
+    <div class="alt">{% if r.ay_sonu_avans %}Ayrıca fazla ödeme (avans): {{ r.ay_sonu_avans|kurus_tl }}{% else %}Borçlu olduğumuz tüm tedarikçiler{% endif %}</div></div>
+</section>
+
+<section class="kart">
+  <h2>Tedarikçi hareketleri</h2>
+  {% if r.tedarikciler %}
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tedarikçi</th><th class="sayi">Ay başı bakiye</th><th class="sayi">Alışlar</th><th class="sayi">İadeler</th><th class="sayi">Ödemeler</th><th class="sayi">Devir/düzeltme</th><th class="sayi">Ay sonu bakiye</th></tr></thead>
+    <tbody>{% for s in r.tedarikciler %}
+      <tr><td><a href="{% url 'cari_ekstre' s.cari.pk %}"><span class="kisi">{% avatar s.cari.unvan %}{{ s.cari.unvan }}</span></a></td>
+        <td class="sayi">{{ s.acilis|kurus_say }}</td><td class="sayi">{{ s.alis|kurus_say }}</td><td class="sayi">{{ s.iade|kurus_say }}</td>
+        <td class="sayi">{{ s.odeme|kurus_say }}</td><td class="sayi">{{ s.diger|kurus_say }}</td><td class="sayi"><b>{{ s.kapanis|kurus_say }}</b></td></tr>
+    {% endfor %}</tbody>
+    <tfoot><tr><th>Toplam</th><td class="sayi">{{ r.ted_toplam.acilis|kurus_say }}</td><td class="sayi">{{ r.ted_toplam.alis|kurus_say }}</td><td class="sayi">{{ r.ted_toplam.iade|kurus_say }}</td>
+      <td class="sayi">{{ r.ted_toplam.odeme|kurus_say }}</td><td class="sayi">{{ r.ted_toplam.diger|kurus_say }}</td><td class="sayi">{{ r.ted_toplam.kapanis|kurus_say }}</td></tr></tfoot>
+  </table></div>
+  <p class="not">Ay sonu bakiye = ay başı bakiye + alışlar + devir/düzeltme − iadeler − ödemeler. Pozitif bakiye tedarikçiye borçlu olduğumuzu gösterir.</p>
+  {% else %}<p class="not">Bu ay için tedarikçi hareketi yok.</p>{% endif %}
+</section>
+
+<section class="kart">
+  <h2>Net genel gider (KDV hariç)</h2>
+  {% if r.gider_kalemleri %}
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Kategori</th><th class="sayi">Net tutar</th><th class="sayi">Paya göre</th></tr></thead>
+    <tbody>{% for k, v in r.gider_kalemleri %}
+      <tr><th scope="row" class="satir-bas">{{ k.ad }}</th><td class="sayi">{{ v|kurus_tl }}</td><td class="sayi">{% widthratio v r.gider.secili 100 %}%</td></tr>
+    {% endfor %}</tbody>
+    <tfoot><tr><th>Net genel gider</th><td class="sayi">{{ r.gider.secili|kurus_tl }}</td><td></td></tr></tfoot>
+  </table></div>
+  <p class="not">Yıl başından {{ r.ay_adi }} sonuna: <b>{{ r.gider.ytd|kurus_tl }}</b> · aylık ortalama: <b>{{ r.gider.ortalama|kurus_tl }}</b>.
+    {% if not r.gider.secili %}Bu ay için gider girilmemiş olabilir: <a href="{% url 'giderler' %}?yil={{ r.yil }}&ay={{ r.ay }}">Genel giderler</a>.{% endif %}</p>
+  {% else %}<p class="not">Bu ay için genel gider girilmemiş. <a href="{% url 'giderler' %}?yil={{ r.yil }}&ay={{ r.ay }}">Genel giderler</a> sayfasından girin.</p>{% endif %}
+</section>
+
+{% if r.kasa %}{% for k in r.kasa %}
+<section class="kart">
+  <h2>{{ k.hesap.ad }} (küçük harcamalar)</h2>
+  <div class="kpi dort">
+    <div class="kart"><span class="etiket">Ay girişi</span><div class="deger orta">{{ k.giris|kurus_tl }}</div></div>
+    <div class="kart"><span class="etiket">Ay çıkışı</span><div class="deger orta">{{ k.cikis|kurus_tl }}</div></div>
+    <div class="kart"><span class="etiket">Ay sonu bakiye</span><div class="deger orta">{{ k.kapanis|kurus_tl }}</div></div>
+  </div>
+  {% if k.kategoriler %}
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Çıkış kategorisi</th><th class="sayi">Tutar</th></tr></thead>
+    <tbody>{% for ad, v in k.kategoriler %}<tr><td>{{ ad }}</td><td class="sayi">{{ v|kurus_tl }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th>Toplam çıkış</th><td class="sayi">{{ k.cikis|kurus_tl }}</td></tr></tfoot>
+  </table></div>
+  {% else %}<p class="not">Bu ay çıkış yok.</p>{% endif %}
+</section>
+{% endfor %}{% endif %}
+<p class="not">Not: Genel giderler, tedarikçi alışları ve kasa birbirinden bağımsız kayıtlardır; aynı faturayı birden fazla yerde girdiyseniz toplamlar çift sayılır.</p>
+{% endblock %}

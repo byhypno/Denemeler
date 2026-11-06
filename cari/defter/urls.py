@@ -17,6 +17,7 @@ urlpatterns = [
     path("cari/<int:pk>/ekstre/", views.cari_ekstre, name="cari_ekstre"),
     path("giderler/", gider_views.giderler, name="giderler"),
     path("giderler/kategori/", gider_views.gider_kategori_ekle, name="gider_kategori_ekle"),
+    path("rapor/", views.aylik_rapor, name="aylik_rapor"),
     path("takvim/", views.odeme_takvimi, name="odeme_takvimi"),
     path("odemeler/", views.odeme_listesi, name="odeme_listesi"),
     path("yedek/", views.yedek_sayfasi, name="yedek_sayfasi"),
