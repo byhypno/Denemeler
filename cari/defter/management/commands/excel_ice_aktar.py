@@ -23,7 +23,8 @@ class Command(BaseCommand):
             for h in ozet["hatalar"]:
                 self.stderr.write("  - " + h)
             raise CommandError("İçe aktarma geri alındı.")
-        self.stdout.write(f"Cari: {ozet['cari']}  Belge: {ozet['belge']}  Kalem: {ozet['kalem']}")
+        self.stdout.write(f"Cari: {ozet['cari']}  Belge: {ozet['belge']}  Kalem: {ozet['kalem']}  "
+                          f"Mutabakat satırı: {ozet['mutabakat_satiri']}")
         for u in ozet["uyarilar"]:
             self.stdout.write(self.style.WARNING("  ! " + u))
 

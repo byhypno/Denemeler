@@ -1,0 +1,20 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Ekstre Mutabakatı · Cari Program{% endblock %}
+{% block icerik %}
+<h1>Ekstre Mutabakatı</h1>
+<p class="not">Tedarikçinin gönderdiği ekstre ile kayıtlarımızın karşılaştırması. Yeni mutabakat için
+<a href="{% url 'admin:defter_ekstremutabakat_add' %}">Yönetim panelinden ekleyin</a>.</p>
+<div class="kart"><div class="tablo-kaydir"><table>
+  <thead><tr><th>Cari</th><th>Ekstre tarihi</th><th class="sayi">Bizim bakiye</th><th class="sayi">Ekstre bakiyesi</th>
+    <th class="sayi">Fark</th><th class="sayi">Açıklanamayan</th><th>Durum</th></tr></thead>
+  <tbody>{% for oz in ozetler %}
+    <tr><td><a href="{% url 'mutabakat_detay' oz.mutabakat.pk %}">{{ oz.mutabakat.cari }}</a></td>
+      <td>{{ oz.mutabakat.ekstre_tarihi|date:"d.m.Y" }}</td>
+      <td class="sayi">{{ oz.bizim_bakiye_kurus|kurus_tl }}</td><td class="sayi">{{ oz.ekstre_bakiye_kurus|kurus_tl }}</td>
+      <td class="sayi">{{ oz.fark_kurus|kurus_tl }}</td><td class="sayi">{{ oz.aciklanamayan_kurus|kurus_tl }}</td>
+      <td>{% if oz.fark_kurus == 0 and not oz.farkli_satirlar %}<span class="chip tamam">✓ Uyumlu</span>
+          {% elif oz.aciklanamayan_kurus %}<span class="chip hata">✕ Açıklanamayan fark</span>
+          {% else %}<span class="chip uyari">⚠ Fark var, nedeni biliniyor</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="7" class="not">Henüz mutabakat kaydı yok.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

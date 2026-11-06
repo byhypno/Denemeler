@@ -271,3 +271,81 @@ class KasaHareketi(KdvliTutar):
             mevcut = self.hesap.bakiye_kurus(haric_hareket_id=self.pk)
             if mevcut - self.efektif_tutar_kurus() < 0:
                 raise ValidationError("Bu çıkış kasa bakiyesini eksiye düşürür.")
+
+
+class EkstreMutabakat(models.Model):
+    """Tedarikçinin gönderdiği ekstre ile bizim kayıtlarımızın karşılaştırması."""
+
+    cari = models.ForeignKey(Cari, on_delete=models.PROTECT, related_name="mutabakatlar")
+    ekstre_tarihi = models.DateField("Ekstre tarihi")
+    ekstre_bakiye_kurus = KurusField("Ekstredeki bakiye (₺)",
+                                     help_text="Tedarikçi ekstresine göre bizim borcumuz.")
+    aciklama = models.CharField("Açıklama", max_length=250, blank=True)
+    olusturma = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Ekstre mutabakatı"
+        verbose_name_plural = "Ekstre mutabakatları"
+        ordering = ["-ekstre_tarihi", "cari"]
+        constraints = [
+            models.UniqueConstraint(fields=["cari", "ekstre_tarihi"], name="mutabakat_tekil"),
+        ]
+
+    def __str__(self):
+        return f"{self.cari} · ekstre {self.ekstre_tarihi:%d.%m.%Y}"
+
+
+class EkstreSatiri(models.Model):
+    class Durum(models.TextChoices):
+        UYUMLU = "UYUMLU", "Uyumlu"
+        FARKLI = "FARKLI", "Tutar farkı"
+        EKSTREDE_YOK = "EKSTREDE_YOK", "Ekstrede yok"
+        BIZDE_YOK = "BIZDE_YOK", "Bizde yok"
+
+    mutabakat = models.ForeignKey(EkstreMutabakat, on_delete=models.CASCADE, related_name="satirlar")
+    sira = models.PositiveIntegerField("Sıra", default=1)
+    belge = models.ForeignKey(Belge, null=True, blank=True, on_delete=models.SET_NULL,
+                              related_name="ekstre_satirlari", verbose_name="Bizim kayıt")
+    tarih = models.DateField(null=True, blank=True)
+    tur_metni = models.CharField("Tür", max_length=30, blank=True)
+    ekstre_evrak_no = models.CharField("Ekstre evrak no", max_length=40, blank=True)
+    ekstre_tutar_kurus = KurusField("Ekstre tutarı (₺)", null=True, blank=True)
+    aciklama = models.CharField("Açıklama / neden", max_length=300, blank=True)
+
+    class Meta:
+        verbose_name = "Ekstre satırı"
+        verbose_name_plural = "Ekstre satırları"
+        ordering = ["mutabakat", "sira"]
+
+    @property
+    def bizim_tutar_kurus(self):
+        return self.belge.tutar_kurus if self.belge_id and not self.belge.iptal else None
+
+    @property
+    def fark_kurus(self) -> int:
+        """Bizim tutar − ekstre tutarı. Pozitif: bizde daha yüksek."""
+        return (self.bizim_tutar_kurus or 0) - (self.ekstre_tutar_kurus or 0)
+
+    @property
+    def etki(self) -> int:
+        return self.belge.etki if self.belge_id else 1
+
+    @property
+    def bakiye_farki_kurus(self) -> int:
+        """Bu satırın, bakiye farkına (bizim − ekstre) katkısı."""
+        return self.etki * self.fark_kurus
+
+    @property
+    def durum(self) -> str:
+        bizim, ekstre = self.bizim_tutar_kurus, self.ekstre_tutar_kurus
+        if bizim is None and ekstre is None:
+            return self.Durum.UYUMLU
+        if ekstre is None:
+            return self.Durum.EKSTREDE_YOK
+        if bizim is None:
+            return self.Durum.BIZDE_YOK
+        return self.Durum.UYUMLU if bizim == ekstre else self.Durum.FARKLI
+
+    @property
+    def durum_etiketi(self) -> str:
+        return self.Durum(self.durum).label

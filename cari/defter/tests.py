@@ -13,7 +13,10 @@ from django.urls import reverse
 from .excel_aktar import excel_beklenen_bakiyeler, ice_aktar, kurus
 from .fields import kurus_bicimle, tl_ayristir
 from .kdv import KdvModu, kdv_hesapla
-from .models import Belge, BelgeKalem, Cari, Hesap, KasaHareketi
+from datetime import timedelta
+
+from .models import Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri, Hesap, KasaHareketi
+from . import services
 from .services import bakiye_kurus, ekstre
 
 
@@ -196,7 +199,7 @@ class KasaTests(TestCase):
         self.assertEqual(Belge.objects.count(), 1)       # kasa girişi cari belge üretmedi
 
 
-def _ornek_excel(yol, ikinci_odeme_fazla=False):
+def _ornek_excel(yol, ikinci_odeme_fazla=False, mutabakat=False):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Tedarikçiler"
@@ -225,6 +228,18 @@ def _ornek_excel(yol, ikinci_odeme_fazla=False):
     k.append(["001", date(2026, 1, 2), "TEST HIRDAVAT", "A-1", "Vida", 10, "ADET", 150.045, 1500.45])
     k.append(["001", date(2026, 1, 2), "TEST HIRDAVAT", "A-2", "Somun", 5, "ADET", 300, 1500])
     k.append(["002", date(2026, 1, 3), "TEST HIRDAVAT", "A-3", "Iade vida", 1, "ADET", 500, 500])
+    if mutabakat:
+        e = wb.create_sheet("Ekstre Mutabakatı")
+        e.append(["Ekstre Mutabakatı — TEST HIRDAVAT"])
+        e.append(["Tedarikçinin 05.02.2026 tarihli cari ekstresi ile bizim kayıtlarımızın karşılaştırması."])
+        e.append([])
+        e.append(["Fiş No", "Tarih", "Tür", "Bizim Kayıt", "Ekstre Evrak No", "Ekstre Tutarı", "Fark", "Durum / Açıklama"])
+        e.append(["001", date(2026, 1, 2), "Alış", 3000.45, "0000002", 3000.0, 0.45, "FARK — 0,45 düşük"])
+        e.append(["002", date(2026, 1, 3), "İade", 500, "0000009", 500, 0, "✓ Uyumlu"])
+        e.append([])
+        e.append(["Özet"])
+        e.append(["Kalem", None, None, "Bizim Kayıt", None, "Ekstre", "Fark"])
+        e.append(["Bakiye (borcumuz)", None, None, 11850.55, None, 11850.10, 0.45])
     wb.save(yol)
 
 
@@ -316,6 +331,262 @@ class AdminDuzeniTests(TestCase):
         r = self.client.post(reverse("admin:defter_belge_delete", args=[b.pk]), {"post": "yes"})
         self.assertEqual(r.status_code, 403)
         self.assertTrue(Belge.objects.filter(pk=b.pk).exists())
+
+
+class ExcelMutabakatAktarTests(TestCase):
+    def test_mutabakat_sayfasi_aktarilir(self):
+        with tempfile.TemporaryDirectory() as d:
+            yol = os.path.join(d, "m.xlsx")
+            _ornek_excel(yol, mutabakat=True)
+            ozet = ice_aktar(yol)
+        self.assertEqual(ozet["hatalar"], [])
+        self.assertEqual(ozet["mutabakat_satiri"], 2)
+        m = EkstreMutabakat.objects.get()
+        self.assertEqual(m.ekstre_tarihi, date(2026, 2, 5))
+        self.assertEqual(m.ekstre_bakiye_kurus, 1185010)
+        oz = services.mutabakat_ozeti(m)
+        self.assertEqual(oz["bizim_bakiye_kurus"], 1185055)
+        self.assertEqual(oz["fark_kurus"], 45)
+        self.assertEqual(oz["aciklanan_kurus"], 45)
+        self.assertEqual(oz["aciklanamayan_kurus"], 0)
+        self.assertEqual(len(oz["farkli_satirlar"]), 1)
+
+    def test_mutabakat_sayfasi_yoksa_sorun_degil(self):
+        with tempfile.TemporaryDirectory() as d:
+            yol = os.path.join(d, "m.xlsx")
+            _ornek_excel(yol)
+            ozet = ice_aktar(yol)
+        self.assertEqual(ozet["mutabakat_satiri"], 0)
+        self.assertFalse(EkstreMutabakat.objects.exists())
+
+
+class MutabakatHesapTests(TestCase):
+    def setUp(self):
+        self.cari = Cari.objects.create(unvan="M")
+        self.alis = Belge.objects.create(cari=self.cari, tur="ALIS_FISI", tarih=date(2026, 1, 5),
+                                         tutar_kurus=100000, evrak_no="1")
+        self.iade = Belge.objects.create(cari=self.cari, tur="IADE", tarih=date(2026, 1, 6),
+                                         tutar_kurus=30000, evrak_no="2")
+
+    def mut(self, ekstre_bakiye):
+        return EkstreMutabakat.objects.create(cari=self.cari, ekstre_tarihi=date(2026, 1, 31),
+                                              ekstre_bakiye_kurus=ekstre_bakiye)
+
+    def test_aciklanamayan_fark(self):
+        m = self.mut(ekstre_bakiye=65000)   # bizim 70.000; ekstre 65.000 -> fark 5.000
+        EkstreSatiri.objects.create(mutabakat=m, belge=self.alis, ekstre_tutar_kurus=97000)  # 3.000 açıklıyor
+        oz = services.mutabakat_ozeti(m)
+        self.assertEqual(oz["fark_kurus"], 5000)
+        self.assertEqual(oz["aciklanan_kurus"], 3000)
+        self.assertEqual(oz["aciklanamayan_kurus"], 2000)
+
+    def test_iade_farki_bakiyeye_ters_yansir(self):
+        m = self.mut(ekstre_bakiye=70000 + 1000)  # ekstrede iade 1.000 eksik -> ekstre bakiyesi 1.000 fazla
+        EkstreSatiri.objects.create(mutabakat=m, belge=self.iade, ekstre_tutar_kurus=29000)
+        oz = services.mutabakat_ozeti(m)
+        self.assertEqual(oz["fark_kurus"], -1000)
+        self.assertEqual(oz["aciklanan_kurus"], -1000)
+        self.assertEqual(oz["aciklanamayan_kurus"], 0)
+
+    def test_satir_durumlari(self):
+        m = self.mut(0)
+        D = EkstreSatiri.Durum
+        self.assertEqual(EkstreSatiri(mutabakat=m, belge=self.alis, ekstre_tutar_kurus=100000).durum, D.UYUMLU)
+        self.assertEqual(EkstreSatiri(mutabakat=m, belge=self.alis, ekstre_tutar_kurus=1).durum, D.FARKLI)
+        self.assertEqual(EkstreSatiri(mutabakat=m, belge=self.alis).durum, D.EKSTREDE_YOK)
+        self.assertEqual(EkstreSatiri(mutabakat=m, ekstre_tutar_kurus=500).durum, D.BIZDE_YOK)
+
+    def test_ayni_cari_ayni_tarih_ikinci_mutabakat_olmaz(self):
+        self.mut(0)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.mut(1)
+
+
+class YaslandirmaTests(TestCase):
+    def setUp(self):
+        self.cari = Cari.objects.create(unvan="Y")
+
+    def belge(self, tur, tutar, tarih, no=""):
+        return Belge.objects.create(cari=self.cari, tur=tur, tutar_kurus=tutar, tarih=tarih, evrak_no=no)
+
+    def test_fifo_odeme_en_eski_borca_mahsup_edilir(self):
+        self.belge("ALIS_FISI", 10000, date(2026, 1, 1), "A")
+        self.belge("ALIS_FISI", 20000, date(2026, 1, 10), "B")
+        self.belge("ODEME", 15000, date(2026, 1, 20))
+        kalemler, avans = services.acik_kalemler(date(2026, 1, 31))
+        self.assertEqual(avans, 0)
+        self.assertEqual([(k["belge"].evrak_no, k["kalan_kurus"]) for k in kalemler], [("B", 15000)])
+        self.assertEqual(sum(k["kalan_kurus"] for k in kalemler), bakiye_kurus(self.cari))
+
+    def test_avans_sonraki_alistan_dusulur(self):
+        self.belge("ODEME", 50000, date(2026, 1, 1))
+        self.belge("ALIS_FISI", 20000, date(2026, 1, 5), "A")
+        self.belge("ALIS_FISI", 40000, date(2026, 1, 6), "B")
+        kalemler, avans = services.acik_kalemler(date(2026, 1, 31))
+        self.assertEqual(avans, 0)
+        self.assertEqual([(k["belge"].evrak_no, k["kalan_kurus"]) for k in kalemler], [("B", 10000)])
+        self.assertEqual(sum(k["kalan_kurus"] for k in kalemler), bakiye_kurus(self.cari))
+
+    def test_fazla_odeme_avans_olarak_kalir(self):
+        self.belge("ALIS_FISI", 10000, date(2026, 1, 1), "A")
+        self.belge("ODEME", 25000, date(2026, 1, 2))
+        kalemler, avans = services.acik_kalemler(date(2026, 1, 31))
+        self.assertEqual((kalemler, avans), ([], 15000))
+
+    def test_iptal_sayilmaz(self):
+        b = self.belge("ALIS_FISI", 10000, date(2026, 1, 1), "A")
+        b.iptal, b.iptal_nedeni = True, "x"
+        b.save()
+        self.assertEqual(services.acik_kalemler(date(2026, 1, 31)), ([], 0))
+
+    def test_kova_sinirlari(self):
+        t = date(2026, 1, 1)
+        self.belge("ALIS_FISI", 100, t, "A")
+        beklenen = {30: 0, 31: 1, 60: 1, 61: 2, 90: 2, 91: 3}
+        for gun, kova in beklenen.items():
+            kalemler, _ = services.acik_kalemler(t + timedelta(days=gun))
+            self.assertEqual(kalemler[0]["kova"], kova, f"{gun} gün")
+
+    def test_yaslandirma_toplami_bakiyeye_esit(self):
+        self.belge("ALIS_FISI", 10000, date(2026, 1, 1), "A")
+        self.belge("ALIS_FISI", 20000, date(2026, 2, 1), "B")
+        self.belge("ODEME", 5000, date(2026, 2, 2))
+        y = services.yaslandirma(date(2026, 3, 1))
+        self.assertEqual(y["toplam_acik_kurus"], bakiye_kurus(self.cari))
+        self.assertFalse(y["vade_tanimli"])
+
+    def test_vade_gecmis_yalniz_vadesi_tanimli_cariler_icin(self):
+        self.belge("ALIS_FISI", 10000, date(2026, 1, 1), "A")
+        y = services.yaslandirma(date(2026, 3, 1))
+        self.assertEqual(y["vadesi_gecmis_kurus"], 0)
+        self.cari.vade_gun = 30
+        self.cari.save()
+        y = services.yaslandirma(date(2026, 3, 1))
+        self.assertTrue(y["vade_tanimli"])
+        self.assertEqual(y["vadesi_gecmis_kurus"], 10000)
+        y = services.yaslandirma(date(2026, 1, 20))   # vade 31 Ocak, henüz gelmedi
+        self.assertEqual(y["vadesi_gecmis_kurus"], 0)
+
+
+class AylikOzetVeKontrolTests(TestCase):
+    def setUp(self):
+        self.cari = Cari.objects.create(unvan="A")
+
+    def belge(self, tur, tutar, tarih, no="", **kw):
+        return Belge.objects.create(cari=self.cari, tur=tur, tutar_kurus=tutar, tarih=tarih, evrak_no=no, **kw)
+
+    def test_aylik_ozet_ve_ay_sonu_bakiye(self):
+        self.belge("ACILIS", 100000, date(2025, 12, 31))
+        self.belge("ALIS_FISI", 50000, date(2026, 1, 10), "1")
+        self.belge("ODEME", 30000, date(2026, 2, 3))
+        self.belge("IADE", 5000, date(2026, 2, 4), "2")
+        a = services.aylik_ozet(2026, bugun=date(2026, 2, 15))
+        self.assertEqual((a["alis"][0], a["odeme"][1], a["iade"][1]), (50000, 30000, 5000))
+        self.assertEqual(a["onceki_bakiye"], 100000)
+        self.assertEqual(a["ay_sonu"][0], 150000)
+        self.assertEqual(a["ay_sonu"][1], 115000)
+        self.assertIsNone(a["ay_sonu"][2])        # gelecek ay boş bırakılır
+
+    def test_aylik_ozet_gecmis_yilda_12_ay_dolu(self):
+        self.belge("ALIS_FISI", 100, date(2025, 3, 1), "1")
+        a = services.aylik_ozet(2025, bugun=date(2026, 6, 1))
+        self.assertTrue(all(x is not None for x in a["ay_sonu"]))
+
+    def test_kontrol_eksi_bakiye_ayi(self):
+        self.belge("ALIS_FISI", 10000, date(2026, 1, 5), "1")
+        self.belge("ODEME", 25000, date(2026, 2, 5))
+        k = services.kontrol_listesi(date(2026, 3, 10))
+        self.assertEqual([(e["ay"], e["bakiye_kurus"]) for e in k["eksi_bakiye"]], [(2, -15000), (3, -15000)])
+
+    def test_kontrol_tekrar_eden_harici_evrak_no(self):
+        self.belge("ALIS_FISI", 100, date(2026, 1, 1), "1", harici_evrak_no="X1")
+        self.belge("ALIS_FISI", 100, date(2026, 1, 2), "2", harici_evrak_no="X1")
+        self.belge("ALIS_FISI", 100, date(2026, 1, 3), "3", harici_evrak_no="Y")
+        k = services.kontrol_listesi(date(2026, 1, 31))
+        self.assertEqual(len(k["tekrar_evrak_no"]), 1)
+        self.assertEqual(len(k["tekrar_evrak_no"][0]), 2)
+
+    def test_temiz_veride_kontrol_adedi_sifir(self):
+        self.belge("ALIS_FISI", 100, date(2026, 1, 1), "1")
+        self.assertEqual(services.kontrol_listesi(date(2026, 1, 31))["adet"], 0)
+
+    def test_cari_bakiyeleri_siralama(self):
+        b = Cari.objects.create(unvan="B")
+        Belge.objects.create(cari=b, tur="ALIS_FISI", tutar_kurus=900, tarih=date(2026, 1, 1))
+        self.belge("ALIS_FISI", 100, date(2026, 1, 1), "1")
+        self.assertEqual([(c.unvan, t) for c, t in services.cari_bakiyeleri()], [("B", 900), ("A", 100)])
+
+    def test_en_cok_alinan_kalemler_iadeyi_saymaz(self):
+        alis = self.belge("ALIS_FISI", 300, date(2026, 1, 1), "1")
+        iade = self.belge("IADE", 100, date(2026, 1, 2), "2")
+        BelgeKalem.objects.create(belge=alis, aciklama="Vida", tutar_kurus=300)
+        BelgeKalem.objects.create(belge=iade, aciklama="Vida", tutar_kurus=100)
+        self.assertEqual(services.en_cok_alinan_kalemler(2026), [("Vida", 300)])
+
+
+class EkranTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("p", password="x", is_staff=True)
+        self.cari = Cari.objects.create(unvan="EKRAN TEDARİKÇİ")
+
+    def giris(self):
+        self.client.force_login(self.user)
+
+    def test_giris_gerekli(self):
+        for ad, args in (("dashboard", []), ("mutabakat_liste", []), ("cari_ekstre", [self.cari.pk])):
+            r = self.client.get(reverse(ad, args=args))
+            self.assertEqual(r.status_code, 302, ad)
+            self.assertIn("/admin/login/", r["Location"])
+
+    def test_staff_olmayan_kullanici_giremez(self):
+        sade = get_user_model().objects.create_user("s", password="x", is_staff=False)
+        self.client.force_login(sade)
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 302)
+
+    def test_bos_veritabaninda_bos_durum(self):
+        self.giris()
+        r = self.client.get(reverse("dashboard"))
+        self.assertContains(r, "Henüz kayıt yok")
+
+    def test_dashboard_degerleri(self):
+        self.giris()
+        Belge.objects.create(cari=self.cari, tur="ALIS_FISI", tarih=date(2026, 1, 5),
+                             tutar_kurus=123450, evrak_no="1")
+        r = self.client.get(reverse("dashboard"), {"yil": "2026"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "1.234,50 ₺")
+        self.assertContains(r, "chart.umd.js")
+        r = self.client.get(reverse("dashboard"), {"yil": "abc", "cari": str(self.cari.pk)})
+        self.assertEqual(r.status_code, 200)     # geçersiz yıl çökmez
+        r = self.client.get(reverse("dashboard"), {"cari": "999999"})
+        self.assertEqual(r.status_code, 200)     # olmayan cari çökmez
+
+    def test_dashboard_mutabakat_farkini_gosterir(self):
+        self.giris()
+        b = Belge.objects.create(cari=self.cari, tur="ALIS_FISI", tarih=date(2026, 1, 5),
+                                 tutar_kurus=100000, evrak_no="1")
+        m = EkstreMutabakat.objects.create(cari=self.cari, ekstre_tarihi=date(2026, 1, 31),
+                                           ekstre_bakiye_kurus=90000)
+        EkstreSatiri.objects.create(mutabakat=m, belge=b, ekstre_tutar_kurus=90000, aciklama="eksik fatura")
+        r = self.client.get(reverse("dashboard"))
+        self.assertContains(r, "100,00 ₺")
+        r = self.client.get(reverse("mutabakat_detay", args=[m.pk]))
+        self.assertContains(r, "eksik fatura")
+        self.assertContains(r, "Tüm fark açıklandı")
+        self.assertEqual(self.client.get(reverse("mutabakat_liste")).status_code, 200)
+
+    def test_ekstre_donem_basi_ve_iptal(self):
+        self.giris()
+        Belge.objects.create(cari=self.cari, tur="ALIS_FISI", tarih=date(2026, 1, 5), tutar_kurus=100000, evrak_no="1")
+        Belge.objects.create(cari=self.cari, tur="ODEME", tarih=date(2026, 2, 5), tutar_kurus=40000)
+        Belge.objects.create(cari=self.cari, tur="ALIS_FISI", tarih=date(2026, 2, 6), tutar_kurus=999999,
+                             evrak_no="IPTAL", iptal=True, iptal_nedeni="x")
+        r = self.client.get(reverse("cari_ekstre", args=[self.cari.pk]), {"bas": "01.02.2026"})
+        self.assertContains(r, "1.000,00 ₺")      # dönem başı
+        self.assertContains(r, "600,00 ₺")        # kapanış
+        self.assertNotContains(r, "IPTAL")
+        r = self.client.get(reverse("cari_ekstre", args=[self.cari.pk]), {"bas": "abc"})
+        self.assertContains(r, "gg.aa.yyyy")
 
 
 @unittest.skipUnless(os.environ.get("CARI_EXCEL_YOL"),

@@ -3,6 +3,7 @@
 Tutarlar önbellekteki (Excel'in hesapladığı) değerlerden okunur ve kuruşa çevrilir.
 Hiçbir şey sessizce atlanmaz: sorunlar `uyarilar` / `hatalar` listesinde döner.
 """
+import re
 import unicodedata
 from datetime import date, datetime
 from decimal import Decimal
@@ -10,7 +11,7 @@ from decimal import Decimal
 import openpyxl
 from django.db import transaction
 
-from .models import Belge, BelgeKalem, Cari
+from .models import Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri
 
 TUR_HARITASI = {
     "açılış / devir": Belge.Tur.ACILIS,
@@ -90,6 +91,7 @@ def ice_aktar(yol, sifirla: bool = False) -> dict:
     if Belge.objects.exists():
         if not sifirla:
             raise RuntimeError("Veritabanında zaten belge var. Üzerine yazmak için --sifirla kullanın.")
+        EkstreMutabakat.objects.all().delete()
         BelgeKalem.objects.all().delete()
         Belge.objects.all().delete()
         Cari.objects.all().delete()
@@ -181,11 +183,70 @@ def ice_aktar(yol, sifirla: bool = False) -> dict:
     for evrak, tutar, toplam in kalem_farki:
         uyarilar.append(f"Fiş {evrak}: belge tutarı ile kalem toplamı farklı ({tutar} ≠ {toplam} kuruş)")
 
+    # --- Ekstre mutabakatı (sayfa yoksa atlanır) ---
+    mutabakat_satir = _mutabakat_aktar(wb, cariler, belgeler, uyarilar, hatalar)
+
     ozet = {
         "cari": len(cariler), "belge": Belge.objects.count(), "kalem": kalem_sayisi,
+        "mutabakat_satiri": mutabakat_satir,
         "uyarilar": uyarilar, "hatalar": hatalar,
     }
     if hatalar:
         # Hata varsa HİÇBİR şey kaydedilmez (sayımlar rollback'ten önce alındı).
         transaction.set_rollback(True)
     return ozet
+
+
+def _mutabakat_aktar(wb, cariler, belgeler, uyarilar, hatalar) -> int:
+    try:
+        ws = _sayfa(wb, "Ekstre Mutabakatı")
+    except ValueError:
+        return 0
+    satirlar = list(ws.iter_rows(values_only=True))
+    baslik = _norm(satirlar[0][0] or "") if satirlar else ""
+    ad = _norm(baslik.split("—", 1)[1]) if "—" in baslik else ""
+    cari = cariler.get(ad)
+    if cari is None:
+        uyarilar.append(f"Ekstre Mutabakatı: '{ad}' carisi bulunamadı, sayfa atlandı.")
+        return 0
+    tarih = None
+    for s in satirlar[:4]:
+        for hucre in s:
+            m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", str(hucre or ""))
+            if m:
+                tarih = date(int(m[3]), int(m[2]), int(m[1]))
+                break
+        if tarih:
+            break
+    ekstre_bakiye = None
+    for s in satirlar:
+        if s[0] and _anahtar(s[0]).startswith("bakiye") and s[5] is not None:
+            ekstre_bakiye = kurus(s[5])
+    if tarih is None or ekstre_bakiye is None:
+        hatalar.append("Ekstre Mutabakatı: ekstre tarihi veya ekstre bakiyesi bulunamadı.")
+        return 0
+    m = EkstreMutabakat.objects.create(cari=cari, ekstre_tarihi=tarih, ekstre_bakiye_kurus=ekstre_bakiye)
+    baslik_i = _baslik_satiri(ws, "Fiş No")
+    sayi = 0
+    for no, s in enumerate(ws.iter_rows(min_row=baslik_i + 1, values_only=True), start=baslik_i + 1):
+        if s[0] in (None, ""):
+            continue
+        if _anahtar(s[0]) == "özet":
+            break
+        fis = _metin(s[0])
+        belge = belgeler.get((ad, fis))
+        ekstre_tutar = kurus(s[5]) if s[5] is not None else None
+        if belge is None:
+            uyarilar.append(f"Ekstre Mutabakatı satır {no}: '{fis}' numaralı bizim kaydımız yok.")
+        elif s[3] is not None and kurus(s[3]) != belge.tutar_kurus:
+            uyarilar.append(f"Ekstre Mutabakatı satır {no}: 'Bizim kayıt' tutarı belge tutarından farklı.")
+        aciklama = _metin(s[7])
+        if aciklama.startswith("✓"):
+            aciklama = ""
+        sayi += 1
+        satir = EkstreSatiri.objects.create(
+            mutabakat=m, sira=sayi, belge=belge, tarih=_tarih(s[1]), tur_metni=_metin(s[2]),
+            ekstre_evrak_no=_metin(s[4]), ekstre_tutar_kurus=ekstre_tutar, aciklama=aciklama[:300])
+        if s[6] is not None and satir.fark_kurus != kurus(s[6]):
+            uyarilar.append(f"Ekstre Mutabakatı satır {no}: hesaplanan fark Excel'deki farktan farklı.")
+    return sayi

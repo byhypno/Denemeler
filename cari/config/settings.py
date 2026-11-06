@@ -101,7 +101,9 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 WHITENOISE_USE_FINDERS = True  # collectstatic olmadan da admin dosyalarını sunar
+WHITENOISE_AUTOREFRESH = DEBUG  # geliştirirken dosya değişince yeniden okur
 
+LOGIN_URL = "/admin/login/"
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 saat
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 

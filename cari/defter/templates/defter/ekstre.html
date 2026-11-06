@@ -1,0 +1,30 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}{{ cari.unvan }} · Ekstre{% endblock %}
+{% block icerik %}
+<h1>{{ cari.unvan }} · Cari ekstresi</h1>
+<form class="filtre" method="get">
+  <label>Başlangıç <input type="text" name="bas" placeholder="gg.aa.yyyy" value="{{ bas|date:'d.m.Y' }}"></label>
+  <label>Bitiş <input type="text" name="bit" placeholder="gg.aa.yyyy" value="{{ bit|date:'d.m.Y' }}"></label>
+  <button type="submit">Göster</button>
+  <button type="button" class="ikincil dugme" onclick="window.print()">Yazdır</button>
+  <a class="dugme ikincil" href="{% url 'dashboard' %}?cari={{ cari.pk }}">← Genel bakış</a>
+</form>
+{% if hata %}<p><span class="chip hata">{{ hata }}</span></p>{% endif %}
+<div class="kart"><div class="tablo-kaydir"><table>
+  <thead><tr><th>Tarih</th><th>Tür</th><th>Evrak no</th><th>Açıklama</th>
+    <th class="sayi">Borç artışı</th><th class="sayi">Borç azalışı</th><th class="sayi">Bakiye</th></tr></thead>
+  <tbody>
+    {% if bas %}<tr><td colspan="6"><i>Dönem başı bakiye</i></td><td class="sayi">{{ onceki|kurus_tl }}</td></tr>{% endif %}
+    {% for b, bakiye in satirlar %}
+    <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_tur_display }}</td><td>{{ b.evrak_no|default:"—" }}</td>
+      <td>{{ b.aciklama|default:"" }}</td>
+      <td class="sayi">{% if b.etki > 0 %}{{ b.tutar_kurus|kurus_say }}{% endif %}</td>
+      <td class="sayi">{% if b.etki < 0 %}{{ b.tutar_kurus|kurus_say }}{% endif %}</td>
+      <td class="sayi">{{ bakiye|kurus_say }}</td></tr>
+    {% empty %}<tr><td colspan="7" class="not">Bu dönemde hareket yok.</td></tr>{% endfor %}
+  </tbody>
+  <tfoot><tr><th colspan="4">Dönem toplamı</th><th class="sayi">{{ toplam_artis|kurus_say }}</th>
+    <th class="sayi">{{ toplam_azalis|kurus_say }}</th><th class="sayi">{{ kapanis|kurus_tl }}</th></tr></tfoot>
+</table></div></div>
+<p class="not">Pozitif bakiye = tedarikçiye borçluyuz. İptal edilmiş kayıtlar gösterilmez.</p>
+{% endblock %}

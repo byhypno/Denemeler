@@ -1,7 +1,8 @@
 from django.contrib import admin, messages
 
 from .fields import kurus_bicimle
-from .models import Belge, BelgeKalem, Cari, Hesap, KasaHareketi, KasaKategori
+from .models import (Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri, Hesap,
+                     KasaHareketi, KasaKategori)
 
 
 class SilmeKapali:
@@ -112,3 +113,30 @@ class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
     @admin.display(description="Tevkifat (₺)")
     def tevkifat_tl(self, obj):
         return kurus_bicimle(obj.tevkifat_kurus) or "—"
+
+
+class EkstreSatiriInline(admin.TabularInline):
+    model = EkstreSatiri
+    extra = 0
+    autocomplete_fields = ("belge",)
+    fields = ("sira", "belge", "tarih", "tur_metni", "ekstre_evrak_no", "ekstre_tutar_kurus",
+              "fark", "durum", "aciklama")
+    readonly_fields = ("fark", "durum")
+
+    @admin.display(description="Fark (₺)")
+    def fark(self, obj):
+        return kurus_bicimle(obj.fark_kurus) if obj.pk else "—"
+
+    @admin.display(description="Durum")
+    def durum(self, obj):
+        return obj.durum_etiketi if obj.pk else "—"
+
+
+@admin.register(EkstreMutabakat)
+class EkstreMutabakatAdmin(admin.ModelAdmin):
+    list_display = ("cari", "ekstre_tarihi", "ekstre_bakiye")
+    inlines = [EkstreSatiriInline]
+
+    @admin.display(description="Ekstre bakiyesi (₺)")
+    def ekstre_bakiye(self, obj):
+        return kurus_bicimle(obj.ekstre_bakiye_kurus)
