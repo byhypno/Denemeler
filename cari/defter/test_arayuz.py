@@ -50,22 +50,27 @@ KOYU_SISTEM = degiskenler(blok(blok(CSS, "@media (prefers-color-scheme: dark)"),
 
 # (ön plan, arka plan, en az oran, açıklama)
 CIFTLER = [
-    ("--murekkep", "--sayfa", 7, "ana metin / yüzey"), ("--murekkep", "--kagit", 7, "ana metin / zemin"),
-    ("--murekkep", "--sayfa-2", 7, "ana metin / ikincil yüzey"),
-    ("--murekkep-2", "--sayfa", 4.5, "ikincil metin / yüzey"), ("--murekkep-2", "--kagit", 4.5, "ikincil metin / zemin"),
-    ("--murekkep-2", "--sayfa-2", 4.5, "ikincil metin / ikincil yüzey"), ("--murekkep-3", "--sayfa", 4.5, "ipucu metni"),
-    ("--cizgi-girdi", "--sayfa", 3, "form kutusu kenarı"),
-    ("--yesil-uzeri", "--yesil", 4.5, "birincil düğme"), ("--yesil", "--sayfa", 4.5, "bağlantı / yüzey"),
-    ("--yesil", "--kagit", 4.5, "bağlantı / zemin"), ("--yesil-acik-metin", "--yesil-acik", 4.5, "tamam etiketi"),
-    ("--kirmizi", "--kirmizi-zemin", 4.5, "hata etiketi"), ("--kirmizi", "--sayfa", 4.5, "eksi tutar"),
-    ("--amber", "--amber-zemin", 4.5, "uyarı etiketi"), ("--mavi", "--mavi-zemin", 4.5, "bilgi etiketi"),
-    ("--yan-metin", "--yan-bg", 7, "menü metni"), ("--yan-metin-2", "--yan-bg", 4.5, "menü ikincil metin"),
-    ("--yan-aktif-metin", "--yan-aktif-bg", 4.5, "seçili menü"), ("--pirinc", "--yan-bg", 3, "seçili menü işareti"),
-    ("--odak", "--sayfa", 3, "odak halkası / yüzey"), ("--odak", "--kagit", 3, "odak halkası / zemin"),
-    ("--odak-yan", "--yan-bg", 3, "odak halkası / menü"),
-    ("--g-alis", "--sayfa", 3, "grafik alış"), ("--g-odeme", "--sayfa", 3, "grafik ödeme"), ("--g-iade", "--sayfa", 3, "grafik iade"),
-    ("--g-bakiye", "--sayfa", 7, "grafik bakiye çizgisi"),
-]
+    ("--metin", "--zemin", 7, "ana metin / zemin"), ("--metin", "--kart", 7, "ana metin / kart"),
+    ("--metin", "--kart-2", 7, "ana metin / ikincil yüzey"),
+    ("--metin-2", "--zemin", 4.5, "ikincil metin / zemin"), ("--metin-2", "--kart", 4.5, "ikincil metin / kart"),
+    ("--metin-2", "--kart-2", 4.5, "ikincil metin / ikincil yüzey"),
+    ("--metin-3", "--kart", 4.5, "ipucu metni"), ("--metin-3", "--zemin", 4.5, "ipucu metni / zemin"),
+    ("--cizgi-girdi", "--kart", 3, "form kutusu kenarı"),
+    ("--vurgu-uzeri", "--vurgu", 4.5, "birincil düğme"), ("--vurgu-uzeri", "--vurgu-hover", 4.5, "düğme (üzerine gelince)"),
+    ("--vurgu", "--kart", 4.5, "bağlantı / kart"), ("--vurgu", "--zemin", 4.5, "bağlantı / zemin"),
+    ("--vurgu-metin", "--vurgu-zemin", 4.5, "vurgu etiketi"),
+    ("--pozitif", "--pozitif-zemin", 4.5, "tamam etiketi"), ("--pozitif", "--kart", 4.5, "olumlu metin"),
+    ("--negatif", "--negatif-zemin", 4.5, "hata etiketi"), ("--negatif", "--kart", 4.5, "eksi tutar"),
+    ("--uyari", "--uyari-zemin", 4.5, "uyarı etiketi"), ("--bilgi", "--bilgi-zemin", 4.5, "bilgi etiketi"),
+    ("--metin", "--yan-bg", 7, "menü metni"), ("--yan-metin-2", "--yan-bg", 4.5, "menü ikincil metin"),
+    ("--yan-metin-2", "--yan-hover", 4.5, "menü üzerine gelince"),
+    ("--yan-aktif-metin", "--yan-aktif-bg", 4.5, "seçili menü"),
+    ("--odak", "--kart", 3, "odak halkası / kart"), ("--odak", "--zemin", 3, "odak halkası / zemin"),
+    ("--odak", "--yan-bg", 3, "odak halkası / menü"),
+    ("--g-alis", "--kart", 3, "grafik alış"), ("--g-odeme", "--kart", 3, "grafik ödeme"), ("--g-iade", "--kart", 3, "grafik iade"),
+    ("--g-bakiye", "--kart", 7, "grafik bakiye çizgisi"),
+    ("--ipucu-metin", "--ipucu-bg", 7, "grafik ipucu balonu"),
+] + [(f"--av{n}-fg", f"--av{n}-bg", 4.5, f"avatar {n}") for n in range(1, 9)]
 
 
 class KontrastTests(TestCase):
@@ -88,8 +93,8 @@ class KontrastTests(TestCase):
 
     def test_koyu_tema_tum_renkleri_tanimliyor(self):
         """Koyu blokta unutulan token açık temanın rengiyle kalırdı (ör. beyaz yüzeyde açık metin)."""
-        renkli_ortak = {k for k in ACIK if k not in ("--golge-yuzen",)}
-        eksik = sorted(k for k in renkli_ortak if k not in KOYU and k not in ("--pirinc",))
+        renkli_ortak = set(ACIK)
+        eksik = sorted(k for k in renkli_ortak if k not in KOYU and k not in ("--marka-1", "--marka-2"))   # marka degradesi iki temada aynı
         self.assertEqual(eksik, [])
 
     def test_yonetim_paneli_kontrasti(self):
@@ -142,7 +147,7 @@ class TokenTamlikTests(TestCase):
         self.assertGreaterEqual(len(dosyalar), 10)
         for d in dosyalar:
             self.assertTrue((STATIK / "fonts" / d).is_file(), d)
-        for lisans in ("LICENSE-ibm-plex-sans.txt", "LICENSE-barlow-semi-condensed.txt"):
+        for lisans in ("LICENSE-plus-jakarta-sans.txt",):
             self.assertTrue((STATIK / "fonts" / lisans).is_file(), lisans)
         self.assertIn("font-display: swap", (STATIK / "css" / "fontlar.css").read_text(encoding="utf-8"))
 
@@ -151,7 +156,7 @@ class TokenTamlikTests(TestCase):
             from fontTools.ttLib import TTFont
         except ImportError:
             self.skipTest("fontTools yok")
-        for aile in ("ibm-plex-sans-latin%s-400-normal", "barlow-semi-condensed-latin%s-600-normal"):
+        for aile in ("plus-jakarta-sans-latin%s-400-normal", "plus-jakarta-sans-latin%s-700-normal"):
             cmap = set()
             for alt in ("", "-ext"):
                 cmap |= set(TTFont(STATIK / "fonts" / (aile % alt + ".woff2")).getBestCmap())

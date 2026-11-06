@@ -18,11 +18,11 @@
 <div class="kabuk" id="kabuk">
   <div class="ust-serit">
     <button type="button" id="yan-ac" aria-controls="yan" aria-expanded="false" aria-label="Menüyü aç">{% ikon "menu" %}</button>
-    <a class="yan-marka" href="{% url 'dashboard' %}">{% ikon "defter" %}Cari <span>Program</span></a>
+    <a class="yan-marka" href="{% url 'dashboard' %}"><span class="marka-isaret">{% ikon "defter" %}</span>Cari <span>Program</span></a>
   </div>
   <div class="yan-perde" data-yan-kapat></div>
   <aside class="yan" id="yan" aria-label="Ana menü">
-    <a class="yan-marka" href="{% url 'dashboard' %}">{% ikon "defter" %}Cari <span>Program</span></a>
+    <a class="yan-marka" href="{% url 'dashboard' %}"><span class="marka-isaret">{% ikon "defter" %}</span>Cari <span>Program</span></a>
     <nav aria-label="Sayfalar">
       <ul class="yan-menu">
         {% if "goruntule" in yetkiler %}
@@ -49,7 +49,7 @@
       {% endif %}
     </nav>
     <div class="yan-alt">
-      <div class="yan-kisi"><strong>{{ request.user.get_username }}</strong><span>{{ rol_etiketi }}</span></div>
+      <div class="yan-kisi">{% avatar request.user.get_username %}<div><strong>{{ request.user.get_username }}</strong><span>{{ rol_etiketi }}</span></div></div>
       <div class="yan-araclar">
         <a href="{% url 'parola' %}">{% ikon "kullanici" %}Parolamı değiştir</a>
         <button type="button" id="tema-dugme" aria-label="Koyu temaya geç">{% ikon "ay" %}<span class="tema-etiket">Koyu tema</span></button>

@@ -22,16 +22,24 @@
     (<code>python manage.py excel_ice_aktar dosya.xlsx</code>).</p></div>
 {% else %}
 <section class="kpi" aria-label="Özet göstergeler">
-  <div class="kart"><div class="etiket">Güncel borcumuz</div>
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "cuzdan" %}</span><span class="etiket">Güncel borcumuz</span></div>
     <div class="deger">{{ guncel_borc|kurus_tl }}</div>
-    <div class="alt">{% if yas.avans_kurus %}Ayrıca fazla ödeme (avans): {{ yas.avans_kurus|kurus_tl }}{% else %}Tedarikçilere{% endif %}</div></div>
-  <div class="kart"><div class="etiket">{{ yil }} alışları</div><div class="deger">{{ yil_alis|kurus_tl }}</div></div>
-  <div class="kart"><div class="etiket">{{ yil }} ödemeleri</div><div class="deger">{{ yil_odeme|kurus_tl }}</div></div>
-  <div class="kart"><div class="etiket">{{ yil }} iadeleri</div><div class="deger">{{ yil_iade|kurus_tl }}</div></div>
-  <div class="kart"><div class="etiket">Açık mutabakat farkı</div>
+    <div class="kpi-alt"><span class="alt">{% if yas.avans_kurus %}Ayrıca fazla ödeme (avans): {{ yas.avans_kurus|kurus_tl }}{% else %}Tedarikçilere{% endif %}</span>
+      {% sparkline aylik.ay_sonu %}</div>
+    {% if degisimler.ay_sonu %}<div class="kpi-alt">{% degisim_etiketi degisimler.ay_sonu "yuksek_kotu" %}<span class="alt">son tam ay, önceki aya göre</span></div>{% endif %}</div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">{{ yil }} alışları</span></div>
+    <div class="deger">{{ yil_alis|kurus_tl }}</div>
+    <div class="kpi-alt">{% degisim_etiketi degisimler.alis "notr" %}{% sparkline aylik.alis %}</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gonder" %}</span><span class="etiket">{{ yil }} ödemeleri</span></div>
+    <div class="deger">{{ yil_odeme|kurus_tl }}</div>
+    <div class="kpi-alt">{% degisim_etiketi degisimler.odeme "notr" %}{% sparkline aylik.odeme %}</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "geri-al" %}</span><span class="etiket">{{ yil }} iadeleri</span></div>
+    <div class="deger">{{ yil_iade|kurus_tl }}</div>
+    <div class="kpi-alt">{% degisim_etiketi degisimler.iade "notr" %}{% sparkline aylik.iade %}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "terazi" %}</span><span class="etiket">Açık mutabakat farkı</span></div>
     <div class="deger">{{ acik_fark|kurus_tl }}</div>
     <div class="alt">{% if acik_fark %}<span class="chip uyari">Tedarikçiyle netleştirilmeli</span>{% else %}<span class="chip tamam">Fark yok</span>{% endif %}</div></div>
-  <div class="kart"><div class="etiket">Kontrol bekleyen</div>
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">Kontrol bekleyen</span></div>
     <div class="deger">{{ kontrol.adet }}</div>
     <div class="alt">{% if kontrol.adet %}<span class="chip uyari">Aşağıdaki listeye bakın</span>{% else %}<span class="chip tamam">Sorun yok</span>{% endif %}</div></div>
 </section>
@@ -87,7 +95,7 @@
   <div class="tablo-kaydir"><table>
     <thead><tr><th>Tarih</th><th>Cari</th><th>Evrak</th><th>Tür</th><th class="sayi">Açık tutar</th><th class="sayi">Yaş (gün)</th></tr></thead>
     <tbody>{% for k in yas.en_eski %}
-      <tr><td>{{ k.belge.tarih|date:"d.m.Y" }}</td><td>{{ k.cari }}</td><td>{{ k.belge.evrak_no|default:"—" }}</td>
+      <tr><td>{{ k.belge.tarih|date:"d.m.Y" }}</td><td><span class="kisi">{% avatar k.cari.unvan %}{{ k.cari }}</span></td><td>{{ k.belge.evrak_no|default:"—" }}</td>
           <td>{{ k.belge.get_tur_display }}</td><td class="sayi">{{ k.kalan_kurus|kurus_tl }}</td><td class="sayi">{{ k.yas_gun }}</td></tr>
     {% empty %}<tr><td colspan="6" class="not">Açık kalem yok.</td></tr>{% endfor %}</tbody>
   </table></div>

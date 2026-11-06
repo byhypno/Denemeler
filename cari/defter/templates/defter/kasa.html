@@ -15,20 +15,20 @@
 {% if not hesap.cari_bagli %}<p class="not">Bu kasa cari defterinden tamamen bağımsızdır.</p>{% endif %}
 
 <section class="kpi" aria-label="Kasa göstergeleri">
-  <div class="kart"><div class="etiket">Güncel kasa bakiyesi</div><div class="deger">{{ ozet.bakiye_kurus|kurus_tl }}</div>
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kasa" %}</span><span class="etiket">Güncel kasa bakiyesi</span></div><div class="deger">{{ ozet.bakiye_kurus|kurus_tl }}</div>
     <div class="alt">{% if hesap.eksiye_dusebilir %}Eksiye düşebilir{% else %}Eksiye düşemez{% endif %}</div></div>
-  <div class="kart"><div class="etiket">Bugün giriş</div><div class="deger">{{ ozet.bugun_giris|kurus_tl }}</div></div>
-  <div class="kart"><div class="etiket">Bugün çıkış</div><div class="deger">{{ ozet.bugun_cikis|kurus_tl }}</div></div>
-  <div class="kart"><div class="etiket">Bu ay giriş / çıkış</div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-asagi" %}</span><span class="etiket">Bugün giriş</span></div><div class="deger">{{ ozet.bugun_giris|kurus_tl }}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-yukari" %}</span><span class="etiket">Bugün çıkış</span></div><div class="deger">{{ ozet.bugun_cikis|kurus_tl }}</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gonder" %}</span><span class="etiket">Bu ay giriş / çıkış</span></div>
     <div class="deger orta">{{ ozet.ay_giris|kurus_say }} / {{ ozet.ay_cikis|kurus_say }}</div><div class="alt">₺ (giriş / çıkış)</div></div>
-  <div class="kart"><div class="etiket">Son kapanış</div>
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kilit" %}</span><span class="etiket">Son kapanış</span></div>
     <div class="deger orta">{% if ozet.kilit_siniri %}{{ ozet.kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div>
     <div class="alt">{% if ozet.acik_gunler %}<span class="chip uyari">{{ ozet.acik_gunler|length }} gün kapanış bekliyor</span>{% else %}<span class="chip tamam">Bekleyen gün yok</span>{% endif %}</div></div>
   {% if hesap.cari_bagli %}
-  <div class="kart"><div class="etiket">Cari ödemesi kontrolü</div><div class="deger">{{ kontrol_adet }}</div>
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">Cari ödemesi kontrolü</span></div><div class="deger">{{ kontrol_adet }}</div>
     <div class="alt">{% if kontrol_adet %}<span class="chip uyari">Tutarsızlık var</span> <a href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">İncele</a>{% else %}<span class="chip tamam">Sorun yok</span>{% endif %}</div></div>
   {% else %}
-  <div class="kart"><div class="etiket">{{ yil }} toplam çıkış</div><div class="deger">{{ yil_cikis|kurus_tl }}</div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">{{ yil }} toplam çıkış</span></div><div class="deger">{{ yil_cikis|kurus_tl }}</div>
     <div class="alt">Cari defterinden bağımsız</div></div>
   {% endif %}
 </section>

@@ -1,6 +1,9 @@
+import zlib
+
 from django import template
 from django.utils.html import format_html
 
+from .. import trend
 from ..fields import kurus_bicimle
 
 register = template.Library()
@@ -59,3 +62,50 @@ def boyut(bayt):
 def ek_etiketi(sahip):
     from ..ek_views import sahip_etiketi
     return sahip_etiketi(sahip)
+
+
+_TR_BUYUK = str.maketrans({"i": "İ", "ı": "I"})
+
+
+def bas_harfler(ad) -> str:
+    """'Eröz Hırdavat Ltd.' -> 'EH'; tek sözcükte ilk iki harf. Türkçe büyük harf kuralı (i->İ)."""
+    sozcukler = [s for s in str(ad or "").replace(".", " ").split() if s[:1].isalnum()]
+    if not sozcukler:
+        return "?"
+    harf = sozcukler[0][0] + sozcukler[1][0] if len(sozcukler) > 1 else sozcukler[0][:2]
+    return harf.translate(_TR_BUYUK).upper()
+
+
+@register.simple_tag
+def avatar(ad, boyut=""):
+    """Baş harfli yuvarlak simge; renk addan türetilir (aynı ad her zaman aynı renk)."""
+    renk = zlib.crc32(str(ad or "").encode("utf-8")) % 8 + 1
+    return format_html('<span class="avatar av-{} {}" aria-hidden="true">{}</span>', renk, boyut, bas_harfler(ad))
+
+
+@register.simple_tag
+def sparkline(seri):
+    """Aylık seriden satır içi mini grafik (dekoratif; değer kartta yazılı)."""
+    yollar = trend.sparkline_yollari(list(seri))
+    if not yollar:
+        return ""
+    return format_html('<svg class="sparkline" viewBox="0 0 92 32" aria-hidden="true" focusable="false">'
+                       '<path class="alan" d="{}"/><path class="cizgi" d="{}"/></svg>', yollar[1], yollar[0])
+
+
+@register.simple_tag
+def degisim_etiketi(d, ton="notr"):
+    """trend.degisim sonucu -> 'önceki aya göre' etiketi. ton: 'yuksek_iyi' | 'yuksek_kotu' | 'notr'.
+    Renk yalnızca yardımcı sinyaldir; yön oku + yüzde + gizli metin her zaman yazılıdır."""
+    if not d:
+        return ""
+    sinif = ""
+    if d["yon"] != "yatay" and ton != "notr":
+        iyi = (d["yon"] == "yukari") == (ton == "yuksek_iyi")
+        sinif = "iyi" if iyi else "kotu"
+    ok = {"yukari": "ok-yukari", "asagi": "ok-asagi"}.get(d["yon"], "")
+    yuzde = f"%{d['yuzde']}" if d["yuzde"] is not None else ""
+    ad = {"yukari": "artış", "asagi": "azalış", "yatay": "değişim yok"}[d["yon"]]
+    ikon_html = ikon(ok, "kucuk") if ok else ""
+    return format_html('<span class="degisim {}">{}{}<span class="sr-only">{} {}, önceki aya göre</span></span>',
+                       sinif, ikon_html, yuzde or ("—" if not ok else ""), yuzde.replace("%", "yüzde ") if yuzde else "", ad)

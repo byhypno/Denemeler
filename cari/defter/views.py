@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from . import ek_servisi as es
 from . import odeme_listesi as ol
-from . import services
+from . import services, trend
 from .models import Belge, Cari, EkstreMutabakat
 from .yetki import oturum_gerekli, var_mi, yetki_gerekli
 
@@ -60,8 +60,9 @@ def dashboard(request):
         "borclu_etiket": [c.unvan for c, _ in borclular], "borclu_deger": [b for _, b in borclular],
         "kalem_etiket": [a for a, _ in kalemler], "kalem_deger": [t for _, t in kalemler],
     }
+    degisimler = {ad: trend.degisim(aylik[ad], yil, bugun) for ad in ("alis", "odeme", "iade", "ay_sonu")}
     return render(request, "defter/dashboard.html", {
-        "yil": yil, "yillar": yillar, "cari": cari, "cariler": Cari.objects.all(),
+        "yil": yil, "aylik": aylik, "degisimler": degisimler, "yillar": yillar, "cari": cari, "cariler": Cari.objects.all(),
         "guncel_borc": guncel_borc, "yil_alis": sum(aylik["alis"]),
         "yil_odeme": sum(aylik["odeme"]), "yil_iade": sum(aylik["iade"]),
         "acik_fark": acik_fark, "kontrol": kontrol, "yas": yas, "borclular": borclular,
