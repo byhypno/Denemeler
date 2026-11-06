@@ -156,10 +156,10 @@ def baglan():
     """apps.ready() içinden bir kez çağrılır."""
     from django.contrib.auth import get_user_model
 
-    from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, EkstreSatiri, GunSonu, Hesap,
-                         KasaHareketi, KasaKategori)
+    from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, EkstreSatiri, GenelGider, GiderKategori,
+                         GunSonu, Hesap, KasaHareketi, KasaKategori)
     izlenen = [Cari, Belge, BelgeKalem, EkstreMutabakat, EkstreSatiri, Hesap, KasaKategori, KasaHareketi,
-               GunSonu, Ek, get_user_model()]
+               GunSonu, Ek, GiderKategori, GenelGider, get_user_model()]
     for m in izlenen:
         uid = f"gunluk_{m._meta.label_lower}"
         pre_save.connect(_kayit_oncesi, sender=m, dispatch_uid=uid + "_pre")

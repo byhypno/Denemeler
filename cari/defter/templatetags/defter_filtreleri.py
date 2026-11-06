@@ -23,6 +23,12 @@ def kurus_tl(deger):
 
 
 @register.filter
+def kurus_ham(deger):
+    """123450 -> '1.234,50' (düz metin; form alanı değeri için, işaretleme yok)"""
+    return kurus_bicimle(int(deger)) if deger not in (None, "") else ""
+
+
+@register.filter
 def kurus_say(deger):
     """123450 -> '1.234,50' (simgesiz)"""
     if deger in (None, ""):

@@ -5,8 +5,8 @@ from django.core.exceptions import ValidationError
 
 from . import metin
 from .fields import kurus_bicimle
-from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, IslemGunlugu, EkstreSatiri, GunSonu, Hesap,
-                     KasaHareketi, KasaKategori)
+from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, GenelGider, GiderKategori, IslemGunlugu, EkstreSatiri,
+                     GunSonu, Hesap, KasaHareketi, KasaKategori)
 
 
 def gecmis_baglantisi(model_adi):
@@ -290,3 +290,28 @@ class IslemGunlugAdmin(admin.ModelAdmin):
 # Yönetim paneli girişi de hatalı denemede geçici kilit uygular.
 from .giris import AdminGirisFormu  # noqa: E402
 admin.site.login_form = AdminGirisFormu
+
+
+@admin.register(GiderKategori)
+class GiderKategoriAdmin(admin.ModelAdmin):
+    """Genel gider kalemleri. Silinmez; kullanılmayacaksa 'aktif' işareti kaldırılır (geçmiş tutarlar korunur)."""
+    list_display = ("ad", "sira", "aktif")
+    list_editable = ("sira", "aktif")
+    search_fields = ("ad",)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(GenelGider)
+class GenelGiderAdmin(SilmeKapali, admin.ModelAdmin):
+    """Aylık net genel giderler. Giriş için Genel giderler sayfasını kullanın; burası düzeltme/inceleme içindir."""
+    list_display = ("yil", "ay", "kategori", "tutar", "aciklama")
+    list_filter = ("yil", "ay", "kategori")
+    autocomplete_fields = ()
+    search_fields = ("aciklama", "kategori__ad")
+
+    @admin.display(description="Net tutar (₺)", ordering="tutar_kurus")
+    def tutar(self, obj):
+        return kurus_bicimle(obj.tutar_kurus)
+

@@ -26,6 +26,11 @@ def degisim(seri: list, yil: int, bugun: date):
     son, onceki = seri[i], seri[i - 1]
     if son is None or onceki is None:
         return None
+    return karsilastir(son, onceki)
+
+
+def karsilastir(son: int, onceki: int) -> dict:
+    """İki değeri karşılaştırır: {"yon": "yukari"|"asagi"|"yatay", "yuzde": int|None}."""
     fark = son - onceki
     yon = "yatay" if fark == 0 else ("yukari" if fark > 0 else "asagi")
     yuzde = None if onceki == 0 else round(abs(fark) * 100 / abs(onceki))
@@ -55,6 +60,7 @@ def sparkline_yollari(seri: list, genislik: int = 92, yukseklik: int = 32, boslu
     return cizgi, alan
 
 
+AY_ADLARI_KISA = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
 AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 
 

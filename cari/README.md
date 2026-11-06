@@ -51,6 +51,17 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 **Yaşlandırma varsayımı:** ödeme ve iadeler *en eski borca* mahsup edilir (FIFO), çünkü ödemeler tek tek faturalara bağlanmıyor.
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
+## Genel giderler (aylık net gider)
+Menüde **Genel giderler**. Şirketin aylık genel giderleri (kira, elektrik, su, mali müşavir, avukat, personel, diğer) her ay **kategori başına tek rakam**
+olarak girilir; **personel tüm çalışanlar için tek kalemdir**. Tutarlar **KDV hariç net** girilir (ör. `12.500,00`).
+- **Ay girişi:** üstteki ay sekmesinden ayı seçin, tutarları yazıp *Kaydet*. Boş bırakılan satır "gider yok" demektir; kayıtlı bir kalemi boş bırakırsanız 0 olur (silinmez, geçmiş işlem günlüğünde durur).
+  *Önceki aydan kopyala* yalnızca bu ayın boş satırlarını doldurur (kira gibi sabit kalemler için). Hatalı satır varsa hiçbiri kaydedilmez.
+- **Özet:** seçili ayın net genel gideri (önceki aya göre değişimle), yıl başından birikim, aylık ortalama (gider girilen aylar üzerinden) ve en büyük kalem.
+- **Yıllık tablo ve grafik:** kategori × 12 ay, toplamlar; kategoriye göre yığılmış aylık sütun grafiği. **Excel** ve **Yazdır** düğmeleri vardır.
+- **Kategoriler:** sayfadan yenisi eklenir; silinmez, kullanılmayacaksa Yönetim > Gider kategorileri'nden pasif yapılır (geçmiş tutarlar tabloda kalır).
+- **Yetki:** Yönetici ve Muhasebe girer/düzenler; Görüntüleyici yalnızca görür; Kasiyer göremez.
+- Bu giderler **cari defterinden ve kasadan bağımsızdır**; fatura/ekstre ile çift saymamak için yalnızca bir yerden girin.
+
 ## Kasa (Aşama 3) — yalnızca ofis içi küçük harcamalar
 Üst menüdeki **Kasa**, ofis içi küçük harcamalar (çay, kırtasiye, kargo vb.) içindir; tek hesap **Ofis Kasa**'dır (TL).
 **Şirketin asıl kasası ve tedarikçilere yapılan ödemelerin kasası bu programda tutulmaz.** Tedarikçiye yapılan ödeme,

@@ -5,7 +5,8 @@ from . import gunluk
 from .yetki import ROL_YETENEKLERI
 
 # Muhasebe, yönetim panelinde bu modellerde ekleme/değiştirme/görme yapabilir (silme YOK: uygulamada silme yok).
-MUHASEBE_YAZAR = ["cari", "belge", "belgekalem", "ekstremutabakat", "ekstresatiri", "kasakategori", "kasahareketi"]
+MUHASEBE_YAZAR = ["cari", "belge", "belgekalem", "ekstremutabakat", "ekstresatiri", "kasakategori", "kasahareketi",
+                 "giderkategori", "genelgider"]
 # Yalnızca görme (kilit/ayar/hesap/ek değişiklikleri yöneticiye aittir):
 MUHASEBE_OKUR = ["hesap", "gunsonu", "ek"]
 

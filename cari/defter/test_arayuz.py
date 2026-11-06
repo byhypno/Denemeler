@@ -70,7 +70,8 @@ CIFTLER = [
     ("--g-alis", "--kart", 3, "grafik alış"), ("--g-odeme", "--kart", 3, "grafik ödeme"), ("--g-iade", "--kart", 3, "grafik iade"),
     ("--g-bakiye", "--kart", 7, "grafik bakiye çizgisi"),
     ("--ipucu-metin", "--ipucu-bg", 7, "grafik ipucu balonu"),
-] + [(f"--av{n}-fg", f"--av{n}-bg", 4.5, f"avatar {n}") for n in range(1, 9)]
+] + [(f"--av{n}-fg", f"--av{n}-bg", 4.5, f"avatar {n}") for n in range(1, 9)] \
+  + [(f"--k{n}", "--kart", 3, f"grafik kategori rengi {n}") for n in range(1, 9)]
 
 
 class KontrastTests(TestCase):

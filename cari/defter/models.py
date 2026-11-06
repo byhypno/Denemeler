@@ -535,3 +535,45 @@ class IslemGunlugu(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("İşlem günlüğü kayıtları silinemez.")
+
+
+class GiderKategori(models.Model):
+    """Genel gider kalemi (Kira, Elektrik, Personel...). Silinmez; kullanılmayacaksa pasif yapılır."""
+
+    ad = models.CharField(max_length=80, unique=True)
+    sira = models.PositiveSmallIntegerField("Sıra", default=100, help_text="Küçük olan üstte görünür.")
+    aktif = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Gider kategorisi"
+        verbose_name_plural = "Gider kategorileri"
+        ordering = ["sira", "ad"]
+
+    def __str__(self):
+        return self.ad
+
+
+class GenelGider(models.Model):
+    """Bir kategorinin bir aydaki NET (KDV hariç) genel gider tutarı. Kategori + ay başına tek kayıt:
+    aynı ayda birden çok fatura varsa toplamı girilir. Personel gibi kalemler tek rakam olarak tutulur."""
+
+    kategori = models.ForeignKey(GiderKategori, on_delete=models.PROTECT, related_name="giderler")
+    yil = models.PositiveSmallIntegerField("Yıl")
+    ay = models.PositiveSmallIntegerField("Ay")
+    tutar_kurus = KurusField("Net tutar, KDV hariç (₺)", default=0)
+    aciklama = models.CharField("Not", max_length=250, blank=True)
+    olusturma = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Genel gider"
+        verbose_name_plural = "Genel giderler"
+        ordering = ["-yil", "-ay", "kategori__sira", "kategori__ad"]
+        constraints = [
+            models.UniqueConstraint(fields=["kategori", "yil", "ay"], name="gider_kategori_ay_tekil"),
+            models.CheckConstraint(condition=Q(ay__gte=1) & Q(ay__lte=12), name="gider_ay_1_12"),
+            models.CheckConstraint(condition=Q(tutar_kurus__gte=0), name="gider_tutar_eksi_degil"),
+        ]
+
+    def __str__(self):
+        return f"{self.kategori} · {self.ay:02d}.{self.yil}"
+
