@@ -5,5 +5,6 @@ class DefterConfig(AppConfig):
     name = "defter"
 
     def ready(self):
-        from . import gunluk
+        from . import gunluk, roller
         gunluk.baglan()
+        roller.baglan(self)

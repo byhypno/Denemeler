@@ -10,6 +10,7 @@ from django.urls import reverse
 from . import odeme_listesi as ol
 from . import services
 from .models import Belge, Cari
+from .test_yardimci import rol_kullanici
 
 
 class ListeTemel(TestCase):
@@ -138,7 +139,7 @@ class ExcelCiktiTests(ListeTemel):
 class EkranTests(ListeTemel):
     def setUp(self):
         super().setUp()
-        self.client.force_login(get_user_model().objects.create_user("p", password="x", is_staff=True))
+        self.client.force_login(rol_kullanici("p", "Muhasebe"))
         self.belge(self.a, "ALIS_FISI", 150000, date(2026, 1, 1), "1")
         self.belge(self.a, "ODEME", 40000, date.today(), odeme_sekli="HAVALE", aciklama="Bu ayki")
 
@@ -146,7 +147,7 @@ class EkranTests(ListeTemel):
         self.client.logout()
         r = self.client.get(reverse("odeme_listesi"))
         self.assertEqual(r.status_code, 302)
-        self.assertIn("/admin/login/", r["Location"])
+        self.assertIn("/giris/", r["Location"])
 
     def test_odenecekler_ekrani(self):
         r = self.client.get(reverse("odeme_listesi"))

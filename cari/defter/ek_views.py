@@ -9,7 +9,8 @@ from django.views.decorators.http import require_POST
 
 from . import ek_servisi as es
 from .models import Ek
-from .views import giris_gerekli
+from .yetki import ek_izni, oturum_gerekli, yetki_gerekli
+from django.core.exceptions import PermissionDenied
 
 
 def sahip_etiketi(sahip) -> str:
@@ -34,9 +35,12 @@ def _sahip_al(tur, pk):
     return get_object_or_404(model, pk=pk)
 
 
-@giris_gerekli
+@oturum_gerekli
 def ek_sahip(request, tur, pk):
     sahip = _sahip_al(tur, pk)
+    yazma = request.method == "POST"
+    if not ek_izni(request.user, tur, sahip, yazma):
+        raise PermissionDenied("Bu kaydın eklerine erişim yetkiniz yok.")
     if request.method == "POST":
         dosyalar = request.FILES.getlist("dosyalar")
         if not dosyalar:
@@ -59,12 +63,15 @@ def ek_sahip(request, tur, pk):
         "ekler": es.ekleri_listele(sahip), "kaldirilanlar": es.ekleri_listele(sahip, True).filter(kaldirildi=True),
         "izinli": es.izinli_uzantilar(), "maks_mb": settings.EK_MAX_BAYT // (1024 * 1024),
         "gorsel_turleri": es.GORSEL, "sayfa": "ekler",
+        "yazabilir": ek_izni(request.user, tur, sahip, True),
     })
 
 
-@giris_gerekli
+@oturum_gerekli
 def ek_indir(request, pk):
     ek = get_object_or_404(Ek, pk=pk, kaldirildi=False)
+    if not ek_izni(request.user, ek.sahip_kisa, ek.sahip, False):
+        raise PermissionDenied("Bu dosyaya erişim yetkiniz yok.")
     yol = es.depo_yolu(ek)
     if not yol.is_file():
         raise Http404("Dosya depoda bulunamadı. 'python manage.py ekleri_dogrula' ile kontrol edin.")
@@ -76,10 +83,12 @@ def ek_indir(request, pk):
     return yanit
 
 
-@giris_gerekli
+@oturum_gerekli
 @require_POST
 def ek_kaldir(request, pk):
     ek = get_object_or_404(Ek, pk=pk)
+    if not ek_izni(request.user, ek.sahip_kisa, ek.sahip, True):
+        raise PermissionDenied("Ek kaldırma yetkiniz yok.")
     try:
         es.ek_kaldir(ek, request.POST.get("neden", ""))
         messages.success(request, "Ek kaldırıldı (dosya diskte saklanmaya devam eder).")
@@ -88,7 +97,7 @@ def ek_kaldir(request, pk):
     return redirect("ek_sahip", tur=ek.sahip_kisa, pk=ek.sahip.pk)
 
 
-@giris_gerekli
+@yetki_gerekli("goruntule")
 def ek_depo(request):
     qs = Ek.objects.select_related("belge__cari", "kasa_hareketi__hesap", "mutabakat__cari", "cari")
     f = {k: request.GET.get(k, "").strip() for k in ("q", "tur", "bas", "bit", "kaldirilan")}

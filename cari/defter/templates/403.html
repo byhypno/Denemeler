@@ -1,0 +1,7 @@
+{% extends "defter/base.html" %}
+{% block baslik %}Yetki yok · Cari Program{% endblock %}
+{% block icerik %}
+<div class="kart bos"><h1>Bu sayfaya erişim yetkiniz yok</h1>
+  <p>Rolünüz: <b>{{ rol_etiketi|default:"—" }}</b>. Gerekliyse yöneticiden rolünüzün değiştirilmesini isteyin.</p>
+  <p><a href="{% url 'dashboard' %}">Ana sayfaya dön</a></p></div>
+{% endblock %}

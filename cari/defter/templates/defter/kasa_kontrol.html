@@ -21,8 +21,8 @@ tutarsızlıkları gösterir. <b>Eşleştir</b> yalnızca bir referans bağı ku
       <tr><td>{{ k.odeme.tarih|date:"d.m.Y" }}</td><td>{{ k.odeme.cari }}</td><td class="sayi">{{ k.odeme.tutar_kurus|kurus_tl }}</td>
         <td>{{ k.odeme.aciklama|default:"" }}</td>
         <td>{% if k.oneri %}Kasa çıkışı {{ k.oneri.tarih|date:"d.m.Y" }} · {{ k.oneri.tutar_kurus|kurus_tl }}
-          <form class="satir-form" method="post">{% csrf_token %}<input type="hidden" name="odeme" value="{{ k.odeme.pk }}">
-            <input type="hidden" name="hareket" value="{{ k.oneri.pk }}"><button class="kucuk" type="submit">Eşleştir</button></form>
+          {% if "veri_gir" in yetkiler %}<form class="satir-form" method="post">{% csrf_token %}<input type="hidden" name="odeme" value="{{ k.odeme.pk }}">
+            <input type="hidden" name="hareket" value="{{ k.oneri.pk }}"><button class="kucuk" type="submit">Eşleştir</button></form>{% endif %}
           {% elif k.aday_sayisi %}<span class="not">{{ k.aday_sayisi }} aday var; Yönetim panelinden elle bağlayın.</span>
           {% else %}<span class="chip uyari">⚠ Kasa çıkışı girin</span>{% endif %}</td></tr>
     {% endfor %}</tbody></table></div></div>
@@ -36,8 +36,8 @@ tutarsızlıkları gösterir. <b>Eşleştir</b> yalnızca bir referans bağı ku
       <tr><td>{{ k.hareket.tarih|date:"d.m.Y" }}</td><td>{{ k.hareket.cari }}</td><td class="sayi">{{ k.hareket.tutar_kurus|kurus_tl }}</td>
         <td>{{ k.hareket.aciklama|default:"" }}</td>
         <td>{% if k.oneri %}Cari ödemesi {{ k.oneri.tarih|date:"d.m.Y" }} · {{ k.oneri.tutar_kurus|kurus_tl }}
-          <form class="satir-form" method="post">{% csrf_token %}<input type="hidden" name="odeme" value="{{ k.oneri.pk }}">
-            <input type="hidden" name="hareket" value="{{ k.hareket.pk }}"><button class="kucuk" type="submit">Eşleştir</button></form>
+          {% if "veri_gir" in yetkiler %}<form class="satir-form" method="post">{% csrf_token %}<input type="hidden" name="odeme" value="{{ k.oneri.pk }}">
+            <input type="hidden" name="hareket" value="{{ k.hareket.pk }}"><button class="kucuk" type="submit">Eşleştir</button></form>{% endif %}
           {% elif k.aday_sayisi %}<span class="not">{{ k.aday_sayisi }} aday var; Yönetim panelinden elle bağlayın.</span>
           {% else %}<span class="chip uyari">⚠ Cari ödemesi girin</span>{% endif %}</td></tr>
     {% endfor %}</tbody></table></div></div>

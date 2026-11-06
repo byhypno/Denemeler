@@ -16,6 +16,7 @@
     <div class="deger">{{ beklenen|kurus_tl }}</div></div>
 </section>
 
+{% if "kasa_yaz" in yetkiler %}
 <section class="kart" style="margin-bottom:12px">
   <h2>Kasayı kapat</h2>
   <p class="not">Kasadaki nakdi sayıp yazın. Kapatılan gün <b>ve öncesi kilitlenir</b>: o günlere kayıt eklenemez,
@@ -34,6 +35,7 @@
     <button type="submit">Kapat ve kilitle</button>
   </form>
 </section>
+{% endif %}
 
 <section class="kart"><h2>Geçmiş kapanışlar</h2>
   <div class="tablo-kaydir"><table>

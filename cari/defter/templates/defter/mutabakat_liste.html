@@ -2,8 +2,8 @@
 {% block baslik %}Ekstre Mutabakatı · Cari Program{% endblock %}
 {% block icerik %}
 <h1>Ekstre Mutabakatı</h1>
-<p class="not">Tedarikçinin gönderdiği ekstre ile kayıtlarımızın karşılaştırması. Yeni mutabakat için
-<a href="{% url 'admin:defter_ekstremutabakat_add' %}">Yönetim panelinden ekleyin</a>.</p>
+<p class="not">Tedarikçinin gönderdiği ekstre ile kayıtlarımızın karşılaştırması. {% if request.user.is_staff %}Yeni mutabakat için
+<a href="{% url 'admin:defter_ekstremutabakat_add' %}">Yönetim panelinden ekleyin</a>.{% endif %}</p>
 <div class="kart"><div class="tablo-kaydir"><table>
   <thead><tr><th>Cari</th><th>Ekstre tarihi</th><th class="sayi">Bizim bakiye</th><th class="sayi">Ekstre bakiyesi</th>
     <th class="sayi">Fark</th><th class="sayi">Açıklanamayan</th><th>Durum</th></tr></thead>

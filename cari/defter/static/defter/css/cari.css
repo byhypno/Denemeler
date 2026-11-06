@@ -27,12 +27,15 @@ a { color: var(--brand); }
 .ust nav a.aktif { opacity: 1; border-bottom-color: #fff; font-weight: 600; }
 .ust nav a:hover, .ust .sag a:hover { opacity: 1; }
 .ust .sag { font-size: 13px; }
+.ust .sag button.baglanti { background: none; border: 0; color: var(--brand-ink); opacity: .85; cursor: pointer; padding: 14px 4px; min-height: 0; font: inherit; text-decoration: underline; }
+.ust .sag button.baglanti:hover { opacity: 1; }
+.giris-kutusu { max-width: 380px; margin: 60px auto; }
 main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 48px; }
 h1 { font-size: 22px; margin: 0 0 14px; }
 h2 { font-size: 16px; margin: 0 0 10px; }
 .filtre { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 18px; }
 .filtre label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
-select, input[type=text], input[type=date] { padding: 8px 10px; border: 1px solid var(--line);
+select, input[type=text], input[type=date], input[type=password], input[type=number] { padding: 8px 10px; border: 1px solid var(--line);
   border-radius: 6px; background: var(--card); color: var(--ink); font: inherit; min-height: 38px; }
 button, .dugme { padding: 8px 16px; border: 0; border-radius: 6px; background: var(--brand);
   color: var(--brand-ink); font: inherit; cursor: pointer; min-height: 38px; text-decoration: none;

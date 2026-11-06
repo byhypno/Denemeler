@@ -263,7 +263,7 @@ class GunlukEkraniTests(GunlukTemel):
         self.client.logout()
         r = self.client.get(reverse("gunluk_sayfasi"))
         self.assertEqual(r.status_code, 302)
-        self.assertIn("/admin/login/", r["Location"])
+        self.assertIn("/giris/", r["Location"])
         self.client.force_login(self.sade)
         self.assertEqual(self.client.get(reverse("gunluk_sayfasi")).status_code, 403)
 

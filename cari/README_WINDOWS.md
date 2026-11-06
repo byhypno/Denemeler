@@ -12,6 +12,15 @@
 4. Masaüstündeki **Cari Program** kısayolu programı açar (tarayıcıda `http://127.0.0.1:8000`). Pencereyi kapatınca program kapanır;
    veriler kaybolmaz.
 
+## 1b. Kullanıcılar
+`kur.bat` yönetici hesabını oluşturur. Diğer kullanıcılar için (parolayı sorar):
+```
+.venv\Scripts\python.exe manage.py kullanici_olustur ayse --rol Kasiyer
+.venv\Scripts\python.exe manage.py kullanici_olustur mehmet --rol Muhasebe
+```
+Roller: **Muhasebe**, **Kasiyer** (yalnızca Ofis Kasa), **Görüntüleyici** (salt okunur). Ayrıntı için `README.md`.
+Her kullanıcı üst köşedeki adına tıklayarak kendi parolasını değiştirebilir.
+
 ## 2. YEDEK AYARI (en önemli adım)
 1. Proje klasöründeki **`ayarlar.bat`** dosyasını Not Defteri ile açın.
 2. `set CARI_YEDEK_DIZINLERI=` satırını **ayrı bir disk veya USB** yoluyla doldurun. Örnek: `set CARI_YEDEK_DIZINLERI=D:\CariYedek;E:\CariYedek`

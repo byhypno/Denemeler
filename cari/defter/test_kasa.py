@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from . import kasa_servisi as ks
 from .models import Belge, Cari, GunSonu, Hesap, KasaHareketi, KasaKategori
+from .test_yardimci import rol_kullanici
 
 GIRIS, CIKIS = KasaHareketi.Yon.GIRIS, KasaHareketi.Yon.CIKIS
 
@@ -369,7 +370,7 @@ class KasaKontrolTests(TestCase):
 class KasaEkranTests(KasaTemel):
     def setUp(self):
         super().setUp()
-        self.user = get_user_model().objects.create_user("p", password="x", is_staff=True)
+        self.user = rol_kullanici("p", "Muhasebe")
         self.bugun = date.today()
 
     def giris(self):
@@ -379,7 +380,7 @@ class KasaEkranTests(KasaTemel):
         for ad in ("kasa", "kasa_gun_sonu", "kasa_kontrol"):
             r = self.client.get(reverse(ad))
             self.assertEqual(r.status_code, 302, ad)
-            self.assertIn("/admin/login/", r["Location"])
+            self.assertIn("/giris/", r["Location"])
         self.assertEqual(self.client.post(reverse("kasa_hareket_iptal", args=[1])).status_code, 302)
 
     def test_cari_kasa_ekrani_cari_alani_ve_kontrol_sayfasi(self):

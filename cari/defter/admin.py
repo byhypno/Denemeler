@@ -106,6 +106,12 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
 class HesapAdmin(SilmeKapali, admin.ModelAdmin):
     list_display = ("ad", "tur", "cari_bagli", "bakiye", "aktif")
 
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser          # kasa ayarları (eksiye düşme, cari bağlantısı) yalnızca yönetici
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
     @admin.display(description="Güncel bakiye (₺)")
     def bakiye(self, obj):
         return kurus_bicimle(obj.bakiye_kurus())
@@ -212,6 +218,9 @@ class GunSonuAdmin(SilmeKapali, admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser          # kapanış kilidini kaldırmak yalnızca yöneticidir
+
     @admin.display(description="Kayıtlı bakiye (₺)")
     def beklenen(self, obj):
         return kurus_bicimle(obj.beklenen_kurus)
@@ -258,3 +267,8 @@ class IslemGunlugAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+# Yönetim paneli girişi de hatalı denemede geçici kilit uygular.
+from .giris import AdminGirisFormu  # noqa: E402
+admin.site.login_form = AdminGirisFormu

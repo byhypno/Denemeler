@@ -18,6 +18,7 @@ from datetime import timedelta
 from .models import Belge, BelgeKalem, Cari, EkstreMutabakat, EkstreSatiri, Hesap, KasaHareketi
 from . import services
 from .services import bakiye_kurus, ekstre
+from .test_yardimci import rol_kullanici
 
 
 class ParaAlaniTests(TestCase):
@@ -524,7 +525,7 @@ class AylikOzetVeKontrolTests(TestCase):
 
 class EkranTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user("p", password="x", is_staff=True)
+        self.user = rol_kullanici("p", "Muhasebe")
         self.cari = Cari.objects.create(unvan="EKRAN TEDARİKÇİ")
 
     def giris(self):
@@ -534,12 +535,12 @@ class EkranTests(TestCase):
         for ad, args in (("dashboard", []), ("mutabakat_liste", []), ("cari_ekstre", [self.cari.pk])):
             r = self.client.get(reverse(ad, args=args))
             self.assertEqual(r.status_code, 302, ad)
-            self.assertIn("/admin/login/", r["Location"])
+            self.assertIn("/giris/", r["Location"])
 
     def test_staff_olmayan_kullanici_giremez(self):
         sade = get_user_model().objects.create_user("s", password="x", is_staff=False)
         self.client.force_login(sade)
-        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 302)
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 403)   # giriş yapmış ama rolsüz
 
     def test_bos_veritabaninda_bos_durum(self):
         self.giris()

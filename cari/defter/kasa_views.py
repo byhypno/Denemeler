@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,19 +13,28 @@ from . import kasa_servisi as ks
 from .fields import kurus_bicimle
 from .forms import GunSonuForm, KasaHareketiForm
 from .models import GunSonu, KasaHareketi, KasaKategori
-from .views import AYLAR, giris_gerekli
+from .views import AYLAR
+from .yetki import gorunur_kasalar, oturum_gerekli, var_mi, yetki_gerekli
 
 
 def _hesap_veya_yok(request, hesap_id):
-    hesap = ks.varsayilan_hesap(hesap_id)
-    return hesap
+    """
+    Kullanıcının GÖREBİLDİĞİ kasalar arasından seçer (ör. Kasiyer yalnızca Ofis Kasa).
+    Var olan ama görme yetkisi olmayan bir kasa AÇIKÇA istenirse 403: sessizce başka kasaya düşmek,
+    kullanıcının kaydı yanlış kasaya girmesine yol açardı.
+    """
+    gorunur = gorunur_kasalar(request.user)
+    if hesap_id and str(hesap_id).isdigit() and not gorunur.filter(pk=int(hesap_id)).exists() \
+            and ks.Hesap.objects.filter(pk=int(hesap_id)).exists():
+        raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
+    return ks.varsayilan_hesap(hesap_id, hesaplar=gorunur)
 
 
 def _hata_metni(e: ValidationError) -> str:
     return " ".join(e.messages)
 
 
-@giris_gerekli
+@yetki_gerekli("kasa_goruntule", "kasa_yaz")
 def kasa_ana(request):
     bugun = date.today()
     hesap = _hesap_veya_yok(request, request.GET.get("hesap"))
@@ -72,7 +82,7 @@ def kasa_ana(request):
     ozet = ks.kasa_ozeti(hesap, bugun)
     kontrol_adet = ks.kasa_kontrol(hesap)["adet"] if hesap.cari_bagli else 0
     return render(request, "defter/kasa.html", {
-        "hesap": hesap, "hesaplar": ks.Hesap.objects.filter(aktif=True, tur="KASA").order_by("id"),
+        "hesap": hesap, "hesaplar": gorunur_kasalar(request.user),
         "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]), "kontrol_adet": kontrol_adet,
         "yil": yil, "yillar": yillar, "filtre": f, "sayfa_nesnesi": sayfa, "sorgu": sorgu.urlencode(),
         "bakiyeler": ks.hareketler_bakiyeli(hesap), "kategoriler": KasaKategori.objects.filter(aktif=True),
@@ -85,10 +95,12 @@ def kasa_ana(request):
     })
 
 
-@giris_gerekli
+@yetki_gerekli("kasa_yaz")
 @require_POST
 def kasa_hareket_iptal(request, pk):
     h = get_object_or_404(KasaHareketi, pk=pk)
+    if not gorunur_kasalar(request.user).filter(pk=h.hesap_id).exists():
+        raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
     neden = request.POST.get("neden", "").strip()
     if not neden:
         messages.error(request, "İptal için neden yazın.")
@@ -105,7 +117,7 @@ def kasa_hareket_iptal(request, pk):
     return redirect(f"{reverse('kasa')}?hesap={h.hesap_id}")
 
 
-@giris_gerekli
+@yetki_gerekli("kasa_goruntule", "kasa_yaz")
 def kasa_gun_sonu(request):
     bugun = date.today()
     hesap = _hesap_veya_yok(request, request.GET.get("hesap"))
@@ -132,14 +144,14 @@ def kasa_gun_sonu(request):
         secili_tarih = bugun
     return render(request, "defter/kasa_gun_sonu.html", {
         "hesap": hesap, "form": form, "secili_tarih": secili_tarih,
-        "hesaplar": ks.Hesap.objects.filter(aktif=True, tur="KASA").order_by("id"),
+        "hesaplar": gorunur_kasalar(request.user),
         "beklenen": ks.gun_sonu_beklenen(hesap, secili_tarih),
         "kilit_siniri": hesap.kilit_siniri(), "acik_gunler": ks.acik_gunler(hesap, bugun),
         "kapanislar": GunSonu.objects.filter(hesap=hesap)[:30], "sayfa": "kasa",
     })
 
 
-@giris_gerekli
+@yetki_gerekli("goruntule", "veri_gir")
 def kasa_kontrol(request):
     if request.method == "POST":
         try:

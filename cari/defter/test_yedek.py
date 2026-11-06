@@ -372,7 +372,7 @@ class YedekEkranVeKomutTests(YedekTemel):
         self.assertNotContains(self.client.get(reverse("dashboard")), "Henüz hiç yedek alınmadı")
         YedekKaydi.objects.all().delete()
         self.client.force_login(self.sade)
-        self.assertNotContains(self.client.get(reverse("dashboard")), "yedek alınmadı")
+        self.assertNotContains(self.client.get(reverse("dashboard")), "yedek alınmadı", status_code=403)
 
     def test_komutlar(self):
         out, err = StringIO(), StringIO()

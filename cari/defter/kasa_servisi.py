@@ -18,8 +18,9 @@ KASA_FARKI = "Kasa farkı"
 ESLESME_GUN = 3
 
 
-def varsayilan_hesap(hesap_id=None):
-    qs = Hesap.objects.filter(aktif=True, tur=Hesap.Tur.KASA)
+def varsayilan_hesap(hesap_id=None, hesaplar=None):
+    """`hesaplar`: kullanıcının görebildiği kasalar (verilmezse tüm aktif kasalar)."""
+    qs = hesaplar if hesaplar is not None else Hesap.objects.filter(aktif=True, tur=Hesap.Tur.KASA)
     if hesap_id and str(hesap_id).isdigit():
         h = qs.filter(pk=int(hesap_id)).first()
         if h:

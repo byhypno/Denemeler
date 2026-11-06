@@ -17,6 +17,7 @@ from django.urls import reverse
 
 from . import ek_servisi as es
 from .models import Belge, Cari, Ek, EkstreMutabakat, Hesap, KasaHareketi
+from .test_yardimci import rol_kullanici
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 40
 PDF = b"%PDF-1.4\n%fake\n" + b"x" * 40
@@ -239,7 +240,7 @@ class DepoButunlukTests(EkTemel):
 class EkEkranTests(EkTemel):
     def setUp(self):
         super().setUp()
-        self.user = get_user_model().objects.create_user("p", password="x", is_staff=True)
+        self.user = rol_kullanici("p", "Muhasebe")
         self.client.force_login(self.user)
 
     def url(self, tur="belge", pk=None):
@@ -251,7 +252,7 @@ class EkEkranTests(EkTemel):
         for u in (self.url(), reverse("ek_depo"), reverse("ek_indir", args=[ek.pk])):
             r = self.client.get(u)
             self.assertEqual(r.status_code, 302, u)
-            self.assertIn("/admin/login/", r["Location"])
+            self.assertIn("/giris/", r["Location"])
         self.assertEqual(self.client.post(reverse("ek_kaldir", args=[ek.pk]), {"neden": "x"}).status_code, 302)
         self.assertTrue(Ek.objects.filter(pk=ek.pk, kaldirildi=False).exists())
         self.assertEqual(self.client.post(self.url(), {"dosyalar": dosya("z.png", PNG)}).status_code, 302)
@@ -261,7 +262,7 @@ class EkEkranTests(EkTemel):
         sade = get_user_model().objects.create_user("s", password="x", is_staff=False)
         self.client.force_login(sade)
         ek = es.ek_ekle(self.belge, dosya("a.png", PNG))
-        self.assertEqual(self.client.get(reverse("ek_indir", args=[ek.pk])).status_code, 302)
+        self.assertEqual(self.client.get(reverse("ek_indir", args=[ek.pk])).status_code, 403)   # giriş yapmış ama rolsüz
 
     def test_sayfalar_ve_bilinmeyen_sahip(self):
         for tur, pk in (("belge", self.belge.pk), ("kasa", self.hareket.pk), ("mutabakat", self.mut.pk),

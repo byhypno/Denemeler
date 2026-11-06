@@ -100,6 +100,12 @@ DATABASES = {
     }
 }
 
+import sys  # noqa: E402
+
+if "test" in sys.argv:
+    # Yalnızca testler: parola özetleme yavaş olduğundan hızlı (güvensiz) bir özetleyici kullanılır.
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
      "OPTIONS": {"min_length": 8}},
@@ -118,7 +124,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 WHITENOISE_USE_FINDERS = True  # collectstatic olmadan da admin dosyalarını sunar
 WHITENOISE_AUTOREFRESH = DEBUG  # geliştirirken dosya değişince yeniden okur
 
-LOGIN_URL = "/admin/login/"
+LOGIN_URL = "/giris/"
+LOGIN_REDIRECT_URL = "/"
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 saat
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 

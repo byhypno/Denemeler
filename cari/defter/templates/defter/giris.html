@@ -1,0 +1,15 @@
+{% extends "defter/base.html" %}
+{% block baslik %}Giriş · Cari Program{% endblock %}
+{% block icerik %}
+<div class="kart giris-kutusu">
+  <h1>Giriş</h1>
+  <form method="post" class="form-izgara" style="grid-template-columns:1fr">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <label>Kullanıcı adı {{ form.username }}</label>
+    <label>Parola {{ form.password }}</label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit">Giriş yap</button>
+  </form>
+  <p class="not">Art arda {{ 5 }} hatalı denemeden sonra giriş birkaç dakika kapanır.</p>
+</div>
+{% endblock %}

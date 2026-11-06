@@ -1,4 +1,4 @@
-# Cari Program (Aşama 1–4)
+# Cari Program (Aşama 1–5)
 
 Tek bilgisayarda, yerelde çalışan cari (tedarikçi) ve **Ofis Kasa** takip programı.
 Tutarlar veritabanında **tamsayı kuruş** olarak saklanır; kayıt silinmez, **iptal** edilir.
@@ -103,8 +103,26 @@ Fiş/fatura görseli, ekstre PDF'i, dekont gibi dosyalar **belgeye, kasa hareket
   Tekrar çalıştırmak güvenlidir (zaten ekli olanlar atlanır).
 - **Depo sağlık kontrolü:** `python manage.py ekleri_dogrula` — eksik dosya, bozuk (hash'i tutmayan) dosya ve kayıtsız dosya var mı?
 
+## Giriş, roller ve güvenlik (Aşama 5)
+- **Giriş:** `/giris/`; üst köşede kullanıcı adınıza tıklayarak **parolanızı değiştirebilir**, **Çıkış**'la oturumu kapatabilirsiniz.
+  Aynı kullanıcı adına art arda **5 hatalı denemeden sonra giriş 5 dakika kapanır** (yönetim paneli girişi dahil).
+- **Roller** (yöneticiyi `createsuperuser` oluşturur; diğerleri `python manage.py kullanici_olustur ad --rol Muhasebe|Kasiyer|Görüntüleyici` ya da
+  Yönetim > Kullanıcılar'da gruba ekleyerek):
+
+  | Rol | Yapabildiği |
+  |---|---|
+  | **Yönetici** | Her şey + **Yedek**, **Günlük**, kullanıcı yönetimi, kasa ayarları ve **kapanış kilidi kaldırma** |
+  | **Muhasebe** | Cari + kasa (iki kasa) görüntüleme ve girişi, ek yükleme/kaldırma, eşleştirme; yönetim panelinde ekleme/değiştirme (silme yok) |
+  | **Kasiyer** | **Yalnızca Ofis Kasa**: hareket girişi/iptali, gün sonu, kasa hareketlerine ek. Cari verileri ve Cari Kasa'yı **göremez** |
+  | **Görüntüleyici** | Her şeyi **görür**, hiçbir şey yazamaz (düğmeler hiç görünmez) |
+
+  Muhasebe rolü verilince kullanıcı otomatik olarak yönetim paneline girebilir; rol kaldırılınca bu yetki de gider. Rol değişiklikleri günlüğe yazılır.
+- **İşlem günlüğü** (Yönetici, üst menü *Günlük*): kim, ne zaman, neyi, eskiden yeniye nasıl değiştirdi; giriş/çıkış ve hatalı denemeler dahil.
+  Günlük **eklenir, değiştirilemez, silinemez** (veritabanı tetikleyicileriyle de korunur); parolalar yazılmaz. Her kaydın yönetim sayfasında *Değişiklik geçmişi* bağlantısı vardır.
+- **Yedek** (Yönetici): bkz. `README_WINDOWS.md`. Her yedek doğrulanır ve geçici klasöre gerçekten geri yüklenerek denenir; son yedek 2 günden eskiyse her sayfada uyarı çıkar.
+- **Windows kurulum:** `kur.bat`, `baslat.bat`, `yedek_gorevi_kur.bat` (bkz. `README_WINDOWS.md`; Windows'ta henüz denenmedi).
+
 ## Henüz YOK (sonraki aşamalar)
-Otomatik yedek, rol/yetki, **işlem günlüğü** (kim ne değiştirdi) ve Windows paketleme (aşama 5).
-Fiş OCR (görselden otomatik okuma) yapılmadı; ek dosya deposu yalnızca saklar.
+Fiş OCR (görselden otomatik okuma) yapılmadı; ek dosya deposu yalnızca saklar. Yedek **şifrelenmez** (şifreli sürücü kullanın). Program yalnızca tek bilgisayardan erişilir.
 Kasada banka hesabı ve kasa↔banka transferi yoktur (yalnızca Ofis Kasa istendi).
 **Şimdilik yedek için `veri/` klasörünü düzenli olarak başka bir diske kopyalayın.**

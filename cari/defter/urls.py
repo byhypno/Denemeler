@@ -1,8 +1,11 @@
 from django.urls import path
 
-from . import ek_views, kasa_views, views
+from . import ek_views, giris, kasa_views, views
 
 urlpatterns = [
+    path("giris/", giris.GirisView.as_view(), name="giris"),
+    path("cikis/", giris.cikis, name="cikis"),
+    path("parola/", giris.ParolaView.as_view(), name="parola"),
     path("", views.dashboard, name="dashboard"),
     path("mutabakat/", views.mutabakat_liste, name="mutabakat_liste"),
     path("mutabakat/<int:pk>/", views.mutabakat_detay, name="mutabakat_detay"),

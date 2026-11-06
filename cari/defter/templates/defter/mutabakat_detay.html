@@ -4,7 +4,7 @@
 <h1>{{ oz.mutabakat.cari }} · Ekstre {{ oz.mutabakat.ekstre_tarihi|date:"d.m.Y" }}</h1>
 <p><a href="{% url 'mutabakat_liste' %}">← Tüm mutabakatlar</a> ·
   <a href="{% url 'cari_ekstre' oz.mutabakat.cari.pk %}">Cari ekstresi</a> ·
-  <a href="{% url 'admin:defter_ekstremutabakat_change' oz.mutabakat.pk %}">Düzenle</a> ·
+  {% if request.user.is_staff %}<a href="{% url 'admin:defter_ekstremutabakat_change' oz.mutabakat.pk %}">Düzenle</a> ·{% endif %}
   <a href="{% url 'ek_sahip' 'mutabakat' oz.mutabakat.pk %}">📎 Ekler ({{ ek_sayisi }})</a> <span class="not">(ekstre PDF'i)</span></p>
 
 <section class="ozet">

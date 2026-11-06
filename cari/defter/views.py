@@ -1,8 +1,8 @@
 from datetime import date
 
 from django import forms
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,28 +11,18 @@ from . import ek_servisi as es
 from . import odeme_listesi as ol
 from . import services
 from .models import Belge, Cari, EkstreMutabakat
+from .yetki import oturum_gerekli, var_mi, yetki_gerekli
 
 AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
-giris_gerekli = staff_member_required(login_url="/admin/login/")
+yonetici_gerekli = yetki_gerekli("yonetim")   # yalnızca yönetici (superuser)
 
 
-def yonetici_gerekli(view):
-    """Yalnızca yönetici (superuser). Giriş yapmış ama yetkisiz kullanıcıya 403 verir."""
-    from functools import wraps
-
-    from django.core.exceptions import PermissionDenied
-
-    @wraps(view)
-    @giris_gerekli
-    def sarmal(request, *a, **kw):
-        if not request.user.is_superuser:
-            raise PermissionDenied("Bu sayfa yalnızca yöneticilere açıktır.")
-        return view(request, *a, **kw)
-    return sarmal
-
-
-@giris_gerekli
+@oturum_gerekli
 def dashboard(request):
+    if not var_mi(request.user, "goruntule"):
+        if var_mi(request.user, "kasa_goruntule"):          # ör. Kasiyer: doğrudan kasaya
+            return redirect("kasa")
+        raise PermissionDenied("Bu sayfa için yetkiniz yok.")
     bugun = date.today()
     yillar = sorted({d.year for d in Belge.objects.filter(iptal=False).dates("tarih", "year")}) \
         or [bugun.year]
@@ -80,14 +70,14 @@ def dashboard(request):
     })
 
 
-@giris_gerekli
+@yetki_gerekli("goruntule")
 def mutabakat_liste(request):
     ozetler = [services.mutabakat_ozeti(m) for m in
                EkstreMutabakat.objects.select_related("cari")]
     return render(request, "defter/mutabakat_liste.html", {"ozetler": ozetler, "sayfa": "mutabakat"})
 
 
-@giris_gerekli
+@yetki_gerekli("goruntule")
 def mutabakat_detay(request, pk):
     m = get_object_or_404(EkstreMutabakat.objects.select_related("cari"), pk=pk)
     return render(request, "defter/mutabakat_detay.html",
@@ -100,7 +90,7 @@ class _Donem(forms.Form):
     bit = forms.DateField(required=False)
 
 
-@giris_gerekli
+@yetki_gerekli("goruntule")
 def cari_ekstre(request, pk):
     cari = get_object_or_404(Cari, pk=pk)
     f = _Donem(request.GET)
@@ -132,7 +122,7 @@ class _ListeFiltre(forms.Form):
     indir = forms.ChoiceField(choices=[("", ""), ("xlsx", "xlsx")], required=False)
 
 
-@giris_gerekli
+@yetki_gerekli("goruntule")
 def odeme_listesi(request):
     bugun = date.today()
     f = _ListeFiltre(request.GET)

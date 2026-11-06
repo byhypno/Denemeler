@@ -8,9 +8,9 @@
 <h1>Kasa · {{ hesap.ad }}</h1>
 {% url 'kasa' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
 <p class="yazdirma-gizle">
-  <a class="dugme ikincil" href="{% url 'kasa_gun_sonu' %}?hesap={{ hesap.pk }}">Gün sonu kapanışı</a>
-  {% if hesap.cari_bagli %}<a class="dugme ikincil" href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">Cari ödemesi kontrolü{% if kontrol_adet %} ({{ kontrol_adet }}){% endif %}</a>{% endif %}
-  <a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>
+  <a class="dugme ikincil" href="{% url 'kasa_gun_sonu' %}?hesap={{ hesap.pk }}">Gün sonu{% if "kasa_yaz" in yetkiler %} kapanışı{% else %} kayıtları{% endif %}</a>
+  {% if hesap.cari_bagli and "goruntule" in yetkiler %}<a class="dugme ikincil" href="{% url 'kasa_kontrol' %}?hesap={{ hesap.pk }}">Cari ödemesi kontrolü{% if kontrol_adet %} ({{ kontrol_adet }}){% endif %}</a>{% endif %}
+  {% if request.user.is_staff %}<a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>{% endif %}
 </p>
 {% if not hesap.cari_bagli %}<p class="not">Bu kasa cari defterinden tamamen bağımsızdır.</p>{% endif %}
 
@@ -33,6 +33,7 @@
   {% endif %}
 </section>
 
+{% if "kasa_yaz" in yetkiler %}
 <section class="kart yazdirma-gizle" style="margin-bottom:12px">
   <h2>Yeni kasa hareketi</h2>
   <form method="post" novalidate>{% csrf_token %}
@@ -53,6 +54,7 @@
     {% if kilit_siniri %}<span class="not">{{ kilit_siniri|date:"d.m.Y" }} ve öncesi kapalı: bu günlere kayıt girilemez.</span>{% endif %}
   </form>
 </section>
+{% endif %}
 
 <section class="kart" style="margin-bottom:12px">
   <h2>{{ yil }} · Aylık giriş, çıkış ve ay sonu kasa bakiyesi
@@ -103,7 +105,7 @@
         <td class="sayi">{{ h.tutar_kurus|kurus_say }}</td>
         <td class="sayi">{% if not h.iptal %}{{ bakiyeler|sozluk_al:h.pk|kurus_say }}{% endif %}</td>
         <td class="islem yazdirma-gizle">
-          {% if h.iptal %}—{% elif kilit_siniri and h.tarih <= kilit_siniri %}<span class="chip">🔒 kapalı gün</span>
+          {% if h.iptal %}—{% elif "kasa_yaz" not in yetkiler %}—{% elif kilit_siniri and h.tarih <= kilit_siniri %}<span class="chip">🔒 kapalı gün</span>
           {% else %}<form class="satir-form" method="post" action="{% url 'kasa_hareket_iptal' h.pk %}">{% csrf_token %}
             <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">
             <button class="kucuk ikincil dugme" type="submit">İptal</button></form>{% endif %}
