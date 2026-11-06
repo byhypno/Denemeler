@@ -115,3 +115,12 @@ def degisim_etiketi(d, ton="notr"):
     ikon_html = ikon(ok, "kucuk") if ok else ""
     return format_html('<span class="degisim {}">{}{}<span class="sr-only">{} {}, önceki aya göre</span></span>',
                        sinif, ikon_html, yuzde or ("—" if not ok else ""), yuzde.replace("%", "yüzde ") if yuzde else "", ad)
+
+
+@register.filter
+def cevir_pozitif(deger):
+    """-5 -> 5 (gecikme gününü '5 gün gecikti' diye yazmak için)"""
+    try:
+        return abs(int(deger))
+    except (TypeError, ValueError):
+        return deger

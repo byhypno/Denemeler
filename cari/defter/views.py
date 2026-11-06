@@ -62,9 +62,10 @@ def dashboard(request):
         "borclu_etiket": [c.unvan for c, _ in borclular], "borclu_deger": [b for _, b in borclular],
         "kalem_etiket": [a for a, _ in kalemler], "kalem_deger": [t for _, t in kalemler],
     }
+    takvim = {g["anahtar"]: g for g in services.odeme_takvimi(bugun, cari)["gruplar"]}
     degisimler = {ad: trend.degisim(aylik[ad], yil, bugun) for ad in ("alis", "odeme", "iade", "ay_sonu")}
     return render(request, "defter/dashboard.html", {
-        "yil": yil, "aylik": aylik, "degisimler": degisimler, "yillar": yillar, "cari": cari, "cariler": Cari.objects.all(),
+        "yil": yil, "aylik": aylik, "degisimler": degisimler, "takvim": takvim, "yillar": yillar, "cari": cari, "cariler": Cari.objects.all(),
         "guncel_borc": guncel_borc, "yil_alis": sum(aylik["alis"]),
         "yil_odeme": sum(aylik["odeme"]), "yil_iade": sum(aylik["iade"]),
         "acik_fark": acik_fark, "kontrol": kontrol, "yas": yas, "borclular": borclular,
@@ -290,3 +291,17 @@ def tedarikci_form(request, pk=None):
         messages.success(request, f"{kayit.unvan} {'güncellendi' if pk else 'eklendi'}.")
         return redirect("cari_ekstre", pk=kayit.pk) if not pk else redirect("tedarikciler")
     return render(request, "defter/tedarikci_form.html", {"form": form, "cari": cari, "sayfa": "tedarikciler"})
+
+
+@yetki_gerekli("goruntule")
+def odeme_takvimi(request):
+    """Vadesi geçen ve yaklaşan borçlar: 'bu hafta kime ne ödeyeceğiz'. Çıktısı yazdırılabilir."""
+    bugun = date.today()
+    cari = None
+    if request.GET.get("cari", "").isdigit():
+        cari = Cari.objects.filter(pk=int(request.GET["cari"])).first()
+    t = services.odeme_takvimi(bugun, cari)
+    return render(request, "defter/odeme_takvimi.html", {
+        "t": t, "bugun": bugun, "cari": cari, "cariler": Cari.objects.filter(aktif=True), "sayfa": "takvim",
+        "g": {g["anahtar"]: g for g in t["gruplar"]},
+    })

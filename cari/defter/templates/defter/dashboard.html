@@ -21,6 +21,12 @@
     <p>Yönetim panelinden hareket girin veya Excel'den içe aktarın
     (<code>python manage.py excel_ice_aktar dosya.xlsx</code>).</p></div>
 {% else %}
+{% if takvim.gecikmis.kalemler or takvim.hafta.kalemler %}
+<div class="mesaj {% if takvim.gecikmis.kalemler %}error{% else %}warning{% endif %}" role="status">
+  <span>{% if takvim.gecikmis.kalemler %}Vadesi geçmiş <b>{{ takvim.gecikmis.toplam|kurus_tl }}</b> ({{ takvim.gecikmis.kalemler|length }} kalem).{% endif %}
+  {% if takvim.hafta.kalemler %}Bu hafta ödenecek <b>{{ takvim.hafta.toplam|kurus_tl }}</b> ({{ takvim.hafta.kalemler|length }} kalem).{% endif %}
+  <a href="{% url 'odeme_takvimi' %}{% if cari %}?cari={{ cari.pk }}{% endif %}">Ödeme takvimini aç</a></span></div>
+{% endif %}
 <section class="kpi" aria-label="Özet göstergeler">
   <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "cuzdan" %}</span><span class="etiket">Güncel borcumuz</span></div>
     <div class="deger">{{ guncel_borc|kurus_tl }}</div>

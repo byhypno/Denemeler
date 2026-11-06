@@ -158,6 +158,48 @@ def yaslandirma(bugun=None, cari=None) -> dict:
     }
 
 
+TAKVIM_GRUPLARI = (
+    ("gecikmis", "Vadesi geçmiş", "hata"),
+    ("hafta", "Bu hafta (0–7 gün)", "uyari"),
+    ("ay", "8–30 gün içinde", "bilgi"),
+    ("sonra", "30 günden sonra", ""),
+    ("vadesiz", "Vadesi tanımsız", ""),
+)
+
+
+def takvim_grubu(vade, bugun) -> str:
+    """Vade tarihine göre ödeme takvimi grubu. Vade bugünse 'hafta' (bugün ödenmeli, henüz gecikmemiş)."""
+    if vade is None:
+        return "vadesiz"
+    gun = (vade - bugun).days
+    if gun < 0:
+        return "gecikmis"
+    if gun <= 7:
+        return "hafta"
+    return "ay" if gun <= 30 else "sonra"
+
+
+def odeme_takvimi(bugun=None, cari=None) -> dict:
+    """Açık kalemleri VADEYE göre gruplar (vade = belge tarihi + carinin vade günü).
+
+    Kalemler FIFO varsayımıyla açık kalan tutarlardır (bkz. acik_kalemler). Vadesi tanımsız cariler ayrı grupta
+    toplanır; bunların vadesi bilinmediği için 'gecikmiş' sayılmaz. Dönüş:
+    {"gruplar": [{"anahtar","ad","ton","kalemler","toplam"}], "toplam", "avans", "vadesiz_cari_sayisi"}
+    """
+    bugun = bugun or date.today()
+    kalemler, avans = acik_kalemler(bugun, cari)
+    kutu = {k: [] for k, _, _ in TAKVIM_GRUPLARI}
+    for k in kalemler:
+        k["gun_kaldi"] = (k["vade_tarihi"] - bugun).days if k["vade_tarihi"] else None
+        kutu[takvim_grubu(k["vade_tarihi"], bugun)].append(k)
+    gruplar = []
+    for anahtar, ad, ton in TAKVIM_GRUPLARI:
+        ks = sorted(kutu[anahtar], key=lambda k: (k["vade_tarihi"] or date.max, k["cari"].unvan, k["belge"].tarih, k["belge"].pk))
+        gruplar.append({"anahtar": anahtar, "ad": ad, "ton": ton, "kalemler": ks, "toplam": sum(k["kalan_kurus"] for k in ks)})
+    return {"gruplar": gruplar, "toplam": sum(g["toplam"] for g in gruplar), "avans": avans,
+            "vadesiz_cari_sayisi": len({k["cari"].pk for k in kutu["vadesiz"]})}
+
+
 def _ay_sonu(yil, ay):
     return date(yil, ay, calendar.monthrange(yil, ay)[1])
 

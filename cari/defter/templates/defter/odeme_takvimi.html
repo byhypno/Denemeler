@@ -1,0 +1,54 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Ödeme takvimi · Cari Program{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik">
+  <div><h1>Ödeme takvimi</h1>
+    <p class="not">Açık borçlar <b>vade tarihine</b> göre (belge tarihi + carinin vade günü). Bugün: {{ bugun|date:"d.m.Y" }}.
+      Ödemeler en eski borca mahsup edilir (FIFO varsayımı).</p></div>
+  <form method="get" class="filtre yazdirma-gizle">
+    <label>Tedarikçi <select name="cari" onchange="this.form.submit()"><option value="">Tümü</option>
+      {% for c in cariler %}<option value="{{ c.pk }}" {% if cari and c.pk == cari.pk %}selected{% endif %}>{{ c.unvan }}</option>{% endfor %}</select></label>
+    <button type="button" class="ikincil dugme" onclick="window.print()">{% ikon "yazdir" "kucuk" %}Yazdır</button>
+  </form>
+</div>
+
+<section class="kpi dort" aria-label="Vade özeti">
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">Vadesi geçmiş</span></div>
+    <div class="deger">{{ g.gecikmis.toplam|kurus_tl }}</div><div class="alt">{{ g.gecikmis.kalemler|length }} kalem</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "takvim" %}</span><span class="etiket">Bu hafta ödenecek</span></div>
+    <div class="deger">{{ g.hafta.toplam|kurus_tl }}</div><div class="alt">{{ g.hafta.kalemler|length }} kalem</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gonder" %}</span><span class="etiket">8–30 gün içinde</span></div>
+    <div class="deger">{{ g.ay.toplam|kurus_tl }}</div><div class="alt">{{ g.ay.kalemler|length }} kalem</div></div>
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "cuzdan" %}</span><span class="etiket">Toplam açık borç</span></div>
+    <div class="deger">{{ t.toplam|kurus_tl }}</div><div class="alt">{% if t.avans %}Ayrıca fazla ödeme (avans): {{ t.avans|kurus_tl }}{% else %}Tüm gruplar{% endif %}</div></div>
+</section>
+
+{% if t.vadesiz_cari_sayisi %}
+<div class="mesaj warning yazdirma-gizle" role="status">{{ t.vadesiz_cari_sayisi }} tedarikçinin vade günü tanımlı değil; borçları "Vadesi tanımsız" grubunda ve gecikmiş sayılmıyor.
+  Tedarikçiler sayfasından <b>Düzenle</b> ile vade günü girin.</div>
+{% endif %}
+
+{% if not t.toplam %}
+<div class="kart bos"><h2>Açık borç yok</h2><p>Ödenmemiş kalem bulunmuyor.</p></div>
+{% endif %}
+
+{% for grup in t.gruplar %}{% if grup.kalemler %}
+<section class="kart">
+  <h2>{{ grup.ad }} <span class="chip {{ grup.ton }}">{{ grup.kalemler|length }} kalem · {{ grup.toplam|kurus_tl }}</span></h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Vade</th><th>Tedarikçi</th><th>Belge</th><th>Evrak</th><th class="sayi">Açık tutar</th><th class="sayi">Durum</th></tr></thead>
+    <tbody>{% for k in grup.kalemler %}
+      <tr><td>{% if k.vade_tarihi %}{{ k.vade_tarihi|date:"d.m.Y" }}{% else %}—{% endif %}</td>
+        <td><a href="{% url 'cari_ekstre' k.cari.pk %}"><span class="kisi">{% avatar k.cari.unvan %}{{ k.cari.unvan }}</span></a></td>
+        <td>{{ k.belge.tarih|date:"d.m.Y" }} · {{ k.belge.get_tur_display }}</td><td>{{ k.belge.evrak_no|default:"—" }}</td>
+        <td class="sayi">{{ k.kalan_kurus|kurus_tl }}</td>
+        <td class="sayi">{% if k.gun_kaldi is None %}<span class="not">{{ k.yas_gun }} gün önce</span>
+          {% elif k.gun_kaldi < 0 %}<span class="chip hata">{{ k.gun_kaldi|cevir_pozitif }} gün gecikti</span>
+          {% elif k.gun_kaldi == 0 %}<span class="chip uyari">Bugün</span>
+          {% else %}<span class="chip {{ grup.ton }}">{{ k.gun_kaldi }} gün kaldı</span>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+    <tfoot><tr><th colspan="4">{{ grup.ad }} toplamı</th><td class="sayi">{{ grup.toplam|kurus_tl }}</td><td></td></tr></tfoot>
+  </table></div>
+</section>
+{% endif %}{% endfor %}
+{% endblock %}
