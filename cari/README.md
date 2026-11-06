@@ -51,22 +51,17 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 **Yaşlandırma varsayımı:** ödeme ve iadeler *en eski borca* mahsup edilir (FIFO), çünkü ödemeler tek tek faturalara bağlanmıyor.
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
-## Kasa (Aşama 3) — ön yüzde yalnızca Ofis Kasa
-Şirketin asıl kasası bu programda tutulmaz. Üst menüdeki **Kasa**, yalnızca **Ofis Kasa**'yı (ofis içi küçük harcamalar: çay, kırtasiye, kargo vb.;
-TL) gösterir. Ofis Kasa **cari defterinden tamamen bağımsızdır**; giriş ve çıkış, gün sonu kapanışı vardır, eksiye düşemez.
+## Kasa (Aşama 3) — yalnızca ofis içi küçük harcamalar
+Üst menüdeki **Kasa**, ofis içi küçük harcamalar (çay, kırtasiye, kargo vb.) içindir; tek hesap **Ofis Kasa**'dır (TL).
+**Şirketin asıl kasası ve tedarikçilere yapılan ödemelerin kasası bu programda tutulmaz.** Tedarikçiye yapılan ödeme,
+cari ekstresinde **cari ödemesi** olarak girilir (Yönetim > Cari hareketler).
 
-**Cari Kasa arkada tutulur, ön yüzde görünmez.** Yalnızca **tedarikçiye ödenen ücreti** tutar: sadece çıkış yazılır (giriş kod düzeyinde engellenir),
-tedarikçi seçmek zorunludur, para alınmadığı için bakiyesi hep eksidir. Bu sürekli eksi bakiye ekranda anlamlı olmadığından Kasa sayfasında,
-sekmelerde ve *Cari ödemesi kontrolü* ekranında **gizlenmiştir** ("Ön yüzde gizle" ayarı). Kayıtları **Yönetim > Kasa hareketleri**'nde (hesap: Cari Kasa)
-girilir ve görülür; silinmez, iptal edilir. İstenirse Yönetim > Hesaplar'dan "Ön yüzde gizle" kaldırılarak ön yüzde de açılır (sekme, "Bu ay ödenen" kartı, kontrol ekranı geri gelir).
-Gizli bir kasaya ön yüzden kayıt **girilemez** (403); sessizce Ofis Kasa'ya düşmez.
-
-**Hiçbir kasa cari bakiyesini, cari ödemesi de hiçbir kasayı otomatik değiştirmez.** Tedarikçiye kasadan nakit öderseniz iki yere ayrı girersiniz
-(cari ödemesi + Cari Kasa çıkışı). Cari Kasa ön yüzde açıksa *Cari ödemesi kontrolü* sayfası ("nakit ödendi ama kasadan çıkışı yok" / "kasadan cariye çıkış var
-ama cari ödemesi yok"; aynı cari + aynı tutar + en çok 3 gün farkla tek aday varsa *Eşleştir* önerir; eşleştirme yalnızca referans bağıdır) tutarsızlığı yakalar.
+Ofis Kasa **cari defterinden tamamen bağımsızdır** (cari veya cari ödemesi seçilemez). Hiçbir kasa kaydı cari bakiyesini değiştirmez.
+*Cari Kasa* ve *Cari ödemesi kontrolü* **kaldırıldı** (geçiş 0015). Daha önce Cari Kasa'ya kayıt girildiyse o kayıtlar silinmez:
+hesap pasif kalır, kayıtların açıklamasına "[Tedarikçi: …]" bilgisi yazılır; hiç kaydı yoksa hesap silinir.
 Yeni kasa eklemek için Yönetim > Hesaplar.
 
-- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV (Cari Kasa açıksa ayrıca cari / ilgili ödeme). Kategorileri *Kategoriler* bağlantısından ekleyin.
+- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV . Kategorileri *Kategoriler* bağlantısından ekleyin.
 - **Kasa eksiye düşemez** (Hesap ayarından değiştirilebilir). Bir girişi iptal etmek de kasayı eksiye düşürüyorsa reddedilir.
 - **Silme yok, iptal var:** satırdaki iptal kutusuna neden yazılır; iptal kayıtlar bakiyeye girmez, "iptaller: göster" ile görülür.
 - **Gün sonu kapanışı:** nakdi sayıp yazarsınız; program kayıtlı bakiyeyle farkı saklar. İsterseniz fark, kapanış gününe
@@ -116,8 +111,8 @@ Tamamen **çevrimdışı** (yazı tipleri ve simgeler yerel) ve WCAG AA kontrast
   | Rol | Yapabildiği |
   |---|---|
   | **Yönetici** | Her şey + **Yedek**, **Günlük**, kullanıcı yönetimi, kasa ayarları ve **kapanış kilidi kaldırma** |
-  | **Muhasebe** | Cari + kasa (iki kasa) görüntüleme ve girişi, ek yükleme/kaldırma, eşleştirme; yönetim panelinde ekleme/değiştirme (silme yok) |
-  | **Kasiyer** | **Yalnızca Ofis Kasa**: hareket girişi/iptali, gün sonu, kasa hareketlerine ek. Cari verileri ve Cari Kasa'yı **göremez** |
+  | **Muhasebe** | Cari + kasa görüntüleme ve girişi, ek yükleme/kaldırma; yönetim panelinde ekleme/değiştirme (silme yok) |
+  | **Kasiyer** | **Yalnızca Ofis Kasa**: hareket girişi/iptali, gün sonu, kasa hareketlerine ek. Cari verileri ve genel giderleri **göremez** |
   | **Görüntüleyici** | Her şeyi **görür**, hiçbir şey yazamaz (düğmeler hiç görünmez) |
 
   Muhasebe rolü verilince kullanıcı otomatik olarak yönetim paneline girebilir; rol kaldırılınca bu yetki de gider. Rol değişiklikleri günlüğe yazılır.

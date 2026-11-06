@@ -15,7 +15,7 @@ from . import ek_servisi as es
 from . import yetki
 from .models import Belge, Cari, EkstreMutabakat, Hesap, IslemGunlugu, KasaHareketi
 from .roller import MUHASEBE_OKUR, MUHASEBE_YAZAR, rolleri_kur
-from .test_yardimci import cari_kasa_ac, rol_kullanici
+from .test_yardimci import rol_kullanici
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 30
 GIRIS, CIKIS = "GIRIS", "CIKIS"
@@ -46,13 +46,10 @@ class YetkiTemel(TestCase):
         self.mut = EkstreMutabakat.objects.create(cari=self.cari, ekstre_tarihi=date(2026, 1, 31),
                                                   ekstre_bakiye_kurus=10000)
         self.ofis = Hesap.objects.get(ad="Ofis Kasa")
-        self.ckasa = cari_kasa_ac()
         self.h_ofis = KasaHareketi.objects.create(hesap=self.ofis, yon=GIRIS, tutar_kurus=900000, tarih=date(2026, 1, 5))
-        self.h_cari = KasaHareketi.objects.create(hesap=self.ckasa, yon=GIRIS, tutar_kurus=900000, tarih=date(2026, 1, 5))
         png = lambda n: SimpleUploadedFile(f"{n}.png", PNG + n.encode())
         self.ek_belge = es.ek_ekle(self.belge, png("b"))
         self.ek_ofis = es.ek_ekle(self.h_ofis, png("o"))
-        self.ek_cari = es.ek_ekle(self.h_cari, png("c"))
 
     def giris(self, rol):
         self.client.logout()
@@ -72,9 +69,9 @@ class YetenekFonksiyonlariTests(YetkiTemel):
         for rol in ("muhasebe", "goruntuleyici", "kasiyer", "rolsuz"):
             self.assertNotIn("yonetim", yetki.yetenekler(K[rol]), rol)
         self.assertEqual(yetki.yetenekler(K["rolsuz"]), frozenset())
-        self.assertFalse({"goruntule", "cari_kasa", "ek_yaz", "veri_gir"} & yetki.yetenekler(K["kasiyer"]))
+        self.assertFalse({"goruntule", "ek_yaz", "veri_gir"} & yetki.yetenekler(K["kasiyer"]))
         self.assertFalse({"kasa_yaz", "ek_yaz", "veri_gir"} & yetki.yetenekler(K["goruntuleyici"]))
-        self.assertTrue({"kasa_yaz", "ek_yaz", "veri_gir", "cari_kasa", "goruntule"} <= yetki.yetenekler(K["muhasebe"]))
+        self.assertTrue({"kasa_yaz", "ek_yaz", "veri_gir", "goruntule"} <= yetki.yetenekler(K["muhasebe"]))
 
     def test_pasif_ve_anonim_kullanici_yetkisiz(self):
         K = self.kullanicilar
@@ -96,7 +93,7 @@ class YetenekFonksiyonlariTests(YetkiTemel):
         K = self.kullanicilar
         self.assertEqual([h.ad for h in yetki.gorunur_kasalar(K["kasiyer"])], ["Ofis Kasa"])
         for rol in ("yonetici", "muhasebe", "goruntuleyici"):
-            self.assertEqual([h.ad for h in yetki.gorunur_kasalar(K[rol])], ["Ofis Kasa", "Cari Kasa"], rol)
+            self.assertEqual([h.ad for h in yetki.gorunur_kasalar(K[rol])], ["Ofis Kasa"], rol)
 
     def test_rol_etiketi(self):
         K = self.kullanicilar
@@ -133,15 +130,6 @@ class SayfaYetkiMatrisiTests(YetkiTemel):
         self.kontrol("gun_sonu", reverse("kasa_gun_sonu"), (200, 200, 200, 200, 403, 302))
         self.kontrol("ofis_kasa_eki", reverse("ek_sahip", args=["kasa", self.h_ofis.pk]), (200, 200, 200, 200, 403, 302))
         self.kontrol("ofis_kasa_eki_indir", reverse("ek_indir", args=[self.ek_ofis.pk]), (200, 200, 200, 200, 403, 302))
-
-    def test_cari_kasa_kasiyere_kapali(self):
-        self.kontrol("cari_kasa", f"{reverse('kasa')}?hesap={self.ckasa.pk}", (200, 200, 200, 403, 403, 302))
-        self.kontrol("cari_kasa_gun_sonu", f"{reverse('kasa_gun_sonu')}?hesap={self.ckasa.pk}", (200, 200, 200, 403, 403, 302))
-        self.kontrol("cari_kasa_eki", reverse("ek_sahip", args=["kasa", self.h_cari.pk]), (200, 200, 200, 403, 403, 302))
-        self.kontrol("cari_kasa_eki_indir", reverse("ek_indir", args=[self.ek_cari.pk]), (200, 200, 200, 403, 403, 302))
-
-    def test_kontrol_sayfasi(self):
-        self.kontrol("kasa_kontrol", reverse("kasa_kontrol"), (200, 200, 200, 403, 403, 302))
 
     def test_yalniz_yonetici_sayfalari(self):
         for ad in ("yedek_sayfasi", "gunluk_sayfasi"):
@@ -189,24 +177,12 @@ class YazmaYetkiMatrisiTests(YetkiTemel):
             yeni = KasaHareketi.objects.filter(aciklama="yetki testi").count()
             self.assertEqual(yeni - n, 1 if bek == 302 else 0, rol)
 
-    def test_kasiyer_cari_kasaya_yazamaz_ve_sessizce_ofise_dusmez(self):
-        n = KasaHareketi.objects.count()
-        self.assertEqual(self.durum("kasiyer", f"{reverse('kasa')}?hesap={self.ckasa.pk}", "post",
-                                    **self.kasa_formu(self.ckasa)), 403)
-        self.assertEqual(KasaHareketi.objects.count(), n)                  # ne Cari Kasa'ya ne Ofis Kasa'ya yazıldı
-        self.assertEqual(self.durum("muhasebe", f"{reverse('kasa')}?hesap={self.ckasa.pk}", "post",
-                                    **self.kasa_formu(self.ckasa)), 302)
-        self.assertEqual(KasaHareketi.objects.get(aciklama="yetki testi").hesap_id, self.ckasa.pk)
-
     def test_olmayan_kasa_idsi_cokmez(self):
         self.assertEqual(self.durum("kasiyer", f"{reverse('kasa')}?hesap=99999"), 200)
 
     def test_kasa_iptali(self):
         for rol, bek in (("goruntuleyici", 403), ("rolsuz", 403)):
             self.assertEqual(self.durum(rol, reverse("kasa_hareket_iptal", args=[self.h_ofis.pk]), "post", neden="x"), bek, rol)
-        self.assertEqual(self.durum("kasiyer", reverse("kasa_hareket_iptal", args=[self.h_cari.pk]), "post", neden="x"), 403)
-        self.h_cari.refresh_from_db()
-        self.assertFalse(self.h_cari.iptal)
         self.assertEqual(self.durum("kasiyer", reverse("kasa_hareket_iptal", args=[self.h_ofis.pk]), "post", neden="x"), 302)
         self.h_ofis.refresh_from_db()
         self.assertTrue(self.h_ofis.iptal)
@@ -217,7 +193,6 @@ class YazmaYetkiMatrisiTests(YetkiTemel):
         KasaHareketi.objects.create(hesap=self.ofis, yon=GIRIS, tutar_kurus=100, tarih=d)
         for rol in ("goruntuleyici", "rolsuz"):
             self.assertEqual(self.durum(rol, reverse("kasa_gun_sonu"), "post", **veri), 403, rol)
-        self.assertEqual(self.durum("kasiyer", f"{reverse('kasa_gun_sonu')}?hesap={self.ckasa.pk}", "post", **veri), 403)
         self.assertEqual(self.durum("kasiyer", reverse("kasa_gun_sonu"), "post", **veri), 302)
 
     def test_ek_yukleme_ve_kaldirma(self):
@@ -231,28 +206,16 @@ class YazmaYetkiMatrisiTests(YetkiTemel):
             self.assertEqual(yukle(rol, "belge", self.belge.pk, f"{rol}.png"), 403, rol)
         # kasa tarafı: kasiyer yalnızca Ofis Kasa'ya; görüntüleyici hiçbirine
         self.assertEqual(yukle("kasiyer", "kasa", self.h_ofis.pk, "k1.png"), 302)
-        self.assertEqual(yukle("kasiyer", "kasa", self.h_cari.pk, "k2.png"), 403)
         self.assertEqual(yukle("goruntuleyici", "kasa", self.h_ofis.pk, "g1.png"), 403)
         self.assertEqual(self.belge.ekler.count(), 3)                      # b + m1 + y1
         # kaldırma
         for rol, ek, bek in (("goruntuleyici", self.ek_belge, 403), ("kasiyer", self.ek_belge, 403),
-                             ("kasiyer", self.ek_cari, 403), ("kasiyer", self.ek_ofis, 302), ("muhasebe", self.ek_belge, 302)):
+                             ("kasiyer", self.ek_ofis, 302), ("muhasebe", self.ek_belge, 302)):
             self.assertEqual(self.durum(rol, reverse("ek_kaldir", args=[ek.pk]), "post", neden="x"), bek, f"{rol} {ek.pk}")
 
     def test_yedek_alma_yalniz_yonetici(self):
         for rol in ("muhasebe", "goruntuleyici", "kasiyer", "rolsuz"):
             self.assertEqual(self.durum(rol, reverse("yedek_al"), "post"), 403, rol)
-
-    def test_eslestirme_yalniz_veri_girenler(self):
-        o = Belge.objects.create(cari=self.cari, tur="ODEME", tarih=date(2026, 1, 6), tutar_kurus=500, odeme_sekli="NAKIT")
-        h = KasaHareketi.objects.create(hesap=self.ckasa, yon=CIKIS, tutar_kurus=500, tarih=date(2026, 1, 6), cari=self.cari)
-        for rol in ("goruntuleyici", "kasiyer", "rolsuz"):
-            self.assertEqual(self.durum(rol, reverse("kasa_kontrol"), "post", odeme=o.pk, hareket=h.pk), 403, rol)
-        h.refresh_from_db()
-        self.assertIsNone(h.ilgili_odeme_id)
-        self.assertEqual(self.durum("muhasebe", reverse("kasa_kontrol"), "post", odeme=o.pk, hareket=h.pk), 302)
-        h.refresh_from_db()
-        self.assertEqual(h.ilgili_odeme_id, o.pk)
 
     def test_goruntuleyici_ekranda_yazma_dugmesi_gormez(self):
         self.giris("goruntuleyici")

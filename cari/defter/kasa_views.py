@@ -25,12 +25,9 @@ def _hesap_veya_yok(request, hesap_id):
     """
     gorunur = gorunur_kasalar(request.user)
     if hesap_id and str(hesap_id).isdigit() and not gorunur.filter(pk=int(hesap_id)).exists():
-        var = ks.Hesap.objects.filter(pk=int(hesap_id))
-        if var.filter(aktif=True, on_yuzde_gizli=False).exists():
-            raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
-        if var.exists() and request.method == "POST":
-            # Pasif/gizli kasayı GÖRÜNTÜLEMEK Ofis Kasa'ya düşer; ama YAZMA asla başka kasaya düşmez (yanlış kasaya kayıt olmasın)
-            raise PermissionDenied("Bu kasa ön yüzde kapalı; kayıt buradan girilemez.")
+        if ks.Hesap.objects.filter(pk=int(hesap_id)).exists() and request.method == "POST":
+            # Pasif kasayı GÖRÜNTÜLEMEK varsayılan kasaya düşer; ama YAZMA asla başka kasaya düşmez (yanlış kasaya kayıt olmasın)
+            raise PermissionDenied("Bu kasa kapalı; kayıt buradan girilemez.")
     return ks.varsayilan_hesap(hesap_id, hesaplar=gorunur)
 
 
@@ -63,7 +60,7 @@ def kasa_ana(request):
         yil = yillar[-1]
 
     # --- Hareket listesi + filtreler
-    qs = hesap.hareketler.select_related("kategori", "cari").order_by("-tarih", "-id")
+    qs = hesap.hareketler.select_related("kategori").order_by("-tarih", "-id")
     f = {k: request.GET.get(k, "") for k in ("bas", "bit", "yon", "kategori", "iptal")}
     for alan, op in (("bas", "tarih__gte"), ("bit", "tarih__lte")):
         try:
@@ -84,10 +81,9 @@ def kasa_ana(request):
     aylik = ks.kasa_aylik(hesap, yil, bugun)
     dagilim = ks.kategori_dagilimi(hesap, yil)
     ozet = ks.kasa_ozeti(hesap, bugun)
-    kontrol_adet = ks.kasa_kontrol(hesap)["adet"] if hesap.cari_bagli else 0
     return render(request, "defter/kasa.html", {
         "hesap": hesap, "hesaplar": gorunur_kasalar(request.user),
-        "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]), "kontrol_adet": kontrol_adet,
+        "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]),
         "yil": yil, "yillar": yillar, "filtre": f, "sayfa_nesnesi": sayfa, "sorgu": sorgu.urlencode(),
         "bakiyeler": ks.hareketler_bakiyeli(hesap), "kategoriler": KasaKategori.objects.filter(aktif=True),
         "en_buyuk": ks.en_buyuk_cikislar(hesap, yil),
@@ -153,21 +149,3 @@ def kasa_gun_sonu(request):
         "kilit_siniri": hesap.kilit_siniri(), "acik_gunler": ks.acik_gunler(hesap, bugun),
         "kapanislar": GunSonu.objects.filter(hesap=hesap)[:30], "sayfa": "kasa",
     })
-
-
-@yetki_gerekli("goruntule", "veri_gir")
-def kasa_kontrol(request):
-    if request.method == "POST":
-        try:
-            ks.eslestir(int(request.POST.get("hareket", 0)), int(request.POST.get("odeme", 0)))
-            messages.success(request, "Eşleştirildi (yalnızca referans bağı kuruldu, tutarlar değişmedi).")
-        except ValidationError as e:
-            messages.error(request, _hata_metni(e))
-        except (ValueError, KasaHareketi.DoesNotExist, ks.Belge.DoesNotExist):
-            messages.error(request, "Kayıt bulunamadı.")
-        return redirect("kasa_kontrol")
-    hesap = _hesap_veya_yok(request, request.GET.get("hesap"))
-    if hesap is None or not hesap.cari_bagli:
-        hesap = gorunur_kasalar(request.user).filter(cari_bagli=True).first()
-    return render(request, "defter/kasa_kontrol.html",
-                  {"hesap": hesap, "kontrol": ks.kasa_kontrol(hesap) if hesap else None, "sayfa": "kasa"})

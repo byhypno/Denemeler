@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from . import kasa_servisi as ks
 from .models import Belge, Cari, GunSonu, Hesap, KasaHareketi, KasaKategori
-from .test_yardimci import cari_kasa_ac, cari_kasa_goster, rol_kullanici
+from .test_yardimci import rol_kullanici
 
 GIRIS, CIKIS = KasaHareketi.Yon.GIRIS, KasaHareketi.Yon.CIKIS
 
@@ -190,17 +190,6 @@ class KasaHesapTests(KasaTemel):
 class OfisKasaBagimsizlikTests(KasaTemel):
     """Ofis Kasa ile cari defteri arasında HİÇBİR bağ olmamalı."""
 
-    def test_ofis_kasaya_cari_veya_cari_odemesi_baglanamaz(self):
-        cari = Cari.objects.create(unvan="X")
-        odeme = Belge.objects.create(cari=cari, tur="ODEME", tarih=date(2026, 1, 1), tutar_kurus=100)
-        for kw in ({"cari": cari}, {"cari": cari, "ilgili_odeme": odeme}):
-            h = KasaHareketi(hesap=self.kasa, yon=GIRIS, tutar_kurus=100, tarih=date(2026, 1, 2), **kw)
-            with self.assertRaises(ValidationError):
-                h.full_clean()
-            with self.assertRaises(ValidationError):
-                h.save()                     # clean'i atlayan doğrudan kayıt da engellenir
-        self.assertEqual(KasaHareketi.objects.count(), 0)
-
     def test_kasa_hareketi_cari_bakiyesini_degistirmez(self):
         cari = Cari.objects.create(unvan="X")
         Belge.objects.create(cari=cari, tur="ALIS_FISI", tarih=date(2026, 1, 1), tutar_kurus=10000, evrak_no="1")
@@ -218,154 +207,6 @@ class OfisKasaBagimsizlikTests(KasaTemel):
         self.assertEqual(KasaHareketi.objects.count(), 1)
         self.assertEqual(cari.bakiye_kurus(), -20000)
 
-    def test_kontrol_ve_eslestirme_ofis_kasayi_kapsamaz(self):
-        self.assertFalse(self.kasa.cari_bagli)
-        self.assertEqual(ks.kasa_kontrol(self.kasa)["adet"], 0)
-        cari = Cari.objects.create(unvan="X")
-        o = Belge.objects.create(cari=cari, tur="ODEME", tarih=date(2026, 1, 3), tutar_kurus=100)
-        h = self.hareket(GIRIS, 100, date(2026, 1, 3))
-        with self.assertRaises(ValidationError):
-            ks.eslestir(h.pk, o.pk)
-
-
-class CariKasaTests(TestCase):
-    """İkinci kasa: 'Cari Kasa' — Ofis Kasa'dan ayrı; hareketlerde cari seçilebilir, tutarlar bağımsız kalır."""
-
-    def setUp(self):
-        self.ofis = Hesap.objects.get(ad="Ofis Kasa")
-        self.ckasa = cari_kasa_ac()
-        self.cari = Cari.objects.create(unvan="K")
-
-    def h(self, hesap, yon, tutar, tarih, **kw):
-        return KasaHareketi.objects.create(hesap=hesap, yon=yon, tutar_kurus=tutar, tarih=tarih, **kw)
-
-    def test_iki_ayri_kasa_hazir(self):
-        self.assertEqual((self.ofis.cari_bagli, self.ckasa.cari_bagli), (False, True))
-        self.assertEqual(Hesap.objects.filter(tur="KASA").count(), 2)
-        self.assertNotEqual(self.ofis.pk, self.ckasa.pk)
-
-    def test_bakiyeler_birbirinden_ayri(self):
-        self.h(self.ofis, GIRIS, 10000, date(2026, 1, 1))
-        self.h(self.ckasa, GIRIS, 99000, date(2026, 1, 1))
-        self.h(self.ckasa, CIKIS, 4000, date(2026, 1, 2), cari=self.cari)
-        self.assertEqual(self.ofis.bakiye_kurus(), 10000)
-        self.assertEqual(self.ckasa.bakiye_kurus(), 95000)
-
-    def test_cari_kasa_hareketi_cari_ledgerini_degistirmez(self):
-        self.h(self.ckasa, GIRIS, 99000, date(2026, 1, 1))
-        self.h(self.ckasa, CIKIS, 4000, date(2026, 1, 2), cari=self.cari)
-        self.assertEqual(self.cari.bakiye_kurus(), 0)
-        self.assertEqual(Belge.objects.count(), 0)
-
-    def test_eksi_bakiye_kurali_her_kasa_icin_ayri(self):
-        self.h(self.ofis, GIRIS, 100000, date(2026, 1, 1))          # Ofis'te para var, Cari Kasa'da yok
-        fazla = KasaHareketi(hesap=self.ckasa, yon=CIKIS, tutar_kurus=100, tarih=date(2026, 1, 2), cari=self.cari)
-        with self.assertRaises(ValidationError):
-            fazla.full_clean()
-
-    def test_gun_sonu_kilidi_hesaba_ozel(self):
-        self.h(self.ofis, GIRIS, 10000, date(2026, 3, 1))
-        self.h(self.ckasa, GIRIS, 20000, date(2026, 3, 1))
-        ks.gun_sonu_kapat(self.ofis, date(2026, 3, 1), 10000, bugun=date(2026, 3, 2))
-        self.assertEqual(self.ofis.kilit_siniri(), date(2026, 3, 1))
-        self.assertIsNone(self.ckasa.kilit_siniri())
-        self.h(self.ckasa, GIRIS, 500, date(2026, 3, 1))          # Cari Kasa hâlâ açık
-        with self.assertRaises(ValidationError):
-            self.h(self.ofis, GIRIS, 500, date(2026, 3, 1))
-        g = ks.gun_sonu_kapat(self.ckasa, date(2026, 3, 1), 20500, bugun=date(2026, 3, 2))
-        self.assertEqual(g.fark_kurus, 0)
-
-    def test_ilgili_odeme_cariyle_uyumlu_olmali(self):
-        baska = Cari.objects.create(unvan="B")
-        o = Belge.objects.create(cari=baska, tur="ODEME", tarih=date(2026, 1, 3), tutar_kurus=100)
-        self.h(self.ckasa, GIRIS, 1000, date(2026, 1, 1))
-        h = KasaHareketi(hesap=self.ckasa, yon=CIKIS, tutar_kurus=100, tarih=date(2026, 1, 3),
-                         cari=self.cari, ilgili_odeme=o)
-        with self.assertRaises(ValidationError):
-            h.full_clean()
-        h2 = KasaHareketi(hesap=self.ckasa, yon=CIKIS, tutar_kurus=100, tarih=date(2026, 1, 3), ilgili_odeme=o)
-        with self.assertRaises(ValidationError):
-            h2.full_clean()                                       # cari olmadan ödeme bağlanamaz
-
-
-class KasaKontrolTests(TestCase):
-    def setUp(self):
-        self.kasa = cari_kasa_ac()
-        self.cari = Cari.objects.create(unvan="K")
-        self.hareket(GIRIS, 1000000, date(2026, 1, 1))
-
-    def hareket(self, yon, tutar, tarih, **kw):
-        return KasaHareketi.objects.create(hesap=self.kasa, yon=yon, tutar_kurus=tutar, tarih=tarih, **kw)
-
-    def odeme(self, tutar, tarih, sekil="NAKIT", cari=None):
-        return Belge.objects.create(cari=cari or self.cari, tur="ODEME", tutar_kurus=tutar, tarih=tarih,
-                                    odeme_sekli=sekil)
-
-    def test_nakit_odeme_kasasiz_listelenir_havale_listelenmez(self):
-        self.odeme(5000, date(2026, 1, 10), "NAKIT")
-        self.odeme(7000, date(2026, 1, 10), "HAVALE")
-        k = ks.kasa_kontrol()
-        self.assertEqual([x["odeme"].tutar_kurus for x in k["nakit_kasasiz"]], [5000])
-        self.assertIsNone(k["nakit_kasasiz"][0]["oneri"])
-
-    def test_tek_aday_oneri_olur(self):
-        o = self.odeme(5000, date(2026, 1, 10))
-        c = self.hareket(CIKIS, 5000, date(2026, 1, 11), cari=self.cari)
-        k = ks.kasa_kontrol()
-        self.assertEqual(k["nakit_kasasiz"][0]["oneri"], c)
-        self.assertEqual(k["kasa_odemesiz"][0]["oneri"], o)
-        self.assertEqual(k["adet"], 2)
-
-    def test_uzak_tarih_veya_farkli_tutar_oneri_degildir(self):
-        self.odeme(5000, date(2026, 1, 10))
-        self.hareket(CIKIS, 5000, date(2026, 1, 20), cari=self.cari)      # 10 gün fark
-        self.hareket(CIKIS, 4999, date(2026, 1, 10), cari=self.cari)      # tutar farklı
-        self.assertIsNone(ks.kasa_kontrol()["nakit_kasasiz"][0]["oneri"])
-
-    def test_birden_fazla_aday_oneri_vermez(self):
-        self.odeme(5000, date(2026, 1, 10))
-        self.hareket(CIKIS, 5000, date(2026, 1, 10), cari=self.cari)
-        self.hareket(CIKIS, 5000, date(2026, 1, 11), cari=self.cari)
-        k = ks.kasa_kontrol()
-        self.assertIsNone(k["nakit_kasasiz"][0]["oneri"])
-        self.assertEqual(k["nakit_kasasiz"][0]["aday_sayisi"], 2)
-
-    def test_baglanan_listeden_cikar_tutarlar_degismez(self):
-        o = self.odeme(5000, date(2026, 1, 10))
-        c = self.hareket(CIKIS, 5000, date(2026, 1, 10), cari=self.cari)
-        ks.eslestir(c.pk, o.pk)
-        c.refresh_from_db()
-        self.assertEqual(c.ilgili_odeme_id, o.pk)
-        self.assertEqual(ks.kasa_kontrol()["adet"], 0)
-        self.assertEqual(self.kasa.bakiye_kurus(), 1000000 - 5000)
-        self.assertEqual(Belge.objects.count(), 1)
-
-    def test_eslestirme_dogrulamalari(self):
-        baska = Cari.objects.create(unvan="Baska")
-        o = self.odeme(5000, date(2026, 1, 10))
-        c_baska = self.hareket(CIKIS, 5000, date(2026, 1, 10), cari=baska)
-        with self.assertRaises(ValidationError):
-            ks.eslestir(c_baska.pk, o.pk)                                  # farklı cari
-        c1 = self.hareket(CIKIS, 5000, date(2026, 1, 10), cari=self.cari)
-        c2 = self.hareket(CIKIS, 5000, date(2026, 1, 11), cari=self.cari)
-        ks.eslestir(c1.pk, o.pk)
-        with self.assertRaises(ValidationError):
-            ks.eslestir(c2.pk, o.pk)                                       # aynı ödeme iki kez bağlanamaz
-
-    def test_kapali_gundeki_kayit_da_eslestirilebilir(self):
-        o = self.odeme(5000, date(2026, 1, 10))
-        c = self.hareket(CIKIS, 5000, date(2026, 1, 10), cari=self.cari)
-        ks.gun_sonu_kapat(self.kasa, date(2026, 1, 15), self.kasa.bakiye_kurus(), bugun=date(2026, 1, 16))
-        ks.eslestir(c.pk, o.pk)
-        c.refresh_from_db()
-        self.assertEqual(c.ilgili_odeme_id, o.pk)
-
-    def test_iptaller_kontrole_girmez(self):
-        self.odeme(5000, date(2026, 1, 10))
-        Belge.objects.filter(tur="ODEME").update(iptal=True, iptal_nedeni="x")
-        self.hareket(CIKIS, 100, date(2026, 1, 10), cari=self.cari, iptal=True, iptal_nedeni="x")
-        self.assertEqual(ks.kasa_kontrol()["adet"], 0)
-
 
 class KasaEkranTests(KasaTemel):
     def setUp(self):
@@ -377,50 +218,11 @@ class KasaEkranTests(KasaTemel):
         self.client.force_login(self.user)
 
     def test_giris_gerekli(self):
-        for ad in ("kasa", "kasa_gun_sonu", "kasa_kontrol"):
+        for ad in ("kasa", "kasa_gun_sonu"):
             r = self.client.get(reverse(ad))
             self.assertEqual(r.status_code, 302, ad)
             self.assertIn("/giris/", r["Location"])
         self.assertEqual(self.client.post(reverse("kasa_hareket_iptal", args=[1])).status_code, 302)
-
-    def test_cari_kasa_ekrani_cari_alani_ve_kontrol_sayfasi(self):
-        self.giris()
-        ck = cari_kasa_ac()
-        cari = Cari.objects.create(unvan="EKRAN CARI")
-        r = self.client.get(reverse("kasa"), {"hesap": ck.pk})
-        self.assertContains(r, "<h1>Cari Kasa</h1>", html=False)
-        self.assertContains(r, 'name="cari"')
-        self.assertContains(r, "Ofis Kasa")                         # sekme
-        r = self.client.post(f"{reverse('kasa')}?hesap={ck.pk}", {
-            "tarih": self.bugun.isoformat(), "yon": "GIRIS", "tutar_kurus": "1.000,00", "kdv_modu": "BILINMIYOR"})
-        self.assertEqual(r.status_code, 302)
-        r = self.client.post(f"{reverse('kasa')}?hesap={ck.pk}", {
-            "tarih": self.bugun.isoformat(), "yon": "CIKIS", "tutar_kurus": "250,00", "cari": cari.pk,
-            "kdv_modu": "BILINMIYOR"})
-        self.assertEqual(r.status_code, 302)
-        h = KasaHareketi.objects.get(yon=CIKIS)
-        self.assertEqual((h.hesap_id, h.cari_id, h.tutar_kurus), (ck.pk, cari.pk, 25000))
-        self.assertContains(self.client.get(reverse("kasa_kontrol"), {"hesap": ck.pk}), "Cari ödemesi girin")
-        # Ofis Kasa'ya cari parametresi yollansa bile yok sayılır / kayıt cari taşımaz
-        r = self.client.post(reverse("kasa"), {"tarih": self.bugun.isoformat(), "yon": "GIRIS",
-                                               "tutar_kurus": "5,00", "cari": cari.pk, "kdv_modu": "BILINMIYOR"})
-        self.assertEqual(r.status_code, 302)
-        self.assertIsNone(KasaHareketi.objects.get(hesap=self.kasa, tutar_kurus=500).cari_id)
-
-    def test_kontrol_eslestirme_ekrandan(self):
-        self.giris()
-        ck = cari_kasa_ac()
-        cari = Cari.objects.create(unvan="EKRAN CARI")
-        KasaHareketi.objects.create(hesap=ck, yon=GIRIS, tutar_kurus=1000000, tarih=self.bugun)
-        o = Belge.objects.create(cari=cari, tur="ODEME", tutar_kurus=5000, tarih=self.bugun, odeme_sekli="NAKIT")
-        c = KasaHareketi.objects.create(hesap=ck, yon=CIKIS, tutar_kurus=5000, tarih=self.bugun, cari=cari)
-        self.assertContains(self.client.get(reverse("kasa_kontrol")), "Eşleştir")
-        r = self.client.post(reverse("kasa_kontrol"), {"odeme": o.pk, "hareket": c.pk}, follow=True)
-        self.assertContains(r, "Tutarsızlık yok")
-        r = self.client.post(reverse("kasa_kontrol"), {"odeme": "x", "hareket": "y", "geri": "https://kotu.example/"},
-                             follow=True)
-        self.assertContains(r, "Kayıt bulunamadı")
-        self.assertEqual(r.redirect_chain[-1][0], reverse("kasa_kontrol"))   # dışarıya yönlendirmez
 
     def test_kasa_sayfasinda_cari_alani_yok(self):
         self.giris()
@@ -568,150 +370,31 @@ class KasaAdminTests(KasaTemel):
         self.assertTrue(yeni.iptal)
 
 
-class CariKasaSadeceCikisTests(TestCase):
-    """Cari Kasa yalnızca tedarikçiye yapılan ödemeyi tutar: giriş yok, bakiye hep eksi (geçiş 0013).
-    Varsayılan olarak ön yüzde GİZLİ olduğundan (0014) bu testler ekranını açıkça görünür yapar."""
+class CariKasaKaldirildiTests(TestCase):
+    """Cari Kasa kaldırıldı (0015): tek kasa Ofis Kasa; cari/ilgili ödeme alanları ve kontrol ekranı yok."""
 
     def setUp(self):
-        self.ck = cari_kasa_goster()
-        self.cari = Cari.objects.create(unvan="Tedarik A")
-        self.client.force_login(rol_kullanici("m", "Muhasebe"))
-        self.url = f"{reverse('kasa')}?hesap={self.ck.pk}"
-
-    def form(self, **kw):
-        d = {"tarih": date.today().isoformat(), "tutar_kurus": "1.000,00", "kdv_modu": "BILINMIYOR",
-             "cari": self.cari.pk, "aciklama": "havale"}
-        d.update(kw)
-        return d
-
-    def test_varsayilan_ayarlar(self):
-        self.assertEqual((self.ck.aktif, self.ck.sadece_cikis, self.ck.eksiye_dusebilir, self.ck.cari_bagli),
-                         (True, True, True, True))
-        self.assertFalse(Hesap.objects.get(ad="Ofis Kasa").on_yuzde_gizli)
-        ofis = Hesap.objects.get(ad="Ofis Kasa")
-        self.assertEqual((ofis.sadece_cikis, ofis.cari_bagli), (False, False))      # ofis kasası etkilenmez
-
-    def test_odeme_girilir_bakiye_eksi_olur_ve_birikir(self):
-        self.assertEqual(self.client.post(self.url, self.form()).status_code, 302)
-        self.assertEqual(self.client.post(self.url, self.form(tutar_kurus="250,50")).status_code, 302)
-        h = KasaHareketi.objects.filter(hesap=self.ck)
-        self.assertEqual({x.yon for x in h}, {"CIKIS"})                              # yön formda yok, çıkış atanır
-        self.assertEqual(self.ck.bakiye_kurus(), -125050)                          # toplam ödenen, eksi
-        self.assertLess(self.ck.bakiye_kurus(), 0)
-
-    def test_formda_yon_alani_yok_cari_zorunlu(self):
-        r = self.client.get(self.url)
-        self.assertNotContains(r, 'name="yon"')
-        self.assertContains(r, "Ödeme yapılan tedarikçi")
-        r = self.client.post(self.url, self.form(cari=""))
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(KasaHareketi.objects.filter(hesap=self.ck).count(), 0)
-
-    def test_istemci_giris_yonu_gondererek_giris_yazamaz(self):
-        self.client.post(self.url, self.form(yon="GIRIS"))
-        self.assertEqual({x.yon for x in KasaHareketi.objects.filter(hesap=self.ck)}, {"CIKIS"})
-
-    def test_model_duzeyinde_giris_ve_carisiz_kayit_reddedilir(self):
-        for kw in ({"yon": "GIRIS", "cari": self.cari}, {"yon": "CIKIS", "cari": None}):
-            with self.assertRaises(ValidationError):
-                KasaHareketi(hesap=self.ck, tarih=date.today(), tutar_kurus=100, **kw).save()
-        self.assertEqual(KasaHareketi.objects.count(), 0)
-
-    def test_eski_giris_kaydi_iptal_edilebilir(self):
-        """Kural yalnızca yeni kayıt içindir: kasa açık ayarlanmadan önce girilmiş bir kayıt kilitlenmesin."""
-        h = Hesap.objects.get(pk=self.ck.pk)
-        h.sadece_cikis = False; h.save()
-        k = KasaHareketi.objects.create(hesap=h, yon="GIRIS", tarih=date.today(), tutar_kurus=500)
-        h.sadece_cikis = True; h.save()
-        k.refresh_from_db(); k.iptal, k.iptal_nedeni = True, "hatalı"
-        k.save()                                                                    # reddedilmez
-        k.refresh_from_db(); self.assertTrue(k.iptal)
-
-    def test_ekran_giris_kartlari_ve_gun_sonu_yok_odenen_var(self):
-        KasaHareketi.objects.create(hesap=self.ck, yon="CIKIS", cari=self.cari, tarih=date.today(), tutar_kurus=700000)
-        r = self.client.get(self.url)
-        self.assertContains(r, "Bu ay ödenen")
-        self.assertContains(r, "Hep eksi")
-        self.assertContains(r, "yalnızca tedarikçiye yapılan ödemeleri")
-        self.assertNotContains(r, "Bugün giriş")
-        self.assertNotContains(r, "Son kapanış")
-        self.assertNotContains(r, "Gün sonu")
-        self.assertContains(r, '<span class="eksi">-7.000,00')                     # bakiye kırmızı ve eksi
-
-    def test_ofis_kasa_degismedi_giris_cikis_var(self):
-        ofis = Hesap.objects.get(ad="Ofis Kasa")
-        r = self.client.get(f"{reverse('kasa')}?hesap={ofis.pk}")
-        self.assertContains(r, 'name="yon"')
-        self.assertContains(r, "Bugün giriş")
-        self.assertContains(r, "Gün sonu")
-        self.assertContains(r, "Ofis içi küçük harcamalar")
-
-    def test_sekmeler_iki_kasa(self):
-        self.assertContains(self.client.get(reverse("kasa")), "Kasa seçimi")
-
-    def test_kasiyer_cari_kasayi_goremez(self):
-        self.client.force_login(rol_kullanici("k", "Kasiyer"))
-        self.assertEqual(self.client.get(self.url).status_code, 403)
-        self.assertEqual(self.client.post(self.url, self.form()).status_code, 403)
-
-
-class CariKasaOnYuzdeGizliTests(TestCase):
-    """Cari Kasa bakiyesi hep eksi olacağından ön yüzde görünmez; kayıtlar arkada (yönetim panelinde) durur (geçiş 0014)."""
-
-    def setUp(self):
-        self.ck = Hesap.objects.get(ad="Cari Kasa")
-        self.ofis = Hesap.objects.get(ad="Ofis Kasa")
-        self.cari = Cari.objects.create(unvan="Tedarik A")
-        KasaHareketi.objects.create(hesap=self.ck, yon="CIKIS", cari=self.cari, tarih=date.today(), tutar_kurus=123456, aciklama="arka kayıt")
         self.client.force_login(rol_kullanici("m", "Muhasebe"))
 
-    def test_varsayilan_gizli_ama_aktif_ve_veri_duruyor(self):
-        self.assertTrue(self.ck.on_yuzde_gizli)
-        self.assertTrue(self.ck.aktif)
-        self.assertEqual(self.ck.bakiye_kurus(), -123456)
+    def test_tek_kasa_ofis_kasa(self):
+        self.assertEqual(list(Hesap.objects.values_list("ad", flat=True)), ["Ofis Kasa"])
 
-    def test_kasa_sayfasinda_yalniz_ofis_kasa(self):
+    def test_alanlar_ve_sayfalar_yok(self):
+        alanlar = {f.name for f in KasaHareketi._meta.get_fields()}
+        self.assertFalse({"cari", "ilgili_odeme"} & alanlar)
+        self.assertFalse({"cari_bagli", "sadece_cikis", "on_yuzde_gizli"} & {f.name for f in Hesap._meta.get_fields()})
+        self.assertEqual(self.client.get("/kasa/kontrol/").status_code, 404)
         r = self.client.get(reverse("kasa"))
-        self.assertEqual(r.context["hesap"], self.ofis)
-        self.assertEqual(list(r.context["hesaplar"]), [self.ofis])
-        for yok in ("Kasa seçimi", "Cari Kasa", "(cari)", "Cari ödemesi kontrolü", "arka kayıt", "Ödeme yapılan tedarikçi"):
+        for yok in ("Cari Kasa", "(cari)", "Cari ödemesi kontrolü", 'name="cari"', "ilgili_odeme", "Kasa seçimi"):
             self.assertNotContains(r, yok)
+        self.assertContains(r, "küçük harcamalar")
 
-    def test_gizli_kasa_istenirse_403_degil_ofise_duser(self):
-        for url in (reverse("kasa"), reverse("kasa_gun_sonu")):
-            r = self.client.get(url, {"hesap": self.ck.pk})
-            self.assertEqual(r.status_code, 200, url)
-            self.assertEqual(r.context["hesap"], self.ofis, url)
-
-    def test_gizli_kasaya_ondan_kayit_girilemez(self):
+    def test_istek_baska_kasa_idsiyle_ofise_yazamaz(self):
+        """Var olan ama aktif olmayan bir kasa id'sine yazma, sessizce Ofis Kasa'ya düşmez."""
+        pasif = Hesap.objects.create(ad="Eski", aktif=False)
         n = KasaHareketi.objects.count()
-        r = self.client.post(f"{reverse('kasa')}?hesap={self.ck.pk}", {
-            "tarih": date.today().isoformat(), "yon": "CIKIS", "tutar_kurus": "10,00", "kdv_modu": "BILINMIYOR",
-            "cari": self.cari.pk, "aciklama": "x"})
-        self.assertEqual(r.status_code, 403)                  # sessizce Ofis Kasa'ya yazılmaz
-        self.assertEqual(KasaHareketi.objects.count(), n)
-
-    def test_front_iptal_gizli_kasa_icin_kapali(self):
-        h = KasaHareketi.objects.get(hesap=self.ck)
-        r = self.client.post(reverse("kasa_hareket_iptal", args=[h.pk]), {"neden": "x"})
+        r = self.client.post(f"{reverse('kasa')}?hesap={pasif.pk}", {
+            "tarih": date.today().isoformat(), "yon": "GIRIS", "tutar_kurus": "10,00", "kdv_modu": "BILINMIYOR"})
         self.assertEqual(r.status_code, 403)
-        h.refresh_from_db(); self.assertFalse(h.iptal)
-
-    def test_kontrol_sayfasi_gizliyken_aciklayici_mesaj(self):
-        r = self.client.get(reverse("kasa_kontrol"))
-        self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "Ön yüzde görünen cari bağlantılı bir kasa yok")
-
-    def test_yonetim_panelinde_gorunur_ve_kayit_girilir(self):
-        y = rol_kullanici("y", is_superuser=True, is_staff=True)
-        self.client.force_login(y)
-        liste = self.client.get(reverse("admin:defter_hesap_changelist"))
-        self.assertContains(liste, "Cari Kasa")
-        r = self.client.get(reverse("admin:defter_kasahareketi_changelist"))
-        self.assertContains(r, "arka kayıt")
-        self.assertEqual(self.client.get(reverse("admin:defter_kasahareketi_add")).status_code, 200)
-
-    def test_gorunur_yapilinca_geri_gelir(self):
-        cari_kasa_goster()
-        r = self.client.get(reverse("kasa"))
-        self.assertContains(r, "Kasa seçimi")
+        self.assertEqual(KasaHareketi.objects.count(), n)
+        self.assertEqual(self.client.get(reverse("kasa"), {"hesap": pasif.pk}).context["hesap"].ad, "Ofis Kasa")

@@ -196,5 +196,5 @@ class YonetimAramaliSecimTests(TestCase):
         self.assertContains(r, "ERÖZ HIRDAVAT")
 
     def test_diger_formlar_da_aramali(self):
-        for ad in ("admin:defter_kasahareketi_add", "admin:defter_ekstremutabakat_add"):
+        for ad in ("admin:defter_ekstremutabakat_add",):
             self.assertIn("admin-autocomplete", self.client.get(reverse(ad)).content.decode(), ad)

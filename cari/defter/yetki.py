@@ -5,7 +5,6 @@ Roller Django 'Grup'larıdır; yönetici = superuser. Her rol bir YETENEK kümes
   goruntule        cari tarafını (Genel Bakış, ekstre, mutabakat, ödeme listesi, ekler) görme
   kasa_goruntule   kasa sayfalarını görme
   kasa_yaz         kasa hareketi girme/iptal, gün sonu kapanışı
-  cari_kasa        Cari Kasa'yı (cari bağlantılı kasa) görme/kullanma
   ek_yaz           cari tarafındaki kayıtlara ek yükleme/kaldırma
   veri_gir         eşleştirme gibi cari tarafı yazma işlemleri (veri girişi yönetim panelinden, model izinleriyle)
   yonetim          yedek, işlem günlüğü, kullanıcı yönetimi, kilit kaldırma (yalnızca yönetici)
@@ -18,9 +17,9 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 
 ROL_YETENEKLERI = {
-    "Muhasebe": frozenset({"goruntule", "kasa_goruntule", "kasa_yaz", "cari_kasa", "ek_yaz", "veri_gir"}),
+    "Muhasebe": frozenset({"goruntule", "kasa_goruntule", "kasa_yaz", "ek_yaz", "veri_gir"}),
     "Kasiyer": frozenset({"kasa_goruntule", "kasa_yaz"}),                      # yalnızca cari bağlantısız kasa
-    "Görüntüleyici": frozenset({"goruntule", "kasa_goruntule", "cari_kasa"}),  # her şeyi görür, hiçbir şey yazamaz
+    "Görüntüleyici": frozenset({"goruntule", "kasa_goruntule"}),  # her şeyi görür, hiçbir şey yazamaz
 }
 YONETICI_YETENEKLERI = frozenset().union(*ROL_YETENEKLERI.values()) | {"yonetim"}
 
@@ -76,17 +75,13 @@ def yetki_gerekli(okuma: str, yazma: str | None = None):
 
 
 def gorunur_kasalar(user):
-    """Kullanıcının ÖN YÜZDE görebildiği kasa hesapları: aktif ve gizlenmemiş olanlar
-    (Cari Kasa ayrıca yalnızca 'cari_kasa' yeteneği olanlara)."""
+    """Kullanıcının görebildiği (aktif) kasa hesapları. Şu an tek kasa var: Ofis Kasa."""
     from .models import Hesap
-    qs = Hesap.objects.filter(aktif=True, on_yuzde_gizli=False, tur=Hesap.Tur.KASA).order_by("id")
-    return qs if var_mi(user, "cari_kasa") else qs.filter(cari_bagli=False)
+    return Hesap.objects.filter(aktif=True, tur=Hesap.Tur.KASA).order_by("id")
 
 
 def ek_izni(user, sahip_turu: str, sahip, yazma: bool) -> bool:
     """Ek dosyalara erişim: kasa ekleri kasa yetkisiyle, diğerleri cari yetkisiyle."""
     if sahip_turu == "kasa":
-        if not var_mi(user, "kasa_yaz" if yazma else "kasa_goruntule"):
-            return False
-        return (not sahip.hesap.cari_bagli) or var_mi(user, "cari_kasa")
+        return var_mi(user, "kasa_yaz" if yazma else "kasa_goruntule")
     return var_mi(user, "ek_yaz" if yazma else "goruntule")

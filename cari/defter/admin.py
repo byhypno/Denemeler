@@ -121,7 +121,7 @@ class BelgeAdmin(SilmeKapali, admin.ModelAdmin):
 
 @admin.register(Hesap)
 class HesapAdmin(SilmeKapali, admin.ModelAdmin):
-    list_display = ("ad", "tur", "cari_bagli", "sadece_cikis", "on_yuzde_gizli", "bakiye", "aktif")
+    list_display = ("ad", "tur", "bakiye", "aktif")
 
     def has_change_permission(self, request, obj=None):
         return request.user.is_superuser          # kasa ayarları (eksiye düşme, cari bağlantısı) yalnızca yönetici
@@ -159,17 +159,16 @@ def kasa_iptal_et(modeladmin, request, queryset):
 
 @admin.register(KasaHareketi)
 class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
-    list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "cari", "aciklama", "iptal")
+    list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "aciklama", "iptal")
     list_filter = ("hesap", "yon", "kategori", "iptal")
-    search_fields = ("aciklama", "makbuz_no", "cari__unvan")
+    search_fields = ("aciklama", "makbuz_no")
     date_hierarchy = "tarih"
-    autocomplete_fields = ("cari",)
     actions = [kasa_iptal_et]
     readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("kasa")
     gecmis_bag = gecmis_baglantisi("KasaHareketi")
     fieldsets = (
-        (None, {"fields": ("hesap", "tarih", "yon", "kategori", "cari", "ilgili_odeme", "makbuz_no",
+        (None, {"fields": ("hesap", "tarih", "yon", "kategori", "makbuz_no",
                            "aciklama", "ekler_bag", "gecmis_bag")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),

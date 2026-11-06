@@ -1,5 +1,5 @@
 {% if hesaplar|length > 1 %}
 <nav class="sekmeler yazdirma-gizle" aria-label="Kasa seçimi">
-  {% for h in hesaplar %}<a href="{{ sekme_url }}?hesap={{ h.pk }}" class="{% if h.pk == hesap.pk %}aktif{% endif %}">{{ h.ad }}{% if h.cari_bagli %} <span class="not">(cari)</span>{% endif %}</a>{% endfor %}
+  {% for h in hesaplar %}<a href="{{ sekme_url }}?hesap={{ h.pk }}" class="{% if h.pk == hesap.pk %}aktif{% endif %}">{{ h.ad }}</a>{% endfor %}
 </nav>
 {% endif %}

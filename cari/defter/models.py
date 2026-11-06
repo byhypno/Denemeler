@@ -189,18 +189,6 @@ class Hesap(models.Model):
     tur = models.CharField(max_length=6, choices=Tur.choices, default=Tur.KASA)
     acilis_bakiye_kurus = KurusField("Açılış bakiyesi (₺)", default=0)
     eksiye_dusebilir = models.BooleanField("Bakiye eksiye düşebilir", default=False)
-    cari_bagli = models.BooleanField(
-        "Cari kasası", default=False,
-        help_text="İşaretliyse bu kasanın hareketlerinde cari ve ilgili cari ödemesi seçilebilir. "
-                  "İşaretli değilse (ör. Ofis Kasa) kasa cari defterinden tamamen bağımsızdır.")
-    sadece_cikis = models.BooleanField(
-        "Yalnızca çıkış (ödeme) kasası", default=False,
-        help_text="İşaretliyse bu kasaya giriş yazılamaz; yalnızca tedarikçiye yapılan ödemeler (çıkış) girilir. "
-                  "Para alınmadığı için bakiye hep eksi kalır.")
-    on_yuzde_gizli = models.BooleanField(
-        "Ön yüzde gizle", default=False,
-        help_text="İşaretliyse bu kasa Kasa sayfasında, sekmelerde ve kontrol ekranında görünmez; kayıtlar arkada durur "
-                  "ve yalnızca Yönetim panelinden girilir/görülür.")
     aktif = models.BooleanField(default=True)
 
     class Meta:
@@ -246,8 +234,7 @@ class KasaKategori(models.Model):
 
 
 class KasaHareketi(KdvliTutar):
-    """Kasa hareketi. Cari bağlantılı olmayan kasalar (Ofis Kasa) cari defterinden TAMAMEN BAĞIMSIZDIR;
-    cari/ilgili ödeme yalnızca "Cari Kasa" türü hesaplarda girilebilir ve hiçbir tutarı etkilemez."""
+    """Kasa hareketi (Ofis Kasa: ofis içi küçük harcamalar). Cari defterinden TAMAMEN BAĞIMSIZDIR."""
 
     class Yon(models.TextChoices):
         GIRIS = "GIRIS", "Giriş"
@@ -257,13 +244,6 @@ class KasaHareketi(KdvliTutar):
     tarih = models.DateField()
     yon = models.CharField("Yön", max_length=5, choices=Yon.choices)
     kategori = models.ForeignKey(KasaKategori, null=True, blank=True, on_delete=models.PROTECT)
-    cari = models.ForeignKey(Cari, null=True, blank=True, on_delete=models.PROTECT,
-                             related_name="kasa_hareketleri",
-                             help_text="Yalnızca Cari Kasa'da kullanılır.")
-    ilgili_odeme = models.ForeignKey(
-        Belge, null=True, blank=True, on_delete=models.PROTECT, related_name="kasa_hareketleri",
-        limit_choices_to={"tur": Belge.Tur.ODEME}, verbose_name="İlgili cari ödemesi (isteğe bağlı)",
-        help_text="Yalnızca referanstır; tutarları etkilemez.")
     makbuz_no = models.CharField("Makbuz / fiş no", max_length=40, blank=True)
     aciklama = models.CharField("Açıklama", max_length=250, blank=True)
     iptal = models.BooleanField("İptal", default=False)
@@ -299,25 +279,7 @@ class KasaHareketi(KdvliTutar):
                 f"Kasa {sinir:%d.%m.%Y} tarihine kadar kapatıldı; bu tarihe kayıt girilemez. "
                 "Düzeltme için güncel tarihli bir ters kayıt girin.")})
 
-    def cari_kontrol(self):
-        """Ofis Kasa gibi cari bağlantısız kasalara cari/ilgili ödeme yazılamaz; ilgili ödeme cariyle uyumlu olmalı."""
-        if self.hesap_id and not self.hesap.cari_bagli and (self.cari_id or self.ilgili_odeme_id):
-            raise ValidationError(
-                f"'{self.hesap}' cari defterinden bağımsızdır; bu kasada cari veya cari ödemesi seçilemez.")
-        if self.hesap_id and self.hesap.sadece_cikis and self._state.adding:
-            # yalnızca yeni kayıtta: eskiden girilmiş kayıtlar (ör. iptal edilirken) bu kuraldan etkilenmesin
-            if self.yon != self.Yon.CIKIS:
-                raise ValidationError({"yon": f"'{self.hesap}' yalnızca ödeme (çıkış) kasasıdır; giriş yazılamaz."})
-            if not self.cari_id:
-                raise ValidationError({"cari": "Tedarikçiye yapılan ödeme için tedarikçi (cari) seçin."})
-        if self.ilgili_odeme_id:
-            if not self.cari_id:
-                raise ValidationError({"cari": "İlgili cari ödemesi seçildiyse cari de seçilmeli."})
-            if self.ilgili_odeme.cari_id != self.cari_id:
-                raise ValidationError({"ilgili_odeme": "Seçilen ödeme bu cariye ait değil."})
-
     def save(self, *args, **kwargs):
-        self.cari_kontrol()
         self.kilit_kontrol()
         super().save(*args, **kwargs)
 
@@ -327,7 +289,6 @@ class KasaHareketi(KdvliTutar):
         if self.iptal and not self.iptal_nedeni:
             raise ValidationError({"iptal_nedeni": "İptal için neden yazın."})
         self.clean_kdv()
-        self.cari_kontrol()
         self.kilit_kontrol()
         if (self.iptal and self.pk and self.yon == self.Yon.GIRIS and not self.hesap.eksiye_dusebilir
                 and KasaHareketi.objects.filter(pk=self.pk, iptal=False).exists()

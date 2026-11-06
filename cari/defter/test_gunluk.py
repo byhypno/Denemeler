@@ -10,7 +10,6 @@ from django.urls import reverse
 
 from . import gunluk
 from . import kasa_servisi as ks
-from .test_yardimci import cari_kasa_ac
 from .excel_aktar import ice_aktar
 from .models import Belge, Cari, Ek, GunSonu, Hesap, IslemGunlugu, KasaHareketi
 from .tests import _ornek_excel
@@ -98,19 +97,6 @@ class KayitGunluguTests(GunlukTemel):
             g = self.son(model="Ek", islem="IPTAL")
             self.assertEqual(g.degisiklik["Kaldırıldı"], ["Hayır", "Evet"])
             self.assertTrue(any("nedeni" in alan and v[1] == "yanlış dosya" for alan, v in g.degisiklik.items()))
-
-    def test_eslestirme_acikca_kaydedilir(self):
-        ck = cari_kasa_ac()
-        c = Cari.objects.create(unvan="K")
-        KasaHareketi.objects.create(hesap=ck, yon="GIRIS", tutar_kurus=9000, tarih=date(2026, 1, 1))
-        o = Belge.objects.create(cari=c, tur="ODEME", tarih=date(2026, 1, 3), tutar_kurus=500, odeme_sekli="NAKIT")
-        h = KasaHareketi.objects.create(hesap=ck, yon="CIKIS", tutar_kurus=500, tarih=date(2026, 1, 3), cari=c)
-        with gunluk.kullanici_olarak("ali"):
-            ks.eslestir(h.pk, o.pk)
-        g = self.son(model="KasaHareketi", islem="DEGISTI")
-        self.assertEqual(g.kullanici, "ali")
-        self.assertIn("eşleştirildi", g.ayrinti)
-        self.assertEqual(g.nesne_id, h.pk)
 
 
 class KullaniciAtamasiTests(GunlukTemel):
@@ -302,7 +288,7 @@ class GunlukEkraniTests(GunlukTemel):
 
 class UpdateKorumaTesti(TestCase):
     """İzlenen modellerde toplu queryset.update() sinyal göndermez ve günlüğü atlar. Uygulama kodunda
-    kullanılmamalı; zorunlu bir yer varsa açıkça gunluk.yaz() ile kaydedilmeli (şu an yalnızca eslestir)."""
+    kullanılmamalı; zorunlu bir yer varsa açıkça gunluk.yaz() ile kaydedilmeli (şu an böyle bir yer yok)."""
 
     def test_update_kullanimi_yalniz_izin_verilen_yerde(self):
         desen = re.compile(r"\)\s*\.update\(|objects\.update\(")
@@ -313,5 +299,4 @@ class UpdateKorumaTesti(TestCase):
             for no, satir in enumerate(p.read_text(encoding="utf-8").splitlines(), start=1):
                 if desen.search(satir) and "attrs.update" not in satir:
                     bulunan.append((p.name, no))
-        self.assertEqual([b[0] for b in bulunan], ["kasa_servisi.py"], bulunan)
-        self.assertIn("gunluk.yaz", (BASE / "kasa_servisi.py").read_text(encoding="utf-8"))
+        self.assertEqual(bulunan, [], bulunan)
