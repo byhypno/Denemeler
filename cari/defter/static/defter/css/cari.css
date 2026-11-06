@@ -204,6 +204,7 @@ code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-siz
 
 /* rakam kartları */
 .kpi, .ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: var(--b-4); margin-bottom: var(--b-5); }
+.kpi.dort { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
 .kpi > .kart, .ozet > .kart { margin: 0; display: flex; flex-direction: column; gap: var(--b-2); }
 .kpi > .kart { padding: var(--b-5); }
 .kpi-ust { display: flex; align-items: center; gap: var(--b-3); }
@@ -331,6 +332,16 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .kontrol li { margin: var(--b-1) 0; }
 .kucuk-resim { max-height: 64px; max-width: 96px; border: 1px solid var(--cizgi); border-radius: 8px; display: block; background: #fff; }
 .ek-bag { display: inline-flex; align-items: center; gap: 4px; margin-left: var(--b-2); font-size: var(--t-sm); text-decoration: none; white-space: nowrap; }
+.cari-bilgi { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-2) var(--b-4); margin: var(--b-1) 0 0; font-size: var(--t-sm); }
+.dosya-kart { display: flex; align-items: center; gap: var(--b-4); flex-wrap: wrap; padding: var(--b-4) var(--b-5); }
+.dosya-kart > div { flex: 1 1 280px; min-width: 0; }
+.dosya-kart h2 { margin: 0 0 2px; font-size: var(--t-md); }
+.dosya-kart p { margin: 0; }
+.ay-grup .ay-baslik th { background: var(--kart-2); border-radius: 0; border-left: 0; border-right: 0; color: var(--metin); font-size: var(--t-sm); font-weight: 650; padding-top: 12px; padding-bottom: 12px; }
+.ay-grup .ay-baslik th.sayi { font-weight: 600; color: var(--metin-2); }
+.ek-bag { color: var(--metin-3); }
+.ek-bag.dolu { color: var(--vurgu); font-weight: 600; }
+.ek-bag:hover { color: var(--vurgu); }
 .degisim-oku { width: .9em; height: .9em; margin: 0 4px; vertical-align: -.1em; color: var(--metin-3); }
 
 /* giriş sayfası */

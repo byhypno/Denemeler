@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django import forms
 from django.contrib import messages
@@ -103,11 +103,25 @@ def cari_ekstre(request, pk):
         hata = "Tarihi gg.aa.yyyy biçiminde girin."
     onceki, satirlar = services.ekstre(cari, bas, bit)
     kapanis = satirlar[-1][1] if satirlar else onceki
+    gruplar = trend.ay_gruplari(satirlar, onceki)
+    def topla(*turler):
+        return sum(b.tutar_kurus for b, _ in satirlar if b.tur in turler)
+    # hızlı ay seçimi: carinin hareket gördüğü son 12 ay
+    aylar = []
+    for d in list(Belge.objects.filter(cari=cari, iptal=False).dates("tarih", "month"))[-12:]:
+        son = (d.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        aylar.append({"ad": f"{trend.AY_ADLARI[d.month - 1][:3]} {d.year}", "bas": f"{d:%d.%m.%Y}", "bit": f"{son:%d.%m.%Y}",
+                      "aktif": bas == d and bit == son})
+    eksi_ay = sum(1 for g in gruplar if g["kapanis"] < 0)
     return render(request, "defter/ekstre.html", {
         "ek_sayi": es.ek_sayilari([b.pk for b, _ in satirlar], "belge"),
         "cari_ek_sayisi": cari.ekler.filter(kaldirildi=False).count(),
-        "cari": cari, "onceki": onceki, "satirlar": satirlar, "kapanis": kapanis,
-        "bas": bas, "bit": bit, "hata": hata, "sayfa": "ekstre",
+        "cari": cari, "onceki": onceki, "satirlar": satirlar, "kapanis": kapanis, "gruplar": gruplar,
+        "bas": bas, "bit": bit, "hata": hata, "sayfa": "ekstre", "aylar": aylar, "eksi_ay": eksi_ay,
+        "guncel_borc": services.bakiye_kurus(cari),
+        "bakiye_seri": [g["kapanis"] for g in gruplar],
+        "alis_toplam": topla(Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI),
+        "odeme_toplam": topla(Belge.Tur.ODEME), "iade_toplam": topla(Belge.Tur.IADE),
         "toplam_artis": sum(b.tutar_kurus for b, _ in satirlar if b.etki > 0),
         "toplam_azalis": sum(b.tutar_kurus for b, _ in satirlar if b.etki < 0),
     })
