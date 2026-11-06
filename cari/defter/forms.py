@@ -1,8 +1,12 @@
 from django import forms
 
-from .fields import KurusFormField, kurus_bicimle
+from decimal import ROUND_HALF_UP, Decimal
+
+from django.db import transaction
+
+from .fields import KurusFormField, kurus_bicimle, ondalik_ayristir, tl_ayristir
 from . import metin
-from .models import Belge, Cari, KasaHareketi, KasaKategori
+from .models import Belge, BelgeKalem, Cari, KasaHareketi, KasaKategori
 
 
 class KasaHareketiForm(forms.ModelForm):
@@ -72,7 +76,7 @@ class BelgeForm(forms.ModelForm):
     - aynı cari + tür + evrak no ikinci kez girilemez (veritabanı kısıtı da vardır);
     - aynı gün + aynı tür + aynı tutar zaten varsa uyarılır ve 'yine de kaydet' onayı istenir (çift giriş koruması)."""
 
-    yine_de = forms.BooleanField(required=False, label="Benzer kayıt var; yine de kaydet")
+    yine_de = forms.BooleanField(required=False, label="Uyarıyı gördüm; yine de kaydet")
 
     class Meta:
         model = Belge
@@ -92,22 +96,99 @@ class BelgeForm(forms.ModelForm):
         self.fields["tutar_kurus"].widget.attrs.update({"placeholder": "1.234,50", "inputmode": "decimal"})
         self.fields["kdv_modu"].label = "KDV"
         self.fields["odeme_sekli"].required = False
+        self.fields["tutar_kurus"].required = False      # kalem girilmişse toplamı alınır; clean() zorunluluğu denetler
+        self.kalem_satirlari = self._kalem_oku(self.data) if self.is_bound else []
+        self.kalemler_temiz = []
+
+    # ---- fiş kalemleri (yalnızca alış fişi/faturası)
+    ALANLAR = ("aciklama", "miktar", "birim", "fiyat", "tutar")
+
+    @classmethod
+    def _kalem_oku(cls, veri):
+        try:
+            n = max(0, min(int(veri.get("kalem_sayisi") or 0), 200))
+        except ValueError:
+            n = 0
+        return [{k: (veri.get(f"kalem_{k}_{i}") or "").strip() for k in cls.ALANLAR} for i in range(n)]
+
+    def _kalemleri_coz(self):
+        """Dolu satırları doğrular. Dönüş: [(aciklama, miktar, birim, birim_fiyat, tutar_kurus)]; hatalar form hatası olur."""
+        temiz = []
+        for no, k in enumerate(self.kalem_satirlari, start=1):
+            if not any(k.values()):
+                continue
+            try:
+                if not k["aciklama"]:
+                    raise ValueError("açıklama yazın")
+                if len(k["aciklama"]) > 250:
+                    raise ValueError("açıklama en fazla 250 karakter olabilir")
+                try:
+                    miktar = ondalik_ayristir(k["miktar"], 3) if k["miktar"] else Decimal(1)
+                except ValueError:
+                    raise ValueError("miktarı 1,5 biçiminde girin")
+                if miktar <= 0:
+                    raise ValueError("miktar sıfırdan büyük olmalı")
+                if miktar >= Decimal(10) ** 11:
+                    raise ValueError("miktar çok büyük")
+                try:
+                    fiyat = ondalik_ayristir(k["fiyat"], 4) if k["fiyat"] else None
+                except ValueError:
+                    raise ValueError("birim fiyatı 1.234,50 biçiminde girin")
+                try:
+                    tutar = tl_ayristir(k["tutar"]) if k["tutar"] else None
+                except ValueError:
+                    raise ValueError("tutarı 1.234,50 biçiminde girin")
+                if tutar is None and fiyat is not None:
+                    tutar = int((miktar * fiyat * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+                if tutar is None:
+                    raise ValueError("tutar ya da birim fiyat girin")
+                if tutar <= 0:
+                    raise ValueError("tutar sıfırdan büyük olmalı")
+                temiz.append((k["aciklama"], miktar, k["birim"][:20], fiyat, tutar))
+            except ValueError as e:
+                k["hata"] = str(e)
+                self.add_error(None, f"Kalem {no}: {e}.")
+        return temiz
 
     def clean(self):
         d = super().clean()
         tur, no = d.get("tur"), (d.get("evrak_no") or "").strip()
+        kalemler = self._kalemleri_coz()
+        if kalemler and tur not in (Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI):
+            self.add_error(None, "Fiş kalemleri yalnızca alış fişi veya alış faturasında girilir.")
+            kalemler = []
+        toplam = sum(k[4] for k in kalemler)
+        if not d.get("tutar_kurus"):
+            if kalemler:
+                d["tutar_kurus"] = toplam          # fiş tutarı boş: kalemlerin toplamı
+            elif "tutar_kurus" not in self.errors:
+                self.add_error("tutar_kurus", "Tutarı girin ya da kalem ekleyin.")
+        elif kalemler and toplam != d["tutar_kurus"] and not d.get("yine_de"):
+            self.yinelenme = True
+            self.add_error(None, f"Kalemlerin toplamı ({kurus_bicimle(toplam)} ₺) fiş tutarından ({kurus_bicimle(d['tutar_kurus'])} ₺) farklı. "
+                                 "Doğruysa 'Uyarıyı gördüm; yine de kaydet' kutusunu işaretleyip tekrar kaydedin; ya da tutarı boş bırakın, toplam kalemlerden alınsın.")
+        self.kalemler_temiz = kalemler
         if tur != Belge.Tur.ODEME:
             d["odeme_sekli"] = ""                      # ödeme şekli yalnızca ödemede anlamlı
             self.instance.odeme_sekli = ""
         if tur and no:
             if Belge.objects.filter(cari=self.cari, tur=tur, evrak_no=no, iptal=False).exists():
                 self.add_error("evrak_no", f"Bu tedarikçide {no} numaralı {dict(Belge.Tur.choices)[tur].lower()} zaten kayıtlı.")
-        if tur and d.get("tarih") and d.get("tutar_kurus") and not self.errors:
+        if tur and d.get("tarih") and d.get("tutar_kurus") and not self.errors and not self.yinelenme:
             benzer = Belge.objects.filter(cari=self.cari, tur=tur, tarih=d["tarih"], iptal=False)
             if any(b.tutar_kurus == self.instance.efektif_tutar_kurus() or b.tutar_kurus == d["tutar_kurus"] for b in benzer) \
                     and not d.get("yine_de"):
                 self.yinelenme = True
                 raise forms.ValidationError(
                     "Aynı gün aynı türde aynı tutarda bir kayıt zaten var. Çift giriş olmadığından eminseniz "
-                    "'Benzer kayıt var; yine de kaydet' kutusunu işaretleyip tekrar kaydedin.")
+                    "'Uyarıyı gördüm; yine de kaydet' kutusunu işaretleyip tekrar kaydedin.")
         return d
+
+    def save(self, commit=True):
+        """Belge + fiş kalemleri TEK işlemde kaydedilir (biri başarısızsa hiçbiri kalmaz)."""
+        with transaction.atomic():
+            belge = super().save(commit=True)
+            for sira, (aciklama, miktar, birim, fiyat, tutar) in enumerate(self.kalemler_temiz, start=1):
+                BelgeKalem.objects.create(belge=belge, sira=sira, aciklama=aciklama, miktar=miktar, birim=birim,
+                                          birim_fiyat=fiyat, tutar_kurus=tutar)
+        return belge

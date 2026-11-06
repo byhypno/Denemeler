@@ -325,8 +325,10 @@ def belge_yeni(request, pk):
             return redirect("cari_ekstre", pk=cari.pk)
     else:
         form = BelgeForm(cari=cari, initial={"tarih": date.today(), "tur": tur if tur in gecerli else Belge.Tur.ALIS_FISI})
+    satirlar = list(form.kalem_satirlari) if request.method == "POST" else []
+    satirlar += [{k: "" for k in BelgeForm.ALANLAR} for _ in range(max(0, 8 - len(satirlar)))]      # en az 8 satır görünür
     return render(request, "defter/belge_form.html", {
-        "form": form, "cari": cari, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "sayfa": "tedarikciler",
+        "form": form, "cari": cari, "kalem_satirlari": list(enumerate(satirlar)), "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "sayfa": "tedarikciler",
         "yinelenme": getattr(form, "yinelenme", False),
     })
 

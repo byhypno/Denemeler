@@ -55,8 +55,9 @@ Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca
 - **Arayüzden hareket girişi:** Tedarikçi ekstresinde **Yeni alış / Yeni ödeme / Yeni iade** düğmeleri (Yönetici ve Muhasebe). Tedarikçi zaten seçili gelir;
   tür, tarih, evrak no, tutar ve isteğe bağlı KDV girilir. *Kaydet ve yenisini ekle* ile arka arkaya fiş girilir.
   Aynı tedarikçide aynı tür + evrak no ikinci kez girilemez; aynı gün + aynı tür + aynı tutar varsa çift giriş uyarısı çıkar ("yine de kaydet" onayı gerekir).
-  Yanlış kayıt silinmez: ekstrede satırdaki **İptal** (neden zorunlu) ile bakiyeden düşer ve işlem günlüğünde kalır. Fiş **kalemleri**, açılış/devir
-  ve kayıt düzenleme hâlâ Yönetim panelindedir.
+  Yanlış kayıt silinmez: ekstrede satırdaki **İptal** (neden zorunlu) ile bakiyeden düşer ve işlem günlüğünde kalır. **Fiş kalemleri** (alış fişi/faturası) aynı formdan girilir: açıklama, miktar, birim, birim fiyat, tutar; tutar boşsa miktar × birim fiyat
+  hesaplanır, fiş tutarı boşsa kalemlerin toplamı alınır, ikisi farklıysa uyarılır. Ekstrede satırdaki "N kalem" ile açılır; "en çok alınan kalemler" grafiğini besler.
+  Açılış/devir girişi ve kayıt düzenleme (kalem düzenleme dahil) hâlâ Yönetim panelindedir.
 - **Ödeme takvimi** (menü): açık borçlar **vade tarihine** göre (belge tarihi + carinin vade günü) gruplanır: vadesi geçmiş, bu hafta, 8–30 gün, 30+ gün,
   vadesi tanımsız. Vade günü girilmemiş tedarikçiler gecikmiş sayılmaz, uyarı çıkar. Genel Bakış sayfasında vadesi geçen / bu hafta ödenecek uyarısı görünür.
   Ödemeler en eski borca mahsup edilir (FIFO varsayımı).

@@ -1,4 +1,4 @@
-{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
 {% block baslik %}Yeni cari hareket · {{ cari.unvan }} · Cari Program{% endblock %}
 {% block icerik %}
 <div class="baslik-kisi">{% avatar cari.unvan "buyuk" %}
@@ -11,6 +11,27 @@
       {% for e in f.errors %}<span class="hata" role="alert">{{ e }}</span>{% endfor %}</label>
     {% endif %}{% endfor %}
   </div>
+  <section class="kalem-bolum" id="kalem-bolum">
+    <h2>Fiş kalemleri <span class="not">(isteğe bağlı, yalnızca alış fişi/faturası)</span></h2>
+    <p class="not">Ürün satırlarını girerseniz "en çok alınan kalemler" grafiği çalışır. Tutar boşsa miktar × birim fiyat hesaplanır;
+      fiş tutarı boş bırakılırsa kalemlerin toplamı alınır. Miktar <code>1,5</code>, tutar <code>1.234,50</code> biçiminde yazılır.</p>
+    <div class="tablo-kaydir"><table class="kalem-tablo">
+      <thead><tr><th>Açıklama</th><th class="sayi">Miktar</th><th>Birim</th><th class="sayi">Birim fiyat</th><th class="sayi">Tutar (₺)</th></tr></thead>
+      <tbody id="kalem-govde">
+      {% for i, k in kalem_satirlari %}
+        <tr{% if k.hata %} class="hatali"{% endif %}>
+          <td><input type="text" name="kalem_aciklama_{{ i }}" value="{{ k.aciklama }}" maxlength="250" aria-label="Kalem {{ i|add:1 }} açıklaması"></td>
+          <td class="sayi"><input type="text" name="kalem_miktar_{{ i }}" value="{{ k.miktar }}" inputmode="decimal" aria-label="Kalem {{ i|add:1 }} miktarı"></td>
+          <td><input type="text" name="kalem_birim_{{ i }}" value="{{ k.birim }}" maxlength="20" aria-label="Kalem {{ i|add:1 }} birimi" placeholder="adet"></td>
+          <td class="sayi"><input type="text" name="kalem_fiyat_{{ i }}" value="{{ k.fiyat }}" inputmode="decimal" aria-label="Kalem {{ i|add:1 }} birim fiyatı"></td>
+          <td class="sayi"><input type="text" name="kalem_tutar_{{ i }}" value="{{ k.tutar }}" inputmode="decimal" aria-label="Kalem {{ i|add:1 }} tutarı"></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="4">Kalemlerin toplamı</th><td class="sayi" id="kalem-toplam">—</td></tr></tfoot>
+    </table></div>
+    <input type="hidden" name="kalem_sayisi" id="kalem-sayisi" value="{{ kalem_satirlari|length }}">
+    <p class="yazdirma-gizle"><button type="button" class="ikincil dugme kucuk" id="kalem-ekle">{% ikon "arti" "kucuk" %}Satır ekle</button></p>
+  </section>
   <details class="ek" {% if form.kdv_orani.errors or form.tevkifat_orani.errors %}open{% endif %}><summary>KDV (isteğe bağlı)</summary>
     <p class="not">KDV girerseniz tutar, seçtiğiniz KDV'li/KDV'siz biçime göre "ödenecek tutar"a çevrilir (tevkifat yalnızca KDV hariç girişte).</p>
     <div class="form-izgara">
@@ -25,4 +46,5 @@
     <a class="dugme ikincil" href="{% url 'cari_ekstre' cari.pk %}">Vazgeç</a></p>
   <p class="not">Kayıt silinmez; yanlış girilirse ekstrede <b>İptal</b> edilir (neden yazılır, bakiyeden düşer, işlem günlüğünde kalır).</p>
 </form>
+<script src="{% static 'defter/js/belge_form.js' %}"></script>
 {% endblock %}

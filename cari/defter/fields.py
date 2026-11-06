@@ -4,6 +4,7 @@ Arayüzde Türk biçimi kullanılır: 1.234,50
 Belirsiz girişler (ör. 1234.50) kasten reddedilir: yanlışlıkla 123.450 TL olmasın.
 """
 import re
+from decimal import Decimal
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -31,6 +32,21 @@ def tl_ayristir(metin: str) -> int:
     tam, _, kesir = m.lstrip("-").partition(",")
     kurus = int(tam.replace(".", "")) * 100 + int((kesir + "00")[:2])
     return -kurus if negatif else kurus
+
+
+_TR_ONDALIK = re.compile(r"^(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$")
+
+
+def ondalik_ayristir(metin: str, en_cok: int = 4) -> Decimal:
+    """'1.250,5' -> Decimal('1250.5'). Miktar/birim fiyat için. Nokta yalnızca binlik ayırıcıdır (1.5 gibi belirsiz giriş reddedilir).
+    Geçersizse ValueError."""
+    m = metin.strip().replace(" ", "")
+    if not _TR_ONDALIK.match(m):
+        raise ValueError(metin)
+    tam, _, kesir = m.partition(",")
+    if len(kesir) > en_cok:
+        raise ValueError(metin)
+    return Decimal(tam.replace(".", "") + "." + (kesir or "0"))
 
 
 class KurusFormField(forms.CharField):

@@ -124,3 +124,15 @@ def cevir_pozitif(deger):
         return abs(int(deger))
     except (TypeError, ValueError):
         return deger
+
+
+@register.filter
+def miktar(deger):
+    """Decimal('1250.500') -> '1.250,5' ; tam sayı: '3'"""
+    try:
+        d = deger.normalize()
+    except AttributeError:
+        return deger
+    tam, _, kesir = f"{d:f}".partition(".")
+    tam = f"{int(tam):,}".replace(",", ".")
+    return f"{tam},{kesir}" if kesir else tam

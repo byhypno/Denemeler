@@ -373,7 +373,17 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .form-dugmeler { display: flex; gap: var(--b-3); flex-wrap: wrap; margin: var(--b-4) 0 0; }
 .form-izgara .genis { grid-column: 1 / -1; }
 .form-izgara textarea { width: 100%; }
-.satir-iptal { margin-top: 4px; font-size: var(--t-xs); }
+.kalem-bolum { margin: var(--b-5) 0 var(--b-4); }
+.kalem-bolum h2 { margin-bottom: var(--b-2); }
+.kalem-tablo td { padding: 4px var(--b-2); }
+.kalem-tablo td input { width: 100%; min-height: 36px; }
+.kalem-tablo td.sayi input { text-align: right; font-variant-numeric: tabular-nums; }
+.kalem-tablo tr.hatali td input { border-color: var(--negatif); }
+.kalem-tablo tfoot th { background: transparent; border: 0; border-top: 1px solid var(--cizgi-guclu); border-radius: 0; }
+.kalemler, .satir-iptal { display: inline-block; vertical-align: top; margin: 4px var(--b-3) 0 0; font-size: var(--t-xs); }
+.kalemler summary { cursor: pointer; color: var(--vurgu); }
+.kalem-mini { margin: 4px 0; font-size: var(--t-xs); }
+.kalem-mini td { padding: 2px var(--b-2); border: 0; }
 .satir-iptal summary { cursor: pointer; color: var(--metin-3); }
 .satir-iptal summary:hover { color: var(--negatif); }
 .satir-iptal[open] { padding: var(--b-2) 0; }

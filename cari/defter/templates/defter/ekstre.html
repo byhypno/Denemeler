@@ -65,7 +65,9 @@
     {% for b, bakiye in g.satirlar %}
     <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_tur_display }}</td>
       <td>{{ b.evrak_no|default:"—" }}{% with n=ek_sayi|sozluk_al:b.pk %}<a class="ek-bag yazdirma-gizle{% if n %} dolu{% endif %}" href="{% url 'ek_sahip' 'belge' b.pk %}" title="Ekler">{% ikon "ek" "kucuk" %}{% if n %}<span>{{ n }}</span>{% else %}<span class="sr-only">Ek ekle</span>{% endif %}</a>{% endwith %}</td>
-      <td>{{ b.aciklama|default:"" }}{% if "veri_gir" in yetkiler %}
+      <td>{{ b.aciklama|default:"" }}{% with ks=b.kalemler.all %}{% if ks %}
+        <details class="kalemler"><summary>{{ ks|length }} kalem</summary>
+          <table class="kalem-mini"><tbody>{% for k in ks %}<tr><td>{{ k.aciklama }}</td><td class="sayi">{{ k.miktar|miktar }}{% if k.birim %} {{ k.birim }}{% endif %}</td><td class="sayi">{{ k.tutar_kurus|kurus_say }}</td></tr>{% endfor %}</tbody></table></details>{% endif %}{% endwith %}{% if "veri_gir" in yetkiler %}
         <details class="satir-iptal yazdirma-gizle"><summary>İptal</summary>
           <form method="post" action="{% url 'belge_iptal' b.pk %}" class="satir-form">{% csrf_token %}
             <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">

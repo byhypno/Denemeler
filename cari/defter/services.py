@@ -38,7 +38,7 @@ def ekstre(cari, baslangic=None, bitis=None):
     if bitis:
         qs = qs.filter(tarih__lte=bitis)
     satirlar, bakiye = [], onceki
-    for b in qs.order_by("tarih", "id"):
+    for b in qs.order_by("tarih", "id").prefetch_related("kalemler"):
         bakiye += b.etki * b.tutar_kurus
         satirlar.append((b, bakiye))
     return onceki, satirlar

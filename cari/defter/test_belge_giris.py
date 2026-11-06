@@ -193,3 +193,106 @@ class IptalTests(Temel):
         self.client.post(self.iptal, {"neden": "x"})
         self.assertNotContains(self.client.get(ekstre), 'value="9"')
         self.assertEqual(self.client.post(reverse("belge_iptal", args=[99999]), {"neden": "x"}).status_code, 404)
+
+
+class KalemTests(Temel):
+    def kalemli(self, *satirlar, **kw):
+        """satirlar: (aciklama, miktar, birim, fiyat, tutar) demetleri."""
+        d = self.veri(**kw)
+        d["kalem_sayisi"] = str(len(satirlar))
+        for i, s in enumerate(satirlar):
+            for ad, v in zip(("aciklama", "miktar", "birim", "fiyat", "tutar"), s):
+                d[f"kalem_{ad}_{i}"] = v
+        return d
+
+    def test_form_bos_satirlarla_gelir_ve_istege_baglidir(self):
+        r = self.client.get(self.url)
+        self.assertContains(r, 'name="kalem_aciklama_7"')
+        self.assertNotContains(r, 'name="kalem_aciklama_8"')
+        self.assertContains(r, 'name="kalem_sayisi" id="kalem-sayisi" value="8"')
+        self.assertEqual(self.client.post(self.url, self.veri(evrak_no="1")).status_code, 302)       # kalemsiz kayıt hâlâ olur
+        self.assertEqual(Belge.objects.get().kalemler.count(), 0)
+
+    def test_kalemler_belgeyle_birlikte_kaydedilir(self):
+        d = self.kalemli(("Vida", "10", "adet", "5,50", ""), ("Pense", "2", "adet", "", "300,00"), ("", "", "", "", ""),
+                         tutar_kurus="355,00", evrak_no="K1")
+        self.assertEqual(self.client.post(self.url, d).status_code, 302)
+        b = Belge.objects.get()
+        k = list(b.kalemler.all())
+        self.assertEqual([(x.sira, x.aciklama, x.tutar_kurus) for x in k], [(1, "Vida", 5500), (2, "Pense", 30000)])
+        self.assertEqual((str(k[0].miktar), k[0].birim, str(k[0].birim_fiyat)), ("10.000", "adet", "5.5000"))
+        self.assertIsNone(k[1].birim_fiyat)
+        self.assertEqual(b.tutar_kurus, 35500)
+
+    def test_fis_tutari_bos_ise_kalem_toplami_alinir(self):
+        d = self.kalemli(("A", "3", "", "10,00", ""), ("B", "1,5", "kg", "7,00", ""), tutar_kurus="", evrak_no="K2")
+        self.assertEqual(self.client.post(self.url, d).status_code, 302)
+        self.assertEqual(Belge.objects.get().tutar_kurus, 3000 + 1050)        # 3×10 + 1,5×7
+        self.assertEqual(self.cari.bakiye_kurus(), 4050)
+
+    def test_tutar_hesabi_yarim_yukari_yuvarlar(self):
+        d = self.kalemli(("A", "3", "", "0,335", ""), tutar_kurus="", evrak_no="Y1")     # 3 × 0,335 = 1,005 ₺ = 100,5 kuruş
+        self.assertEqual(self.client.post(self.url, d).status_code, 302)
+        self.assertEqual(Belge.objects.get().kalemler.get().tutar_kurus, 101)
+
+    def test_toplam_uyusmazsa_uyarir_yine_de_ile_kaydeder(self):
+        d = self.kalemli(("A", "1", "", "", "100,00"), tutar_kurus="150,00", evrak_no="K3")
+        r = self.client.post(self.url, d)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "fiş tutarından")
+        self.assertContains(r, 'name="yine_de"')
+        self.assertContains(r, 'value="A"')                                     # girilen satırlar kaybolmaz
+        self.assertEqual((Belge.objects.count(), self.cari.bakiye_kurus()), (0, 0))
+        d["yine_de"] = "on"
+        self.assertEqual(self.client.post(self.url, d).status_code, 302)
+        self.assertEqual((Belge.objects.get().tutar_kurus, Belge.objects.get().kalemler.count()), (15000, 1))
+
+    def test_kalem_hatalari_hicbir_sey_kaydetmez(self):
+        for satir, parca in ((("", "2", "", "", "5,00"), "açıklama yazın"), (("A", "x", "", "", "5,00"), "miktarı"),
+                             (("A", "1", "", "1.5", ""), "birim fiyatı"), (("A", "1", "", "", "5.00"), "tutarı"),
+                             (("A", "1", "", "", ""), "tutar ya da birim fiyat"), (("A", "0", "", "5,00", ""), "miktar sıfırdan"),
+                             (("A", "1", "", "", "0,00"), "tutar sıfırdan"), (("A", "1,2345", "", "5,00", ""), "miktarı")):
+            r = self.client.post(self.url, self.kalemli(satir, tutar_kurus="", evrak_no="E"))
+            self.assertEqual(r.status_code, 200, satir)
+            self.assertContains(r, parca)
+        self.assertEqual((Belge.objects.count(), Belge.objects.filter(kalemler__isnull=False).count()), (0, 0))
+
+    def test_odeme_ve_iadede_kalem_olmaz(self):
+        r = self.client.post(self.url, self.kalemli(("A", "1", "", "", "5,00"), tur="ODEME", tutar_kurus="5,00"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "yalnızca alış fişi veya alış faturasında")
+        self.assertEqual(Belge.objects.count(), 0)
+
+    def test_tutar_da_kalem_de_yoksa_hata(self):
+        r = self.client.post(self.url, self.veri(tutar_kurus=""))
+        self.assertContains(r, "Tutarı girin ya da kalem ekleyin")
+
+    def test_kalem_sayisi_bozuksa_cokmez(self):
+        for v in ("x", "-3", "99999", ""):
+            d = self.veri(evrak_no=f"S{v}")
+            d["kalem_sayisi"] = v
+            self.assertIn(self.client.post(self.url, d).status_code, (200, 302), v)
+
+    def test_kdv_ile_kalem_toplami_girilen_tutarla_karsilastirilir(self):
+        d = self.kalemli(("A", "1", "", "", "1.000,00"), tutar_kurus="1.000,00", kdv_modu="HARIC", kdv_orani="20", evrak_no="K4")
+        self.assertEqual(self.client.post(self.url, d).status_code, 302)
+        b = Belge.objects.get()
+        self.assertEqual((b.tutar_kurus, b.kalemler.get().tutar_kurus), (120000, 100000))   # kalemler fişteki KDV hariç tutar
+
+    def test_ekstrede_kalemler_gorunur(self):
+        self.client.post(self.url, self.kalemli(("Oerlikon elektrod", "1.250,5", "kg", "", "300,00"), tutar_kurus="", evrak_no="K5"))
+        r = self.client.get(reverse("cari_ekstre", args=[self.cari.pk]))
+        self.assertContains(r, "1 kalem")
+        self.assertContains(r, "Oerlikon elektrod")
+        self.assertContains(r, "1.250,5 kg")
+
+    def test_html_kacar(self):
+        r = self.client.post(self.url, self.kalemli(("<script>k</script>", "1", "", "", "x"), tutar_kurus="", evrak_no="Z"))
+        self.assertNotContains(r, "<script>k</script>")
+        self.client.post(self.url, self.kalemli(("<script>k</script>", "1", "", "", "5,00"), tutar_kurus="", evrak_no="Z"))
+        self.assertNotContains(self.client.get(reverse("cari_ekstre", args=[self.cari.pk])), "<script>k</script>")
+
+    def test_dashboard_en_cok_alinan_kalemlere_yansir(self):
+        self.client.post(self.url, self.kalemli(("Çelik halat", "1", "", "", "900,00"), tutar_kurus="", evrak_no="D1", tarih=f"{date.today().year}-01-05"))
+        r = self.client.get(reverse("dashboard"))
+        self.assertIn("Çelik halat", r.context["grafik"]["kalem_etiket"])
