@@ -51,14 +51,22 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 **Yaşlandırma varsayımı:** ödeme ve iadeler *en eski borca* mahsup edilir (FIFO), çünkü ödemeler tek tek faturalara bağlanmıyor.
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
-## Kasa (Aşama 3)
-Üst menüde **Kasa**. Varsayılan hesap **Ofis Kasa** (TL) hazır gelir.
+## Kasa (Aşama 3) — iki ayrı kasa
+Üst menüde **Kasa**; üstteki sekmelerle kasa değiştirilir. İki hesap hazır gelir (TL):
 
-**Ofis Kasa ile cari defteri tamamen ayrıdır.** Kasa hareketinde cari seçilmez; kasa hareketi cari bakiyesini,
-cari ödemesi (nakit olsa bile) kasa bakiyesini değiştirmez; aralarında eşleştirme/referans yoktur.
-Bir tedarikçiye kasadan nakit ödeme yaparsanız **iki yere ayrı girersiniz** (cari ödemesi + kasa çıkışı);
-biri unutulursa bakiyeler ayrışır ve program bunu sizin yerinize denetlemez.
-- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV. Kategorileri *Kategoriler* bağlantısından ekleyin.
+| Kasa | Cari ile ilişkisi |
+|---|---|
+| **Ofis Kasa** | **Cari defterinden tamamen bağımsızdır.** Hareketinde cari seçilemez (form alanı yoktur; kod düzeyinde de engellenir). |
+| **Cari Kasa** | Cari ödemeleri için ayrı kasa. Hareketinde **cari** ve isteğe bağlı **ilgili cari ödemesi** seçilebilir. Bunlar yalnızca bilgi/referanstır. |
+
+İki kasanın bakiyesi, gün sonu kapanışı ve kilidi birbirinden ayrıdır. **Hiçbir kasa cari bakiyesini, cari ödemesi de hiçbir kasayı otomatik değiştirmez.**
+Bir tedarikçiye kasadan nakit öderseniz **iki yere ayrı girersiniz** (cari ödemesi + kasa çıkışı). Biri unutulursa bakiyeler ayrışır:
+bunu yakalamak için **Cari Kasa**'da *Cari ödemesi kontrolü* sayfası vardır ("nakit ödendi ama kasadan çıkışı yok" /
+"kasadan cariye çıkış var ama cari ödemesi yok"; aynı cari + aynı tutar + en çok 3 gün farkla tek aday varsa *Eşleştir* önerir,
+eşleştirme yalnızca referans bağıdır). Ofis Kasa bu kontrolün dışındadır.
+Yeni kasa eklemek için Yönetim > Hesaplar; "Cari kasası" kutusu o kasanın cari bağlantılı olup olmadığını belirler.
+
+- **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV (Cari Kasa'da ayrıca cari / ilgili ödeme). Kategorileri *Kategoriler* bağlantısından ekleyin.
 - **Kasa eksiye düşemez** (Hesap ayarından değiştirilebilir). Bir girişi iptal etmek de kasayı eksiye düşürüyorsa reddedilir.
 - **Silme yok, iptal var:** satırdaki iptal kutusuna neden yazılır; iptal kayıtlar bakiyeye girmez, "iptaller: göster" ile görülür.
 - **Gün sonu kapanışı:** nakdi sayıp yazarsınız; program kayıtlı bakiyeyle farkı saklar. İsterseniz fark, kapanış gününe
@@ -67,6 +75,15 @@ biri unutulursa bakiyeler ayrışır ve program bunu sizin yerinize denetlemez.
   (Kilidi kaldırmak yalnızca Yönetim > Gün sonu kapanışları > "Kilitli" kutusundandır; bilinçli ve nadir bir işlemdir.)
 - **Kasa dashboard'u:** güncel bakiye, bugün/bu ay giriş-çıkış, aylık giriş/çıkış ve ay sonu bakiye grafiği,
   kategoriye göre çıkışlar, en büyük çıkışlar, kapanış bekleyen günler.
+
+## Ödeme listesi (üst menü: Ödeme Listesi)
+Cari ödemeleri için iki liste; ikisi de **Yazdır** (tarayıcıdan PDF'e de kaydedilebilir) ve **Excel'e aktar** ile alınır:
+- **Ödenecekler (açık borç):** cari bazında açık borç, yaş dağılımı (0–30 / 31–60 / 61–90 / 90+ gün), en eski belge, vadesi geçmiş tutar
+  (yalnızca vade günü tanımlı carilerde). Yazdırmada elle doldurmak için **Planlanan ödeme** ve **Not** kutuları ile imza satırı gelir.
+  Toplam, cari bakiyelerinin pozitif toplamına eşittir; ödeme/iadeler en eski borca mahsup edilir (FIFO varsayımı). Fazla ödeme (avans) ayrıca belirtilir.
+- **Yapılan ödemeler:** tarih aralığı, cari ve ödeme şekline göre; cari bazında alt toplam, ödeme şekline göre dağılım, genel toplam.
+
+Excel dosyalarında tutarlar kuruşlu sayı olarak yazılır; metin hücreleri (cari adı, açıklama) `=` ile başlasa bile formül olarak çalışmaz.
 
 ## Henüz YOK (sonraki aşamalar)
 Ek dosya/fiş OCR (4); otomatik yedek, rol/yetki, **işlem günlüğü** (kim ne değiştirdi) ve Windows paketleme (5).
