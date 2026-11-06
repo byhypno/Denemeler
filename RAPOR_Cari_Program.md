@@ -6,11 +6,63 @@ Güven düzeyleri: [Kesin] / [Muhtemel] / [Tahmin].
 
 ---
 
+## GÜNCELLEME 2 (son karar): Paraşüt bağlantısı YOK, KASA modülü VAR
+
+Kullanıcı kararı: program Paraşüt ile **hiçbir bağlantı kurmayacak**; bağımsız çalışacak. Ayrıca **kasa** ayrı bir bölüm olarak tutulacak.
+Bu nedenle aşağıdaki "GÜNCELLEME" bölümündeki Paraşüt maddeleri (salt okunur senkron, API, üçlü mutabakat) **geçersizdir**; KDV, çok kullanıcı ve OCR kararları geçerlidir.
+
+### Bu karardan doğan sonuçlar
+- Program artık **kendi başına asıl kayıt** (yönetim kaydı) olur. Yedek, işlem günlüğü ve test **daha da kritik**. [Kesin]
+- Paraşüt'e de giren veriler iki yerde elle girilecekse **çift emek ve ayrışma riski** vardır; kullanıcı bunu bilerek kabul etti. Azaltmak için: Excel/CSV içe aktarma serbest, dışa aktarma (mali müşavire Excel/PDF) hazır olsun. [Kesin]
+- Mutabakat ekranı yalnızca **tedarikçi ekstresi ↔ bizim kayıt** olarak kalır.
+- Resmi muhasebe yazılımı olmadığı uyarısı geçerli: bu program yönetim kaydıdır.
+
+### Kasa modülü (ayrı bölüm)
+**Ne için:** nakit giriş/çıkışı, gün sonu kasa kontrolü, harcama kategorileri, nakit akışı.
+
+**Veri modeli (ek tablolar):**
+| Tablo | Ana alanlar |
+|---|---|
+| `Hesap` | ad, tür (kasa / banka-opsiyonel), para birimi, açılış bakiyesi (kuruş), aktif |
+| `KasaHareketi` | hesap→, tarih, yön (giriş/çıkış), tutar_kuruş, kategori→, cari→ (opsiyonel), belge→ (opsiyonel), makbuz/fiş no, açıklama, ek dosya |
+| `Kategori` | ad, tür (gelir/gider), genel gider grubu (opsiyonel) |
+| `GunSonu` | hesap→, tarih, beklenen bakiye, sayılan tutar, fark, not, kilitli_mi |
+| `Transfer` | kaynak hesap→, hedef hesap→, tutar, tarih (kasa↔banka) |
+
+**Kritik kural: tek kayıt, iki etki.** Tedarikçiye nakit ödeme yapıldığında bu **tek işlem** hem cari bakiyeyi azaltır hem kasadan çıkış olur. Ödemeyi cari tarafına ve kasa tarafına ayrı ayrı girmek çift sayım yaratır. [Kesin]
+
+**Diğer kurallar:**
+- Kasa bakiyesi **eksiye düşemez** (uyarı veya engel; ayardan seçilir).
+- **Gün sonu kapanışı:** sayım ↔ hesaplanan bakiye farkı kaydedilir; kapatılan günün kayıtları kilitlenir, düzeltme ancak ters kayıtla yapılır.
+- Kategorili gider girişi KDV alanlarını (matrah/oran/tevkifat) destekler; ileride genel gider raporu bu veriden çıkar.
+- Makbuz/fiş görseli yüklenebilir, OCR akışı (onaylı taslak) kasa fişlerinde de çalışır.
+
+**Kasa dashboard'u:** güncel kasa bakiyesi, bugünkü giriş/çıkış, aylık nakit akışı (giriş-çıkış-bakiye), kategori dağılımı, en büyük çıkışlar, gün sonu farkları, açık (kapatılmamış) günler.
+
+### Güncel yol haritası
+| Aşama | İçerik |
+|---|---|
+| 0 | Kalan soruların cevabı (aşağıda) |
+| 1 | Şema (cari + belge + KDV/tevkifat + hesap/kasa), Excel içe aktarma, bakiye doğrulama testi |
+| 2 | Cari dashboard + ekstre mutabakatı |
+| 3 | **Kasa modülü:** hareket, gün sonu, transfer, kasa dashboard'u |
+| 4 | Ek dosya deposu + fiş OCR (onaylı taslak) |
+| 5 | Giriş/rol, otomatik yedek, geri yükleme testi, Windows paketleme |
+| 6 | (İsteğe bağlı) çok kullanıcı, genel gider raporu, PDF ekstre |
+
+### Kalan sorular (kasa için)
+1. Kasa sadece **TL** mi, döviz kasası da var mı?
+2. **Banka hesabı** da takip edilsin mi, yoksa sadece nakit kasa mı?
+3. Kasayı kim kullanıyor, **yetki** ayrımı gerekiyor mu (örn. giriş yapabilen / sadece görebilen)?
+4. Kasa ile cari ödemesi aynı ekrandan mı yapılsın? (Önerim: evet, tek işlem iki etki.)
+
+---
+
 ## GÜNCELLEME (kullanıcı cevapları sonrası)
 
 **Cevaplar:** Windows · yalnızca tedarikçi carisi · ileride çok kullanıcı "olabilir" · KDV seçenekleri olmalı · fiş OCR isteniyor · **işletme zaten Paraşüt kullanıyor.**
 
-### Ana karar: Paraşüt'ün yerine değil, yanında
+### (GEÇERSİZ — bkz. Güncelleme 2) Ana karar: Paraşüt'ün yerine değil, yanında
 - **Paraşüt = resmi kayıt** (e-fatura, KDV, beyanname altyapısı, mali müşavir erişimi). Biz onu **taklit etmeyiz.** [Kesin]
 - **Bizim program = yerel arşiv + analiz + mutabakat katmanı:** fiş görselleri ve belge deposu, tedarikçi ekstre mutabakatı, Paraşüt'te olmayan analizler, fiş OCR.
 - **Çift giriş yasak:** Aynı fatura hem Paraşüt'e hem buraya elle girilmemeli. Çözüm: Paraşüt'ten **salt okunur** senkron (API) veya dışa aktarılmış dosyadan içe aktarma; elle girişi sadece Paraşüt'e girmeyen kayıtlar (fiş, ekstre notu, düzeltme) için yap.
