@@ -37,12 +37,12 @@ class KomutTests(Temel):
         self.assertIn("atlandı", self.calistir())
         self.assertEqual(Cari.objects.count(), 0)
 
-    def test_veri_varsa_hicbir_sey_yapmaz(self):
+    def test_elle_girilmis_tedarikci_yuklemeyi_engellemez(self):
         self.yaz({"excel": "cari.xlsx"})
         Cari.objects.create(unvan="Mevcut")
         with mock.patch("defter.management.commands.baslangic_verisi.call_command") as cc:
-            self.assertIn("YÜKLENMEDİ", self.calistir())
-        cc.assert_not_called()
+            self.assertNotIn("YÜKLENMEDİ", self.calistir())
+        cc.assert_called_once()
 
     def test_belge_varsa_da_atlar(self):
         self.yaz({"excel": "cari.xlsx"})
@@ -107,3 +107,59 @@ class KomutTests(Temel):
         kur = (Path(__file__).resolve().parent.parent / "kur.bat").read_text()
         self.assertIn('if exist "baslangic_verisi\\yukle.json"', kur)
         self.assertIn("manage.py baslangic_verisi", kur)
+
+
+class EkstreHareketleriTests(Temel):
+    def veri(self, bakiye=450, **kw):
+        (self.kl / "h.json").write_text(json.dumps({
+            "cari": "ÖRNEK ISI YALITIM", "kaynak": "ekstre", "beklenen_bakiye_kurus": bakiye * 100,
+            "satirlar": [
+                {"tarih": "2026-01-02", "evrak_no": "7", "aciklama": "ÇİMENTO", "tur": "ALIS_FISI", "tutar_kurus": 100000, "odeme_sekli": ""},
+                {"tarih": "2026-01-03", "evrak_no": "8", "aciklama": "KUM", "tur": "ALIS_FISI", "tutar_kurus": 50000, "odeme_sekli": ""},
+                {"tarih": "2026-01-04", "evrak_no": "9", "aciklama": "HAVALE ÖDEMESİ", "tur": "ODEME", "tutar_kurus": 100000, "odeme_sekli": "HAVALE"},
+                {"tarih": "2026-01-05", "evrak_no": "10", "aciklama": "TUĞLA İADE", "tur": "IADE", "tutar_kurus": 5000, "odeme_sekli": ""}]}), encoding="utf-8")
+        (self.kl / "yukle.json").write_text(json.dumps({"hareketler": [{"dosya": "h.json"}], **kw}), encoding="utf-8")
+
+    def test_yukler_ve_bakiye_eslesir(self):
+        self.veri(bakiye=450)
+        cikti = self.calistir()
+        c = Cari.objects.get(unvan="ÖRNEK ISI YALITIM")
+        self.assertEqual((c.belgeler.count(), c.bakiye_kurus()), (4, 45000))
+        b = c.belgeler.get(harici_evrak_no="9")
+        self.assertEqual((b.tur, b.odeme_sekli, b.evrak_no), ("ODEME", "HAVALE", ""))
+        self.assertIn("EŞLEŞTİ", cikti)
+
+    def test_bakiye_eslesmezse_hicbir_sey_kaydedilmez(self):
+        self.veri(bakiye=451)
+        with self.assertRaises(CommandError):
+            self.calistir()
+        self.assertEqual((Cari.objects.count(), Belge.objects.count()), (0, 0))
+
+    def test_tekrar_calistirmak_cogaltmaz(self):
+        self.veri(bakiye=450)
+        self.calistir()
+        cikti = self.calistir()
+        self.assertEqual(Belge.objects.count(), 4)
+        self.assertIn("zaten hareketi var", cikti)
+
+    def test_baska_tedarikcinin_belgesi_varken_de_yuklenir(self):
+        diger = Cari.objects.create(unvan="BASKA")
+        Belge.objects.create(cari=diger, tur="ALIS_FISI", tarih=date(2026, 1, 1), tutar_kurus=100)
+        self.veri(bakiye=450)
+        self.calistir()
+        self.assertEqual(Cari.objects.get(unvan="ÖRNEK ISI YALITIM").belgeler.count(), 4)
+        self.assertEqual(diger.belgeler.count(), 1)
+
+    def test_elle_acilmis_bos_cari_kullanilir(self):
+        mevcut = Cari.objects.create(unvan="ÖRNEK ISI YALITIM")
+        self.veri(bakiye=450)
+        self.calistir()
+        self.assertEqual(Cari.objects.filter(unvan="ÖRNEK ISI YALITIM").count(), 1)
+        self.assertEqual(mevcut.belgeler.count(), 4)
+
+    def test_cari_dosyasi_tekrarda_ikilenmez(self):
+        self.yaz({"cari_dosyalari": [{"dosya": "ekstre.pdf", "cari": "X", "aciklama": "e"}]})
+        Cari.objects.create(unvan="X")
+        self.calistir()
+        self.calistir()
+        self.assertEqual(Ek.objects.count(), 1)

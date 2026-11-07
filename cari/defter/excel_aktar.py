@@ -126,6 +126,11 @@ def _ice_aktar(yol, sifirla: bool = False) -> dict:
             continue
         ad = _norm(s[0])
         vade = s[7]
+        var = Cari.objects.filter(unvan=ad).first()           # aynı ünvanlı cari elle girilmişse onu kullan (çift kayıt/hata olmasın)
+        if var is not None:
+            cariler[ad] = var
+            uyarilar.append(f"'{ad}' zaten kayıtlıydı; mevcut cari kullanıldı.")
+            continue
         cariler[ad] = Cari.objects.create(
             unvan=ad, kisa_kod=_metin(s[1]), tedarikcideki_kodumuz=_metin(s[2]),
             vergi_bilgisi=_metin(s[3]), telefon=_metin(s[4]), eposta=_metin(s[5]),
@@ -147,7 +152,7 @@ def _ice_aktar(yol, sifirla: bool = False) -> dict:
             continue
         ad = _norm(s[2] or "")
         if ad not in cariler:
-            cariler[ad] = Cari.objects.create(unvan=ad)
+            cariler[ad] = Cari.objects.filter(unvan=ad).first() or Cari.objects.create(unvan=ad)
             uyarilar.append(f"Hareketler satır {no}: '{ad}' Tedarikçiler sayfasında yoktu, cari olarak eklendi.")
         tutar = next((v for v in (s[9], s[10], s[7]) if v not in (None, "")), None)
         if tutar is None or kurus(tutar) <= 0:

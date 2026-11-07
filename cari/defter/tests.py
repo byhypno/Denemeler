@@ -251,6 +251,17 @@ class ExcelAktarTests(TestCase):
         self.yol = os.path.join(self.dizin.name, "ornek.xlsx")
         _ornek_excel(self.yol)
 
+    def test_elle_girilmis_ayni_cari_kullanilir_hata_vermez(self):
+        mevcut = Cari.objects.create(unvan="TEST HIRDAVAT")
+        diger = Cari.objects.create(unvan="BASKA TEDARIKCI")
+        ozet = ice_aktar(self.yol)
+        self.assertEqual(ozet["hatalar"], [])
+        self.assertEqual(Cari.objects.filter(unvan="TEST HIRDAVAT").count(), 1)
+        self.assertEqual(Cari.objects.get(unvan="TEST HIRDAVAT").pk, mevcut.pk)
+        self.assertEqual(mevcut.bakiye_kurus(), 1185055)
+        self.assertEqual(diger.bakiye_kurus(), 0)                    # diğer tedarikçiye dokunulmadı
+        self.assertTrue(any("zaten kayıtlıydı" in u for u in ozet["uyarilar"]))
+
     def test_aktarim_ve_bakiye(self):
         ozet = ice_aktar(self.yol)
         self.assertEqual((ozet["cari"], ozet["belge"], ozet["kalem"]), (1, 4, 3))
