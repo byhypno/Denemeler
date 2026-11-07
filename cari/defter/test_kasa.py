@@ -129,6 +129,11 @@ class GunSonuKilitTests(KasaTemel):
 
 
 class EksiBakiyeTests(KasaTemel):
+    def setUp(self):
+        super().setUp()
+        Hesap.objects.filter(pk=self.kasa.pk).update(eksiye_dusebilir=False)   # engel mekanizmasını sınamak için kapat
+        self.kasa.refresh_from_db()
+
     def test_cikis_eksiye_dusuremez_giris_iptali_de_dusuremez(self):
         giris = self.hareket(GIRIS, 10000, date(2026, 3, 1))
         self.hareket(CIKIS, 6000, date(2026, 3, 2))
@@ -146,6 +151,19 @@ class EksiBakiyeTests(KasaTemel):
         giris.save()
         giris.refresh_from_db()
         giris.full_clean()                             # tekrar temiz: hata yok
+
+
+class OfisKasaEksiVarsayilanTests(KasaTemel):
+    def test_ofis_kasa_eksiden_baslayabilir(self):
+        self.assertTrue(self.kasa.eksiye_dusebilir)
+        h = KasaHareketi(hesap=self.kasa, yon=CIKIS, tutar_kurus=5000, tarih=date(2026, 3, 1))
+        h.full_clean()
+        h.save()
+        self.assertEqual(self.kasa.bakiye_kurus(), -5000)
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        r = self.client.post(reverse("kasa"), {"tarih": "2026-03-02", "yon": "CIKIS", "tutar_kurus": "50,00", "kdv_modu": "BILINMIYOR"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.kasa.bakiye_kurus(), -10000)
 
 
 class KasaHesapTests(KasaTemel):
@@ -248,6 +266,7 @@ class KasaEkranTests(KasaTemel):
 
     def test_belirsiz_tutar_ve_eksi_bakiye_reddedilir(self):
         self.giris()
+        Hesap.objects.filter(pk=self.kasa.pk).update(eksiye_dusebilir=False)
         r = self.client.post(reverse("kasa"), {"tarih": self.bugun.isoformat(), "yon": "GIRIS",
                                                "tutar_kurus": "1234.50", "kdv_modu": "BILINMIYOR"})
         self.assertEqual(r.status_code, 200)

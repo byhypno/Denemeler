@@ -165,6 +165,8 @@ class KasaTests(TestCase):
 
     def test_bakiye_ve_eksi_engeli(self):
         kasa = Hesap.objects.get(ad="Ofis Kasa")
+        Hesap.objects.filter(pk=kasa.pk).update(eksiye_dusebilir=False)
+        kasa.refresh_from_db()
         KasaHareketi.objects.create(hesap=kasa, tarih=date(2026, 1, 1), yon="GIRIS", tutar_kurus=100000)
         KasaHareketi.objects.create(hesap=kasa, tarih=date(2026, 1, 2), yon="CIKIS", tutar_kurus=30000)
         self.assertEqual(kasa.bakiye_kurus(), 70000)
