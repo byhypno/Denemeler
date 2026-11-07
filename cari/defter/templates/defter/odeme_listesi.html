@@ -1,0 +1,82 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Ödeme listesi: {% if liste == "yapilan" %}yapılan ödemeler{% else %}ödenecekler{% endif %} · Cari{% endblock %}
+{% block icerik %}
+<h1 class="yazdirma-gizle">Ödeme listesi</h1>
+<nav class="sekmeler yazdirma-gizle" aria-label="Liste türü">
+  <a href="?liste=odenecek{% if cari %}&cari={{ cari.pk }}{% endif %}" class="{% if liste != 'yapilan' %}aktif{% endif %}">Ödenecekler (açık borç)</a>
+  <a href="?liste=yapilan{% if cari %}&cari={{ cari.pk }}{% endif %}" class="{% if liste == 'yapilan' %}aktif{% endif %}">Yapılan ödemeler</a>
+</nav>
+
+<form class="filtre yazdirma-gizle" method="get">
+  <input type="hidden" name="liste" value="{{ liste }}">
+  <label>Cari <select name="cari"><option value="">Tüm cariler</option>
+    {% for c in cariler %}<option value="{{ c.pk }}" {% if cari and c.pk == cari.pk %}selected{% endif %}>{{ c.unvan }}</option>{% endfor %}</select></label>
+  {% if liste == "yapilan" %}
+  <label>Başlangıç <input type="date" name="bas" value="{{ bas|date:'Y-m-d' }}"></label>
+  <label>Bitiş <input type="date" name="bit" value="{{ bit|date:'Y-m-d' }}"></label>
+  <label>Ödeme şekli <select name="sekil"><option value="">Tümü</option>
+    {% for k, e in sekiller %}<option value="{{ k }}" {% if sekil == k %}selected{% endif %}>{{ e }}</option>{% endfor %}</select></label>
+  {% endif %}
+  <button type="submit">Listele</button>
+  <button type="button" class="dugme ikincil" onclick="window.print()">Yazdır</button>
+  <a class="dugme ikincil" href="?{{ excel_sorgu }}&indir=xlsx">Excel'e aktar</a>
+</form>
+{% if hata %}<p><span class="chip uyari">{{ hata }}</span></p>{% endif %}
+
+<div class="sadece-yazdir">
+  <p class="yazdirma-baslik">{% if liste == "yapilan" %}Yapılan ödemeler{% else %}Ödenecekler listesi{% endif %}</p>
+  <p>{% if liste == "yapilan" %}Dönem: {{ bas|date:"d.m.Y" }} – {{ bit|date:"d.m.Y" }}{% else %}Tarih: {{ bugun|date:"d.m.Y" }}{% endif %}
+    {% if cari %} · Cari: {{ cari.unvan }}{% endif %}</p>
+</div>
+
+{% if liste == "yapilan" %}
+  <section class="ozet">
+    <div class="kart"><div class="not">Toplam ödeme</div><div class="deger">{{ veri.toplam_kurus|kurus_tl }}</div>
+      <div class="not">{{ veri.adet }} ödeme · {{ veri.gruplar|length }} cari</div></div>
+    {% for e, t in veri.sekil_toplamlari %}<div class="kart"><div class="not">{{ e }}</div><div class="deger">{{ t|kurus_tl }}</div></div>{% endfor %}
+  </section>
+  {% for g in veri.gruplar %}
+  <div class="kart"><h2>{{ g.cari.unvan }}</h2>
+    <div class="tablo-kaydir"><table>
+      <thead><tr><th>Tarih</th><th>Ödeme şekli</th><th>Evrak no</th><th>Açıklama</th><th class="sayi">Tutar</th></tr></thead>
+      <tbody>{% for b in g.belgeler %}
+        <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_odeme_sekli_display|default:"—" }}</td>
+          <td>{{ b.evrak_no|default:b.harici_evrak_no|default:"—" }}</td><td>{{ b.aciklama|default:"" }}</td>
+          <td class="sayi">{{ b.tutar_kurus|kurus_say }}</td></tr>{% endfor %}</tbody>
+      <tfoot><tr><th colspan="4">{{ g.cari.unvan }} toplamı</th><th class="sayi">{{ g.toplam_kurus|kurus_tl }}</th></tr></tfoot>
+    </table></div></div>
+  {% empty %}<div class="kart bos">Bu dönemde ödeme yok.</div>{% endfor %}
+  {% if veri.gruplar %}<div class="kart"><b>GENEL TOPLAM: {{ veri.toplam_kurus|kurus_tl }}</b></div>{% endif %}
+{% else %}
+  <section class="ozet yazdirma-gizle">
+    <div class="kart"><div class="not">Toplam açık borç</div><div class="deger">{{ veri.toplam_kurus|kurus_tl }}</div>
+      <div class="not">{{ veri.satirlar|length }} cari</div></div>
+    <div class="kart"><div class="not">{{ kova_etiketleri.3 }}</div><div class="deger">{{ veri.kovalar.3|kurus_tl }}</div></div>
+    <div class="kart"><div class="not">Vadesi geçmiş</div>
+      <div class="deger">{% if veri.vade_tanimli %}{{ veri.vadesi_gecmis_kurus|kurus_tl }}{% else %}—{% endif %}</div>
+      {% if not veri.vade_tanimli %}<div class="not">Cari kartlarında vade günü tanımlı değil</div>{% endif %}</div>
+  </section>
+  <div class="kart"><div class="tablo-kaydir"><table>
+    <thead><tr><th>Cari</th><th class="sayi">Açık borç</th>
+      {% for k in kova_etiketleri %}<th class="sayi yazdirma-gizle">{{ k }}</th>{% endfor %}
+      <th>En eski belge</th><th class="sayi">Yaş</th><th class="sayi yazdirma-gizle">Vadesi geçmiş</th>
+      <th class="yazdirma-sutun">Planlanan ödeme</th><th class="yazdirma-sutun">Not</th></tr></thead>
+    <tbody>{% for s in veri.satirlar %}
+      <tr><td><a href="{% url 'cari_ekstre' s.cari.pk %}">{{ s.cari.unvan }}</a></td>
+        <td class="sayi"><b>{{ s.toplam_kurus|kurus_tl }}</b></td>
+        {% for k in s.kovalar %}<td class="sayi yazdirma-gizle">{{ k|kurus_say }}</td>{% endfor %}
+        <td>{{ s.en_eski_tarih|date:"d.m.Y" }}</td><td class="sayi">{{ s.en_eski_yas }} gün</td>
+        <td class="sayi yazdirma-gizle">{% if s.vade_tanimli %}{{ s.vadesi_gecmis_kurus|kurus_say }}{% else %}—{% endif %}</td>
+        <td class="yazdirma-sutun"></td><td class="yazdirma-sutun"></td></tr>
+    {% empty %}<tr><td colspan="10" class="not">Açık borç yok.</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th>TOPLAM</th><th class="sayi">{{ veri.toplam_kurus|kurus_tl }}</th>
+      {% for k in veri.kovalar %}<th class="sayi yazdirma-gizle">{{ k|kurus_say }}</th>{% endfor %}
+      <th></th><th></th><th class="yazdirma-gizle"></th><th class="yazdirma-sutun"></th><th class="yazdirma-sutun"></th></tr></tfoot>
+  </table></div></div>
+  {% for c, a in veri.avanslar %}{% if forloop.first %}<p class="not">Fazla ödeme (avans) olan cariler:{% endif %}
+    {{ c.unvan }} {{ a|kurus_tl }}{% if not forloop.last %};{% endif %}{% if forloop.last %}</p>{% endif %}{% endfor %}
+  <p class="not">Açık borç, ödeme ve iadelerin <b>en eski borca mahsup edildiği (FIFO)</b> varsayımıyla hesaplanır; toplam cari bakiyesine eşittir.
+    Yaş, belge tarihinden itibaren gündür.</p>
+  <div class="sadece-yazdir imza"><span>Hazırlayan: ____________</span><span>Onaylayan: ____________</span></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}{% if hesap %}{{ hesap.ad }}{% else %}Kasa{% endif %} · Cari{% endblock %}
+{% block icerik %}
+{% if not hesap %}
+  <div class="kart bos"><h2>Aktif kasa hesabı yok</h2>
+    <p><a href="{% url 'admin:defter_hesap_add' %}">Yönetim panelinden</a> bir kasa hesabı ekleyin.</p></div>
+{% else %}
+<h1>{{ hesap.ad }}</h1>
+{% url 'kasa' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
+<p class="yazdirma-gizle">
+  <a class="dugme ikincil" href="{% url 'kasa_gun_sonu' %}?hesap={{ hesap.pk }}">Gün sonu{% if "kasa_yaz" in yetkiler %} kapanışı{% else %} kayıtları{% endif %}</a>
+  <a class="dugme ikincil" href="{% url 'kasa_rapor' %}?hesap={{ hesap.pk }}">{% ikon "rapor" "kucuk" %}Rapor (Excel / PDF)</a>
+  {% if request.user.is_staff %}<a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>{% endif %}
+</p>
+<p class="not">Ofis içi küçük harcamalar için kasa. Şirketin asıl kasası burada tutulmaz; bu kasa cari defterinden tamamen bağımsızdır.</p>
+
+<section class="kpi" aria-label="Kasa göstergeleri">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kasa" %}</span><span class="etiket">Güncel kasa bakiyesi</span></div><div class="deger">{{ ozet.bakiye_kurus|kurus_tl }}</div>
+    <div class="alt">{% if hesap.eksiye_dusebilir %}Eksiye düşebilir{% else %}Eksiye düşemez{% endif %}</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-asagi" %}</span><span class="etiket">Bugün giriş</span></div><div class="deger">{{ ozet.bugun_giris|kurus_tl }}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-yukari" %}</span><span class="etiket">Bugün çıkış</span></div><div class="deger">{{ ozet.bugun_cikis|kurus_tl }}</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gonder" %}</span><span class="etiket">Bu ay giriş / çıkış</span></div>
+    <div class="deger orta">{{ ozet.ay_giris|kurus_say }} / {{ ozet.ay_cikis|kurus_say }}</div><div class="alt">₺ (giriş / çıkış)</div></div>
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kilit" %}</span><span class="etiket">Son kapanış</span></div>
+    <div class="deger orta">{% if ozet.kilit_siniri %}{{ ozet.kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div>
+    <div class="alt">{% if ozet.acik_gunler %}<span class="chip uyari">{{ ozet.acik_gunler|length }} gün kapanış bekliyor</span>{% else %}<span class="chip tamam">Bekleyen gün yok</span>{% endif %}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">{{ yil }} toplam çıkış</span></div><div class="deger">{{ yil_cikis|kurus_tl }}</div>
+    <div class="alt">Cari defterinden bağımsız</div></div>
+</section>
+
+{% if "kasa_yaz" in yetkiler %}
+<section class="kart yazdirma-gizle" id="yeni-hareket">
+  <h2>Yeni kasa hareketi</h2>
+  <p class="not">Birden çok kayıt girecekseniz: <a href="{% url 'kasa_toplu' %}?hesap={{ hesap.pk }}">Toplu giriş (10 satır)</a></p>
+  <datalist id="harcayan-listesi">{% for a in harcayanlar %}<option value="{{ a }}">{% endfor %}</datalist>
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="form-izgara">
+      {% for f in form %}{% if f.name not in kdv_alanlari %}
+      <label>{{ f.label }}{{ f }}{% for e in f.errors %}<span class="hata">{{ e }}</span>{% endfor %}</label>
+      {% endif %}{% endfor %}
+    </div>
+    <details class="ek"><summary>KDV (isteğe bağlı)</summary>
+      <div class="form-izgara">
+        {% for f in form %}{% if f.name in kdv_alanlari %}
+        <label>{{ f.label }}{{ f }}{% for e in f.errors %}<span class="hata">{{ e }}</span>{% endfor %}</label>
+        {% endif %}{% endfor %}
+      </div>
+    </details>
+    <button type="submit">Kaydet</button>
+    {% if kilit_siniri %}<span class="not">{{ kilit_siniri|date:"d.m.Y" }} ve öncesi kapalı: bu günlere kayıt girilemez.</span>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+<section class="kart">
+  <h2>{{ yil }} yılı aylık giriş, çıkış ve ay sonu kasa bakiyesi
+    <form method="get" style="display:inline-block; margin-left:12px">
+      <input type="hidden" name="hesap" value="{{ hesap.pk }}">
+      <select name="yil" onchange="this.form.submit()" aria-label="Yıl">{% for y in yillar %}<option value="{{ y }}" {% if y == yil %}selected{% endif %}>{{ y }}</option>{% endfor %}</select>
+    </form></h2>
+  <div class="grafik"><canvas id="g-kasa-aylik" role="img" aria-label="Aylık kasa girişi, çıkışı ve ay sonu bakiyesi"></canvas></div>
+</section>
+
+<section class="izgara iki">
+  <div class="kart"><h2>{{ yil }} yılı kategoriye göre çıkışlar</h2>
+    {% if grafik.kat_etiket %}<div class="grafik"><canvas id="g-kasa-kategori" role="img" aria-label="Kategoriye göre kasa çıkışları"></canvas></div>
+    {% else %}<p class="not">Bu yıl için çıkış kaydı yok.</p>{% endif %}</div>
+  <div class="kart"><h2>{{ yil }} yılının en büyük çıkışları</h2>
+    <div class="tablo-kaydir"><table><thead><tr><th>Tarih</th><th>Kategori</th><th>Açıklama</th><th class="sayi">Tutar</th></tr></thead><tbody>
+      {% for h in en_buyuk %}<tr><td>{{ h.tarih|date:"d.m.Y" }}</td><td>{{ h.kategori|default:"—" }}</td>
+        <td>{{ h.aciklama|default:"—" }}</td><td class="sayi">{{ h.tutar_kurus|kurus_tl }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="not">Çıkış yok.</td></tr>{% endfor %}</tbody></table></div></div>
+</section>
+
+<section class="kart">
+  <h2>Hareketler</h2>
+  <form class="filtre" method="get">
+    <input type="hidden" name="hesap" value="{{ hesap.pk }}"><input type="hidden" name="yil" value="{{ yil }}">
+    <label>Başlangıç <input type="date" name="bas" value="{{ filtre.bas }}"></label>
+    <label>Bitiş <input type="date" name="bit" value="{{ filtre.bit }}"></label>
+    <label>Yön <select name="yon"><option value="">Tümü</option>
+      <option value="GIRIS" {% if filtre.yon == "GIRIS" %}selected{% endif %}>Giriş</option>
+      <option value="CIKIS" {% if filtre.yon == "CIKIS" %}selected{% endif %}>Çıkış</option></select></label>
+    <label>Kategori <select name="kategori"><option value="">Tümü</option>
+      {% for k in kategoriler %}<option value="{{ k.pk }}" {% if filtre.kategori == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.ad }}</option>{% endfor %}</select></label>
+    <label>Harcayan <select name="harcayan"><option value="">Tümü</option>
+      <option value="-" {% if filtre.harcayan == "-" %}selected{% endif %}>(belirtilmemiş)</option>
+      {% for a in harcayanlar %}<option value="{{ a }}" {% if filtre.harcayan == a %}selected{% endif %}>{{ a }}</option>{% endfor %}</select></label>
+    <label class="ara-kutu">Ara <input type="search" name="q" value="{{ filtre.q }}" placeholder="açıklama, makbuz, harcayan…" autocomplete="off"></label>
+    <label><span>İptaller</span><span><input type="checkbox" name="iptal" value="1" {% if filtre.iptal == "1" %}checked{% endif %}> göster</span></label>
+    <button type="submit">Filtrele</button>
+    <a class="dugme ikincil" href="{% url 'kasa' %}?hesap={{ hesap.pk }}&amp;yil={{ yil }}">Temizle</a>
+  </form>
+  <p class="not">Listedeki (iptaller hariç) {{ liste_toplami.adet }} kayıt: giriş <b>{{ liste_toplami.giris|kurus_tl }}</b> ·
+    çıkış <b>{{ liste_toplami.cikis|kurus_tl }}</b> · net <b>{{ liste_toplami.net|kurus_tl }}</b>
+    <span class="yazdirma-gizle"> ·
+    <a href="?{{ sorgu }}&amp;indir=xlsx">{% ikon "rapor" "kucuk" %}Bu listeyi Excel'e aktar</a>
+    {% if "kasa_yaz" in yetkiler %} · <a href="{% url 'kasa_harcayan_duzelt' %}?hesap={{ hesap.pk }}">Harcayan adlarını düzelt</a>{% endif %}</span></p>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Harcayan</th><th>Açıklama</th><th>Makbuz</th>
+      <th class="sayi">Tutar</th><th class="sayi">Bakiye</th><th class="yazdirma-gizle">İşlem</th></tr></thead>
+    <tbody>
+    {% for h in sayfa_nesnesi %}
+      <tr class="{% if h.iptal %}iptal-satir{% endif %}">
+        <td>{{ h.tarih|date:"d.m.Y" }}</td>
+        <td>{% if h.yon == "GIRIS" %}<span class="yon giris">{% ikon "ok-yukari" "kucuk" %}Giriş</span>{% else %}<span class="yon cikis">{% ikon "ok-asagi" "kucuk" %}Çıkış</span>{% endif %}</td>
+        <td>{{ h.kategori|default:"—" }}</td>
+        <td>{{ h.harcayan|default:"—" }}</td>
+        <td>{{ h.aciklama|default:"" }}{% if h.iptal %} <i>(iptal: {{ h.iptal_nedeni }})</i>{% endif %}</td>
+        <td>{{ h.makbuz_no|default:"" }}{% with n=ek_sayi|sozluk_al:h.pk %}<a class="ek-bag yazdirma-gizle{% if n %} dolu{% endif %}" href="{% url 'ek_sahip' 'kasa' h.pk %}" title="Ekler (fiş/makbuz görseli)">{% ikon "ek" "kucuk" %}{% if n %}<span>{{ n }}</span>{% else %}<span class="sr-only">Ek ekle</span>{% endif %}</a>{% endwith %}</td>
+        <td class="sayi">{{ h.tutar_kurus|kurus_say }}</td>
+        <td class="sayi">{% if not h.iptal %}{{ bakiyeler|sozluk_al:h.pk|kurus_say }}{% endif %}</td>
+        <td class="islem yazdirma-gizle">
+          {% if h.iptal %}—{% elif "kasa_yaz" not in yetkiler %}—{% elif kilit_siniri and h.tarih <= kilit_siniri %}<span class="chip">{% ikon "kilit" "kucuk" %}kapalı gün</span>
+          {% else %}<form class="satir-form" method="post" action="{% url 'kasa_hareket_iptal' h.pk %}">{% csrf_token %}
+            <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">
+            <button class="kucuk ikincil dugme" type="submit">İptal</button></form>
+            <a class="kucuk ikincil dugme" href="{% url 'kasa_hareket_duzelt' h.pk %}">Düzenle</a>{% endif %}
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="9" class="not">Kayıt yok.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="sayfalama yazdirma-gizle">
+    {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">{% ikon "geri" "kucuk" %}Önceki</a>{% endif %}
+    <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }} · {{ sayfa_nesnesi.paginator.count }} kayıt</span>
+    {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Sonraki{% ikon "ok-sag" "kucuk" %}</a>{% endif %}
+  </div>
+</section>
+
+{{ grafik|json_script:"grafik-veri" }}
+<script src="{% static 'defter/vendor/chart.umd.js' %}"></script>
+<script src="{% static 'defter/js/grafik_ortak.js' %}"></script>
+<script src="{% static 'defter/js/kasa.js' %}"></script>
+{% endif %}
+{% endblock %}

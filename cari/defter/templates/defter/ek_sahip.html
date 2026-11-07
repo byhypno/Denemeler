@@ -1,0 +1,50 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Ekler · {{ etiket }}{% endblock %}
+{% block icerik %}
+<h1>Ekler</h1>
+<p class="not">{{ etiket }}</p>
+<p><a href="{{ geri }}">{% ikon "geri" "kucuk" %}Geri dön</a></p>
+
+{% if yazabilir %}
+<section class="kart yazdirma-gizle">
+  <h2>Dosya ekle</h2>
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <div class="form-izgara">
+      <label>Dosyalar (birden fazla seçebilirsiniz)
+        <input type="file" name="dosyalar" multiple required
+               accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.xlsx,.docx"></label>
+      <label>Açıklama (isteğe bağlı) <input type="text" name="aciklama" maxlength="250" placeholder="ör. Fiş görseli"></label>
+    </div>
+    <p class="not">İzinli türler: {{ izinli }}. Dosya başına en fazla {{ maks_mb }} MB. Dosya içeriği türüyle uyuşmalıdır.
+      Aynı dosya aynı kayda iki kez eklenemez.</p>
+    <button type="submit">Yükle</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="kart">
+  <h2>Ekli dosyalar ({{ ekler|length }})</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Önizleme</th><th>Dosya</th><th>Boyut</th><th>Yüklenme</th><th>Açıklama</th><th class="yazdirma-gizle">İşlem</th></tr></thead>
+    <tbody>{% for e in ekler %}
+      <tr>
+        <td>{% if e.icerik_turu in gorsel_turleri %}<a href="{% url 'ek_indir' e.pk %}" target="_blank" rel="noopener"><img class="kucuk-resim" loading="lazy" src="{% url 'ek_indir' e.pk %}" alt="{{ e.orijinal_ad }}"></a>{% else %}<span class="chip">{{ e.orijinal_ad|slice:"-4:"|upper }}</span>{% endif %}</td>
+        <td><a href="{% url 'ek_indir' e.pk %}" target="_blank" rel="noopener">{{ e.orijinal_ad }}</a></td>
+        <td class="sayi">{{ e.boyut_bayt|boyut }}</td>
+        <td>{{ e.yuklenme|date:"d.m.Y H:i" }}{% if e.yukleyen %}<br><span class="not">{{ e.yukleyen }}</span>{% endif %}</td>
+        <td>{{ e.aciklama|default:"—" }}</td>
+        <td class="yazdirma-gizle">
+          <a class="dugme kucuk ikincil" href="{% url 'ek_indir' e.pk %}?indir=1">İndir</a>
+          {% if yazabilir %}<form class="satir-form" method="post" action="{% url 'ek_kaldir' e.pk %}">{% csrf_token %}
+            <input name="neden" placeholder="Kaldırma nedeni" required aria-label="Kaldırma nedeni">
+            <button class="kucuk ikincil dugme" type="submit">Kaldır</button></form>{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="not">Henüz ek yok.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if kaldirilanlar %}
+  <details class="ek"><summary>Kaldırılan ekler ({{ kaldirilanlar|length }})</summary>
+    <ul>{% for e in kaldirilanlar %}<li>{{ e.orijinal_ad }} — {{ e.kaldirma_zamani|date:"d.m.Y H:i" }}: {{ e.kaldirma_nedeni }}</li>{% endfor %}</ul>
+    <p class="not">Kaldırılan dosyalar diskte saklanmaya devam eder ve buradan indirilemez.</p></details>
+  {% endif %}
+</section>
+{% endblock %}

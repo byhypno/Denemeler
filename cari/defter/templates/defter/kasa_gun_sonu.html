@@ -1,0 +1,56 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Gün sonu kapanışı · Cari{% endblock %}
+{% block icerik %}
+{% if not hesap %}<div class="kart bos">Aktif kasa hesabı yok.</div>{% else %}
+<h1>Gün sonu kapanışı</h1>
+<p class="not">{{ hesap.ad }}</p>
+{% url 'kasa_gun_sonu' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
+<p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
+
+<section class="ozet">
+  <div class="kart"><div class="not">Son kapanış</div>
+    <div class="deger orta">{% if kilit_siniri %}{{ kilit_siniri|date:"d.m.Y" }}{% else %}Henüz yok{% endif %}</div></div>
+  <div class="kart"><div class="not">Kapanış bekleyen gün</div>
+    <div class="deger">{{ acik_gunler|length }}</div>
+    {% if acik_gunler %}<div class="not">{% for g in acik_gunler|slice:":6" %}{{ g|date:"d.m" }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if acik_gunler|length > 6 %} …{% endif %}</div>{% endif %}</div>
+  <div class="kart"><div class="not">{{ secili_tarih|date:"d.m.Y" }} sonu kayıtlı bakiye</div>
+    <div class="deger">{{ beklenen|kurus_tl }}</div></div>
+</section>
+
+{% if "kasa_yaz" in yetkiler %}
+<section class="kart">
+  <h2>Kasayı kapat</h2>
+  <p class="not">Kasadaki nakdi sayıp yazın. Kapatılan gün <b>ve öncesi kilitlenir</b>: o günlere kayıt eklenemez,
+    değiştirilemez, iptal edilemez. Yanlış varsa güncel tarihli bir ters kayıt girilir.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="form-izgara">
+      <label>{{ form.tarih.label }}
+        <input type="date" name="tarih" value="{{ secili_tarih|date:'Y-m-d' }}" required
+          onchange="location.href='?hesap={{ hesap.pk }}&tarih='+this.value">
+        {% for e in form.tarih.errors %}<span class="hata">{{ e }}</span>{% endfor %}</label>
+      <label>{{ form.sayilan.label }}{{ form.sayilan }}{% for e in form.sayilan.errors %}<span class="hata">{{ e }}</span>{% endfor %}</label>
+      <label>{{ form.aciklama.label }}{{ form.aciklama }}</label>
+    </div>
+    <p><label>{{ form.farki_isle }} {{ form.farki_isle.label }}</label></p>
+    <button type="submit">Kapat ve kilitle</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="kart"><h2>Geçmiş kapanışlar</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Gün</th><th class="sayi">Kayıtlı bakiye</th><th class="sayi">Sayılan</th><th class="sayi">Fark</th><th>Durum</th><th>Açıklama</th></tr></thead>
+    <tbody>{% for g in kapanislar %}
+      <tr {% if g.fark_kurus %}class="vurgu"{% endif %}><td>{{ g.tarih|date:"d.m.Y" }}</td>
+        <td class="sayi">{{ g.beklenen_kurus|kurus_tl }}</td><td class="sayi">{{ g.sayilan_kurus|kurus_tl }}</td>
+        <td class="sayi">{{ g.fark_kurus|kurus_tl }}</td>
+        <td>{% if not g.fark_kurus %}<span class="chip tamam">Tuttu</span>
+            {% elif g.fark_kurus > 0 %}<span class="chip uyari">Kasa fazlası</span>{% else %}<span class="chip hata">Kasa noksanı</span>{% endif %}
+            {% if g.fark_islendi %}<span class="not">Hareket olarak işlendi.</span>{% endif %}
+            {% if not g.kilitli %}<span class="chip">kilit açık</span>{% endif %}</td>
+        <td>{{ g.aciklama|default:"" }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="not">Henüz kapanış yok.</td></tr>{% endfor %}</tbody>
+  </table></div></section>
+{% endif %}
+{% endblock %}

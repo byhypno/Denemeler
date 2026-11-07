@@ -1,0 +1,31 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri static %}
+{% block baslik %}Toplu kasa girişi · Cari{% endblock %}
+{% block icerik %}
+<h1>Toplu kasa girişi</h1>
+<p class="not">{{ hesap.ad }}</p>
+<p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
+<p class="not">Boş bırakılan satırlar atlanır. <b>Geçerli satırlar kaydedilir, hatalı satırlar hata mesajıyla ekranda kalır.</b>
+  Enter bir sonraki alana geçer; son alanda yeni satır açılır. KDV gerekiyorsa kaydı tek tek girin.
+  {% if kilit_siniri %}{{ kilit_siniri|date:"d.m.Y" }} ve öncesi kapalı: bu günlere kayıt girilemez.{% endif %}</p>
+<datalist id="harcayan-listesi">{% for a in harcayanlar %}<option value="{{ a }}">{% endfor %}</datalist>
+<form method="post" novalidate>{% csrf_token %}
+  <input type="hidden" name="hesap" value="{{ hesap.pk }}">
+  <input type="hidden" name="satir_sayisi" id="satir-sayisi" value="{{ sonraki }}">
+  <section class="kart">
+    <div class="tablo-kaydir"><table class="toplu-tablo">
+      <thead><tr><th>Tarih</th><th>Yön</th><th class="sayi">Tutar (₺)</th><th>Kategori</th><th>Harcayan</th><th>Fiş no</th><th>Açıklama</th></tr></thead>
+      <tbody id="toplu-govde">
+      {% for i, f in satirlar %}
+        <tr{% if f.errors %} class="hatali"{% endif %}>
+          {% for a in f %}<td{% if a.name == "tutar_kurus" %} class="sayi"{% endif %}>{{ a }}</td>{% endfor %}
+        </tr>
+        {% if f.errors %}<tr class="hatali-not"><td colspan="7"><span class="hata" role="alert">{% for a in f %}{% for e in a.errors %}{{ a.label }}: {{ e }} {% endfor %}{% endfor %}{{ f.non_field_errors|join:" " }}</span></td></tr>{% endif %}
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="yazdirma-gizle"><button type="button" class="ikincil dugme kucuk" id="toplu-ekle">{% ikon "arti" "kucuk" %}Satır ekle</button></p>
+  </section>
+  <p><button type="submit">Kaydet</button></p>
+</form>
+<script src="{% static 'defter/js/kasa_toplu.js' %}"></script>
+{% endblock %}
