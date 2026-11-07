@@ -16,3 +16,6 @@ secret.key
 cari/ayarlar.bat
 cari/.venv/
 cari/veri/
+
+# Denetim ajanı geçici çalışma kopyaları
+.claude/worktrees/
