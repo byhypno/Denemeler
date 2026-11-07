@@ -6,6 +6,7 @@ Kullanım (Linux/Mac/Windows, internet gerekir; paket hazırlanırken BİR kez):
 Üretilen `Egeser-Cari-Kurulum.zip`: program dosyaları + `wheels/` (Windows için paketler, internetsiz kurulum) + KURULUM.txt.
 Hedef bilgisayarda yalnızca zip'i açıp `kur.bat` çalıştırılır. Python yoksa kur.bat winget ile kurmayı dener.
 Pakete GİRMEYENLER: gerçek veri (veri/), ayarlar.bat, .venv, testler, __pycache__.
+`--baslangic-verisi KLASOR` ile (yukle.json + Excel/zip/pdf) ilk kurulumda yüklenecek verileriniz pakete eklenir.
 """
 import argparse
 import subprocess
@@ -40,6 +41,9 @@ KURULUM_TXT = """EGESER-CARI KURULUMU (Windows 10/11)
    Sonra yedek_gorevi_kur.bat dosyasina cift tiklayin: her gece otomatik yedek alinir.
    Verileriniz "veri" klasorundedir; programi guncellerken bu klasore dokunmayin.
 
+BASLANGIC VERISI: Bu pakette "baslangic_verisi" klasoru varsa kur.bat verilerinizi (Excel cari takip,
+fis gorselleri, cari dosyalari) ilk kurulumda KENDISI yukler. Program bos degilse tekrar yuklemez.
+
 SORUN OLURSA: kur.bat penceresindeki son mesaji fotograflayip gonderin.
 """
 
@@ -70,15 +74,22 @@ def wheels_indir(hedef: Path):
     subprocess.run(komut, check=True)
 
 
-def paket_olustur(cikti_dizin, wheels=True) -> Path:
+def paket_olustur(cikti_dizin, wheels=True, baslangic_verisi=None) -> Path:
     cikti_dizin = Path(cikti_dizin)
     cikti_dizin.mkdir(parents=True, exist_ok=True)
-    zip_yolu = cikti_dizin / f"{PAKET_ADI}-Kurulum.zip"
+    zip_yolu = cikti_dizin / (f"{PAKET_ADI}-Kurulum-Veriler-Ile.zip" if baslangic_verisi else f"{PAKET_ADI}-Kurulum.zip")
     with tempfile.TemporaryDirectory() as t, zipfile.ZipFile(zip_yolu, "w", zipfile.ZIP_DEFLATED) as z:
         for p in dosyalar():
             z.write(KOK / p, f"{PAKET_ADI}/{p.as_posix()}")
         z.writestr(zipfile.ZipInfo(f"{PAKET_ADI}/KURULUM.txt", date_time=(2026, 1, 1, 0, 0, 0)),
                    b"\xef\xbb\xbf" + KURULUM_TXT.replace("\n", "\r\n").encode("utf-8"))
+        if baslangic_verisi:
+            # Kendi verileriniz (Excel, fiş görselleri...) pakete GİRER ama depoya girmez; kur.bat ilk kurulumda yükler.
+            kaynak = Path(baslangic_verisi)
+            if not (kaynak / "yukle.json").is_file():
+                raise SystemExit(f"{kaynak}/yukle.json yok (hangi dosyanın yükleneceğini tarif eden dosya).")
+            for f in sorted(p for p in kaynak.rglob("*") if p.is_file()):
+                z.write(f, f"{PAKET_ADI}/baslangic_verisi/{f.relative_to(kaynak).as_posix()}")
         if wheels:
             w = Path(t) / "wheels"
             w.mkdir()
@@ -92,7 +103,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cikti", default=str(KOK / "dist"))
     ap.add_argument("--wheels-yok", action="store_true", help="paketleri indirme (yalnızca deneme için)")
+    ap.add_argument("--baslangic-verisi", help="yukle.json + veri dosyalarının bulunduğu klasör; ilk kurulumda yüklenir (pakete girer, depoya girmez)")
     a = ap.parse_args()
-    yol = paket_olustur(a.cikti, wheels=not a.wheels_yok)
+    yol = paket_olustur(a.cikti, wheels=not a.wheels_yok, baslangic_verisi=a.baslangic_verisi)
     with zipfile.ZipFile(yol) as z:
         print(f"{yol}  ({yol.stat().st_size / 1e6:.1f} MB, {len(z.namelist())} dosya)")

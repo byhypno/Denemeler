@@ -64,6 +64,12 @@ if errorlevel 1 (
   echo Yonetici hesabi zaten var, olusturma atlandi.
 )
 
+if exist "baslangic_verisi\yukle.json" (
+  echo Baslangic verileri yukleniyor ^(Excel, fis gorselleri^)...
+  ".venv\Scripts\python.exe" manage.py baslangic_verisi
+  if errorlevel 1 echo Baslangic verisi yuklenemedi; mesaja bakin. Kurulum devam ediyor.
+)
+
 echo Egeser-Cari kisayolu ^(logolu simgeyle^) masaustune ve Baslat menusune olusturuluyor...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0kisayol_olustur.ps1"
 if errorlevel 1 echo Kisayol olusturulamadi; programi baslat.bat dosyasina cift tiklayarak da acabilirsiniz.
