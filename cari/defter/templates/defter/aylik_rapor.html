@@ -28,6 +28,20 @@
     <div class="alt">{% if r.ay_sonu_avans %}Ayrıca fazla ödeme (avans): {{ r.ay_sonu_avans|kurus_tl }}{% else %}Borçlu olduğumuz tüm tedarikçiler{% endif %}</div></div>
 </section>
 
+{% if r.gecen_yil %}
+<section class="kart">
+  <h2>Geçen yılın aynı ayıyla karşılaştırma ({{ r.ay_adi }} {{ r.yil|add:"-1" }})</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Kalem</th><th class="sayi">{{ r.yil }}</th><th class="sayi">{{ r.yil|add:"-1" }}</th><th class="sayi">Değişim</th></tr></thead>
+    <tbody>{% for ad, bu, gy, d in r.gecen_yil %}
+      <tr><th scope="row" class="satir-bas">{{ ad }}</th><td class="sayi">{{ bu|kurus_tl }}</td><td class="sayi">{{ gy|kurus_tl }}</td>
+        <td class="sayi">{% degisim_etiketi d "notr" %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <p class="not">Mevsimsel farkı görmek için aynı ayın bir önceki yılla karşılaştırması. Net genel gider KDV hariçtir.</p>
+</section>
+{% endif %}
+
 <section class="kart">
   <h2>Tedarikçi hareketleri</h2>
   {% if r.tedarikciler %}

@@ -71,7 +71,7 @@
   govde.addEventListener('input', (e) => { topla(); ipucu(e.target.closest('tr')); });
   govde.addEventListener('change', (e) => { ipucu(e.target.closest('tr')); });
   govde.querySelectorAll('tr').forEach(ipucu);
-  document.getElementById('kalem-ekle').addEventListener('click', () => {
+  function satirEkle() {
     const son = govde.lastElementChild;
     const i = govde.children.length;
     const yeni = son.cloneNode(true);
@@ -85,6 +85,18 @@
     govde.appendChild(yeni);
     sayac.value = govde.children.length;
     yeni.querySelector('input').focus();
+  }
+  document.getElementById('kalem-ekle').addEventListener('click', satirEkle);
+  // Klavye akışı: kalem alanında Enter formu göndermez; sonraki alana (satır sonunda sonraki satıra, en sonda yeni satıra) geçer.
+  govde.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.isComposing || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    const alanlar = Array.from(govde.querySelectorAll('input'));
+    const sira = alanlar.indexOf(e.target);
+    if (sira < 0) return;
+    if (sira === alanlar.length - 1) { satirEkle(); return; }
+    alanlar[sira + 1].focus();
+    if (alanlar[sira + 1].select) alanlar[sira + 1].select();
   });
   topla();
 })();

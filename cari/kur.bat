@@ -46,7 +46,13 @@ if exist "wheels\*.whl" (
   ".venv\Scripts\python.exe" -m pip install --upgrade pip
   ".venv\Scripts\python.exe" -m pip install -r requirements.txt
 )
-if errorlevel 1 ( echo Paketler kurulamadi. Internet baglantisini kontrol edin. & pause & exit /b 1 )
+if errorlevel 1 (
+  echo Paketler kurulamadi. Internet baglantisini kontrol edin.
+  echo Pakete hazir gelen dosyalar Python 3.12, 3.13 ve 3.14 ^(64 bit^) icindir. Sizdeki surum:
+  python --version
+  pause
+  exit /b 1
+)
 
 if not exist "ayarlar.bat" copy "ayarlar.ornek.bat" "ayarlar.bat" >nul
 call "ayarlar.bat"

@@ -150,3 +150,19 @@ class RaporEkranTests(Temel):
 
     def test_menu_baglantisi(self):
         self.assertContains(self.client.get(self.url), 'aria-current="page"')
+
+
+class GecenYilKarsilastirmaTests(TestCase):
+    def test_gecen_yilin_ayni_ayi(self):
+        from . import rapor_servisi as rs
+        from .models import GenelGider, GiderKategori
+        kira = GiderKategori.objects.get(ad="Kira")
+        GenelGider.objects.create(kategori=kira, yil=2025, ay=6, tutar_kurus=10000)
+        GenelGider.objects.create(kategori=kira, yil=2026, ay=6, tutar_kurus=15000)
+        r = rs.aylik_rapor(2026, 6)
+        ad, bu, gy, d = next(x for x in r["gecen_yil"] if x[0] == "Net genel gider")
+        self.assertEqual((bu, gy, d["yon"], d["yuzde"]), (15000, 10000, "yukari", 50))
+
+    def test_gecen_yil_verisi_yoksa_bolum_gizli(self):
+        from . import rapor_servisi as rs
+        self.assertIsNone(rs.aylik_rapor(2026, 6)["gecen_yil"])

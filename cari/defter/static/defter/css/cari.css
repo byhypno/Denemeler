@@ -310,9 +310,9 @@ input[type="file"] { padding: 7px var(--b-3); }
 .hata-kutu { background: var(--negatif-zemin); color: var(--negatif); border-radius: var(--r-kontrol);
   padding: var(--b-3) var(--b-4); margin-bottom: var(--b-4); font-size: var(--t-sm); font-weight: 500; }
 details.ek > summary { cursor: pointer; color: var(--vurgu); margin: var(--b-2) 0; font-weight: 600; }
-.satir-form { display: inline-flex; gap: var(--b-2); align-items: center; }
+.satir-form { display: inline-flex; gap: var(--b-2); align-items: center; flex-wrap: wrap; }
 .satir-form input { min-height: 34px; padding: 5px var(--b-2); width: 104px; font-size: var(--t-sm); }
-td.islem { white-space: nowrap; padding-left: var(--b-2); padding-right: var(--b-2); }
+td.islem { white-space: normal; padding-left: var(--b-2); padding-right: var(--b-2); }
 td.islem .satir-form input { width: 96px; }
 
 /* düğmeler */

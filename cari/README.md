@@ -69,6 +69,7 @@ Simge ile yazı arasındaki satır farklıysa `--sembol-alt-sinir <piksel>` veri
   vadesi tanımsız. Vade günü girilmemiş tedarikçiler gecikmiş sayılmaz, uyarı çıkar. Genel Bakış sayfasında vadesi geçen / bu hafta ödenecek uyarısı görünür.
   Ödemeler en eski borca mahsup edilir (FIFO varsayımı).
 - **Veri girişi** (menü): tedarikçi seçip alış/ödeme/iade girme, kasa hareketi, aylık gider ve malzemeler tek sayfada. Yönetim paneli yalnızca seyrek/gelişmiş işler içindir.
+- **Aylık rapor**: seçilen ayın geçen yılın aynı ayıyla karşılaştırması (alışlar, ödemeler, net genel gider). **Fiş kalemlerinde** Enter bir sonraki alana geçer; son alanda yeni satır açar.
 - **Kasa kaydını düzenle** (Kasa listesinde "Düzenle"): açıklama, kategori, fiş no ve harcayan düzeltilir; tutar, tarih ve yön değişmez (yanlış tutar için kaydı iptal edip doğrusunu girin). İptal edilmiş ve kapanışı yapılmış güne ait kayıtlar düzeltilemez; her düzeltme işlem günlüğüne yazılır.
 - **Kasa raporu** (Kasa → "Rapor"): dönem seçilir (bu ay, önceki ay, son para girişinden bugüne, bu yıl, özel aralık). Ekranda, **Excel** (Kasa defteri: solda girişler, sağda çıkışlar + TOPLAM/KALAN; Özet; Günlük sayfaları) ve **PDF** olarak alınır.
   Kasa hareketindeki **Harcayan** alanı kişi bazında toplam verir; fişi girilmemiş çıkışlar uyarılır. PDF için `reportlab` gerekir (Windows paketinde hazır gelir; Türkçe/₺ yazı tipi `defter/static/defter/fonts/pdf/` içindedir).

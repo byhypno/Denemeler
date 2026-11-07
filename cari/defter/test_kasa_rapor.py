@@ -242,3 +242,12 @@ class DenetimDuzeltmeTests(Temel):
         self.assertFalse(KasaHareketi.objects.exists())
         from . import kasa_servisi as ks
         self.assertEqual(ks.kasa_aylik(self.h, 1)["giris"], [0] * 12)
+
+
+class GecersizAralikUyariTests(Temel):
+    def test_gecersiz_ozel_aralik_uyari_verir(self):
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        r = self.client.get(reverse("kasa_rapor"), {"bas": "2026-05-01", "bit": "2026-01-01"})
+        self.assertContains(r, "tarih aralığı geçersiz")
+        r = self.client.get(reverse("kasa_rapor"), {"bas": "2026-01-01", "bit": "2026-05-01"})
+        self.assertNotContains(r, "tarih aralığı geçersiz")

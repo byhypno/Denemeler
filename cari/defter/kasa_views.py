@@ -157,6 +157,9 @@ def kasa_rapor(request):
         return render(request, "defter/kasa_rapor.html", {"hesap": None, "sayfa": "kasa"})
     bugun = date.today()
     bas, bit, etiket = kr.donem_sec(hesap, request.GET, bugun)
+    if (request.GET.get("bas") or request.GET.get("bit")) and etiket != "Özel aralık":
+        messages.warning(request, "Girilen tarih aralığı geçersiz (başlangıç bitişten sonra olamaz; yıllar 2000–2100 olmalı). "
+                                  f"“{etiket}” gösteriliyor.")
     r = kr.kasa_raporu(hesap, bas, bit)
     indir = request.GET.get("indir")
     if indir in ("xlsx", "pdf"):

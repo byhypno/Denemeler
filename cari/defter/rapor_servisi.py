@@ -83,7 +83,14 @@ def aylik_rapor(yil, ay, kasa_dahil=True):
     kalemler = [(k, v) for k, v in kalemler if v]
     borclu_pozitif = sum(r["kapanis"] for r in tedarikciler if r["kapanis"] > 0)
     avans = -sum(r["kapanis"] for r in tedarikciler if r["kapanis"] < 0)
+    gy_ted = _tedarikciler(yil - 1, ay)[1] if yil > 2000 else {"alis": 0, "odeme": 0}
+    gy_gider = gs.ay_toplami(yil - 1, ay) if yil > 2000 else 0
+    gecen_yil = [(ad, bu, gy, trend.karsilastir(bu, gy) if (bu or gy) else None) for ad, bu, gy in (
+        ("Tedarikçi alışları", t_toplam["alis"], gy_ted["alis"]),
+        ("Tedarikçilere ödenen", t_toplam["odeme"], gy_ted["odeme"]),
+        ("Net genel gider", gider["secili"], gy_gider))]
     return {
+        "gecen_yil": gecen_yil if any(gy for _, _, gy, _ in gecen_yil) else None,
         "yil": yil, "ay": ay, "ay_adi": trend.AY_ADLARI[ay - 1], "bas": bas, "son": son,
         "tedarikciler": tedarikciler, "ted_toplam": t_toplam,
         "ted_degisim": {"alis": trend.karsilastir(t_toplam["alis"], onceki_ted["alis"]) if (t_toplam["alis"] or onceki_ted["alis"]) else None,
