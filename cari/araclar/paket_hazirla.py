@@ -39,7 +39,7 @@ KURULUM_TXT = """EGESER-CARI KURULUMU (Windows 10/11)
 4) YEDEK (onemli): ayarlar.bat dosyasini Not Defteri ile acip CARI_YEDEK_DIZINLERI satirina
    AYRI bir disk/USB yolu yazin (ornek: set CARI_YEDEK_DIZINLERI=E:\\EgeserYedek).
    Haftalik flash bellek yedegi icin CARI_FLASH_YEDEK satirini da doldurun (ornek: set CARI_FLASH_YEDEK=G:\\CariYedek).
-   Sonra yedek_gorevi_kur.bat dosyasina SAG TIKLAYIP "Yonetici olarak calistir" deyin: her gece (ve flash varsa her pazar) otomatik yedek alinir.
+   Sonra yedek_gorevi_kur.bat dosyasina SAG TIKLAYIP "Yonetici olarak calistir" deyin: her gun 17:30'da (ve flash varsa her cuma 17:45'te) otomatik yedek alinir.
    Verileriniz "veri" klasorundedir; programi guncellerken bu klasore dokunmayin.
 
 BASLANGIC VERISI: Bu pakette "baslangic_verisi" klasoru varsa kur.bat verilerinizi (Excel cari takip,

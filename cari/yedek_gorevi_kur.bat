@@ -7,16 +7,16 @@ if "%CARI_YEDEK_DIZINLERI%"=="" (
   pause
   exit /b 1
 )
-echo Her gun saat 22:00 icin otomatik yedek gorevi olusturuluyor...
-schtasks /create /tn "Cari Program Yedek" /tr "\"%~dp0yedek_al.bat\" sessiz" /sc daily /st 22:00 /f
+echo Her gun saat 17:30 icin otomatik yedek gorevi olusturuluyor...
+schtasks /create /tn "Cari Program Yedek" /tr "\"%~dp0yedek_al.bat\" sessiz" /sc daily /st 17:30 /f
 if errorlevel 1 (
   echo Gorev olusturulamadi. Bu dosyaya sag tiklayip "Yonetici olarak calistir" deneyin.
   pause
   exit /b 1
 )
 if not "%CARI_FLASH_YEDEK%"=="" (
-  echo Her pazar 22:30 icin flash bellek yedek gorevi olusturuluyor...
-  schtasks /create /tn "Cari Program Flash Yedek" /tr "\"%~dp0yedek_flash.bat\" sessiz" /sc weekly /d SUN /st 22:30 /f
+  echo Her cuma 17:45 icin flash bellek yedek gorevi olusturuluyor...
+  schtasks /create /tn "Cari Program Flash Yedek" /tr "\"%~dp0yedek_flash.bat\" sessiz" /sc weekly /d FRI /st 17:45 /f
   if errorlevel 1 ( echo Flash yedek gorevi olusturulamadi. & pause & exit /b 1 )
 )
 echo Tamam. Bilgisayar o saatte kapaliysa yedek alinmaz; programda "Yedek" sayfasindan elle de alabilirsiniz.

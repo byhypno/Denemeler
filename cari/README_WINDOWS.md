@@ -31,7 +31,7 @@ Her kullanıcı üst köşedeki adına tıklayarak kendi parolasını değiştir
 1. Proje klasöründeki **`ayarlar.bat`** dosyasını Not Defteri ile açın.
 2. `set CARI_YEDEK_DIZINLERI=` satırını **ayrı bir disk veya USB** yoluyla doldurun. Örnek: `set CARI_YEDEK_DIZINLERI=D:\CariYedek;E:\CariYedek`
    (birden fazla hedef `;` ile ayrılır). **Yedek verinin olduğu diskte olursa disk bozulduğunda ikisi de gider.**
-3. **`yedek_gorevi_kur.bat`** dosyasına çift tıklayın: her gün 22:00'de otomatik yedek görevi oluşturur. Bilgisayar o saatte kapalıysa
+3. **`yedek_gorevi_kur.bat`** dosyasına çift tıklayın: her gün 17:30'da otomatik yedek görevi oluşturur. Bilgisayar o saatte kapalıysa
    yedek alınmaz; bu yüzden programdaki **Yedek** sayfası, son yedek 2 günden eskiyse her sayfanın üstünde kırmızı uyarı gösterir.
 4. Programda **Yedek → Şimdi yedek al** ile elle de alabilirsiniz.
 
