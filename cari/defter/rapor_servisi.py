@@ -13,7 +13,7 @@ import openpyxl
 from django.db.models import Sum
 
 from . import gider_servisi as gs
-from . import services, trend
+from . import metin, services, trend
 from .models import Belge, Hesap, KasaHareketi
 
 ALIS = (Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI)
@@ -52,7 +52,7 @@ def _tedarikciler(yil, ay):
         if not (any(s.values()) or ac or kap):
             continue
         satirlar.append({"cari": c, **s, "acilis": ac, "kapanis": kap})
-    satirlar.sort(key=lambda r: (-r["kapanis"], r["cari"].unvan))
+    satirlar.sort(key=lambda r: (-r["kapanis"], metin.katla(r["cari"].unvan)))
     toplam = {k: sum(r[k] for r in satirlar) for k in ("alis", "odeme", "iade", "diger", "acilis", "kapanis")}
     return satirlar, toplam
 

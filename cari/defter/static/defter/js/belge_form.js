@@ -30,7 +30,8 @@
   const katla = (s) => (s || '').replace(/İ/g, 'i').replace(/I/g, 'i').toLowerCase()
     .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/\s+/g, ' ').trim();
   if (hafizaEl) JSON.parse(hafizaEl.textContent).forEach((m) => hafiza.set(katla(m.ad), m));
-  const lira = (n) => tl.format(n) + ' ₺';
+  const tl4 = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });   // birim fiyat 4 haneye kadar (0,335)
+  const lira = (n) => tl4.format(n) + ' ₺';
   function birimFiyat(tr) {
     const f = sayi(tr.querySelector('[name^="kalem_fiyat_"]').value);
     if (f !== null) return f;
@@ -50,17 +51,17 @@
     yazi.textContent = 'Son alış: ' + lira(son) + (m.birim ? ' / ' + m.birim : '') + ' · ' + m.tarih + ' · ' + m.cari + ' ';
     kutu.appendChild(yazi);
     const yeni = birimFiyat(tr);
-    if (yeni !== null && Math.abs(yeni - son) >= 0.005) {
+    if (yeni !== null && son > 0 && Math.abs(yeni - son) >= 0.005) {     // son fiyat 0 ise oran tanımsız (Infinity olmasın)
       const oran = ((yeni - son) / son) * 100;
       const chip = document.createElement('span');
       chip.className = 'degisim ' + (oran > 0 ? 'kotu' : 'iyi');
       chip.textContent = (oran > 0 ? '▲ %' : '▼ %') + Math.abs(oran).toFixed(1).replace('.', ',') + (oran > 0 ? ' zam' : ' indirim');
       kutu.appendChild(chip);
-    } else if (yeni === null) {
+    } else if (yeni === null && son > 0) {
       const d = document.createElement('button');
       d.type = 'button'; d.className = 'kucuk ikincil dugme'; d.textContent = 'Son fiyatı kullan';
       d.addEventListener('click', () => {
-        tr.querySelector('[name^="kalem_fiyat_"]').value = tl.format(son);
+        tr.querySelector('[name^="kalem_fiyat_"]').value = tl4.format(son);
         const b = tr.querySelector('[name^="kalem_birim_"]'); if (b && !b.value && m.birim) b.value = m.birim;
         topla(); ipucu(tr);
       });

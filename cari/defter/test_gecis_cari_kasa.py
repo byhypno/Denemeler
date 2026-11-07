@@ -46,3 +46,18 @@ class CariKasaKaldirmaGecisiTests(TransactionTestCase):
         Hesap.objects.get_or_create(ad="Cari Kasa", defaults={"cari_bagli": True})[0]
         apps = self.migrate(self.sonraki)
         self.assertEqual(list(apps.get_model("defter", "Hesap").objects.values_list("ad", flat=True)), ["Ofis Kasa"])
+
+    def test_gun_sonu_kaydi_olan_hareketsiz_cari_kasa_cokmez_pasif_kalir(self):
+        """Denetim bulgusu: hareketsiz ama gün sonu kaydı olan Cari Kasa silinmeye çalışılınca ProtectedError ile
+        yükseltme duruyordu. Artık hesap pasif kalır, kapanış kaydı korunur."""
+        apps = self.migrate(self.onceki)
+        Hesap, GunSonu = apps.get_model("defter", "Hesap"), apps.get_model("defter", "GunSonu")
+        Hesap.objects.get_or_create(ad="Ofis Kasa")
+        ck = Hesap.objects.get_or_create(ad="Cari Kasa", defaults={"cari_bagli": True})[0]
+        GunSonu.objects.create(hesap=ck, tarih="2026-01-31", beklenen_kurus=0, sayilan_kurus=0, fark_kurus=0)
+
+        apps = self.migrate(self.sonraki)                          # çökmemeli
+        Hesap, GunSonu = apps.get_model("defter", "Hesap"), apps.get_model("defter", "GunSonu")
+        ck = Hesap.objects.get(ad="Cari Kasa")
+        self.assertFalse(ck.aktif)
+        self.assertEqual(GunSonu.objects.filter(hesap=ck).count(), 1)

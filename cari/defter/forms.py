@@ -6,6 +6,7 @@ from django.db import transaction
 
 from .fields import KurusFormField, kurus_bicimle, ondalik_ayristir, tl_ayristir
 from . import malzeme_servisi, metin
+from .kdv import KdvModu, kdv_hesapla, oranlari_dogrula
 from .models import Belge, BelgeKalem, Cari, KasaHareketi, KasaKategori
 
 
@@ -138,6 +139,8 @@ class BelgeForm(forms.ModelForm):
                     tutar = tl_ayristir(k["tutar"]) if k["tutar"] else None
                 except ValueError:
                     raise ValueError("tutarı 1.234,50 biçiminde girin")
+                if fiyat is not None and fiyat <= 0:
+                    raise ValueError("birim fiyat sıfırdan büyük olmalı")
                 if tutar is None and fiyat is not None:
                     tutar = int((miktar * fiyat * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
                 if tutar is None:
@@ -176,7 +179,8 @@ class BelgeForm(forms.ModelForm):
                 self.add_error("evrak_no", f"Bu tedarikçide {no} numaralı {dict(Belge.Tur.choices)[tur].lower()} zaten kayıtlı.")
         if tur and d.get("tarih") and d.get("tutar_kurus") and not self.errors and not self.yinelenme:
             benzer = Belge.objects.filter(cari=self.cari, tur=tur, tarih=d["tarih"], iptal=False)
-            if any(b.tutar_kurus == self.instance.efektif_tutar_kurus() or b.tutar_kurus == d["tutar_kurus"] for b in benzer) \
+            odenecek = self._odenecek_tutar(d)             # KDV'li girişte veritabanına yazılacak (çevrilmiş) tutar
+            if any(b.tutar_kurus in (odenecek, d["tutar_kurus"]) for b in benzer) \
                     and not d.get("yine_de"):
                 self.yinelenme = True
                 raise forms.ValidationError(
@@ -184,13 +188,26 @@ class BelgeForm(forms.ModelForm):
                     "'Uyarıyı gördüm; yine de kaydet' kutusunu işaretleyip tekrar kaydedin.")
         return d
 
+    @staticmethod
+    def _odenecek_tutar(d) -> int:
+        """Girilen tutarın KDV/tevkifat çevrimi sonrası bakiyeye etki edecek hali (geçersiz KDV girişinde girilen tutar)."""
+        tutar, mod, oran = d["tutar_kurus"], d.get("kdv_modu"), d.get("kdv_orani")
+        if mod in (KdvModu.HARIC, KdvModu.DAHIL) and oran is not None:
+            try:
+                oranlari_dogrula(oran, d.get("tevkifat_orani"))
+                return kdv_hesapla(tutar, oran, mod, d.get("tevkifat_orani"))["odenecek_kurus"]
+            except ValueError:
+                return tutar
+        return tutar
+
     def save(self, commit=True):
         """Belge + fiş kalemleri TEK işlemde kaydedilir (biri başarısızsa hiçbiri kalmaz)."""
         with transaction.atomic():
             belge = super().save(commit=True)
             self.olusan_kalemler = []
+            harita = malzeme_servisi.katla_haritasi()
             for sira, (aciklama, miktar, birim, fiyat, tutar) in enumerate(self.kalemler_temiz, start=1):
-                malzeme, _ = malzeme_servisi.malzeme_bul_veya_olustur(aciklama, birim)     # katalog kendiliğinden büyür
+                malzeme, _ = malzeme_servisi.malzeme_bul_veya_olustur(aciklama, birim, harita)     # katalog kendiliğinden büyür
                 self.olusan_kalemler.append(BelgeKalem.objects.create(
                     belge=belge, malzeme=malzeme, sira=sira, aciklama=aciklama, miktar=miktar, birim=birim,
                     birim_fiyat=fiyat, tutar_kurus=tutar))

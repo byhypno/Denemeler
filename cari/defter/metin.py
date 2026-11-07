@@ -16,3 +16,18 @@ def eslesir(arama, *alanlar) -> bool:
     """Arama sözcüklerinin HEPSİ alanlardan birinde geçiyorsa doğru (boş arama her şeyle eşleşir)."""
     samanlik = katla(" ".join(str(a or "") for a in alanlar))
     return all(s in samanlik for s in katla(arama).split())
+
+
+def guvenli_int(deger):
+    """'12' -> 12; bozuk girdi ('abc', '²', '', None, çok uzun) -> None. `str.isdigit()` '²' gibi karakterlerde doğru döner ama
+    `int()` patlar; istek parametreleri bu yardımcıyla sayıya çevrilmelidir. Negatif sayı kabul edilmez."""
+    try:
+        n = int(str(deger).strip())
+    except (TypeError, ValueError):
+        return None
+    return n if 0 <= n < 2**63 else None
+
+
+def turkce_sirala(nesneler, anahtar=lambda x: x):
+    """Türkçe alfabe sırası (Ç, Ö, Ş, İ, Ü Z'den sonraya düşmesin): `katla` ile karşılaştırır."""
+    return sorted(nesneler, key=lambda x: katla(anahtar(x)))

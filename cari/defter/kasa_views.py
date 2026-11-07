@@ -9,12 +9,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from . import ek_servisi as es
+from . import metin
 from . import kasa_servisi as ks
 from .fields import kurus_bicimle
 from .forms import GunSonuForm, KasaHareketiForm
 from .models import GunSonu, KasaHareketi, KasaKategori
 from .views import AYLAR
-from .yetki import gorunur_kasalar, oturum_gerekli, var_mi, yetki_gerekli
+from .yetki import gorunur_kasalar, yetki_gerekli
 
 
 def _hesap_veya_yok(request, hesap_id):
@@ -24,8 +25,9 @@ def _hesap_veya_yok(request, hesap_id):
     kullanıcının kaydı yanlış kasaya girmesine yol açardı.
     """
     gorunur = gorunur_kasalar(request.user)
-    if hesap_id and str(hesap_id).isdigit() and not gorunur.filter(pk=int(hesap_id)).exists():
-        if ks.Hesap.objects.filter(pk=int(hesap_id)).exists() and request.method == "POST":
+    hid = metin.guvenli_int(hesap_id)
+    if hid is not None and not gorunur.filter(pk=hid).exists():
+        if ks.Hesap.objects.filter(pk=hid).exists() and request.method == "POST":
             # Pasif kasayı GÖRÜNTÜLEMEK varsayılan kasaya düşer; ama YAZMA asla başka kasaya düşmez (yanlış kasaya kayıt olmasın)
             raise PermissionDenied("Bu kasa kapalı; kayıt buradan girilemez.")
     return ks.varsayilan_hesap(hesap_id, hesaplar=gorunur)
@@ -70,8 +72,8 @@ def kasa_ana(request):
             f[alan] = ""
     if f["yon"] in ("GIRIS", "CIKIS"):
         qs = qs.filter(yon=f["yon"])
-    if f["kategori"].isdigit():
-        qs = qs.filter(kategori_id=int(f["kategori"]))
+    if metin.guvenli_int(f["kategori"]) is not None:
+        qs = qs.filter(kategori_id=metin.guvenli_int(f["kategori"]))
     if f["iptal"] != "1":
         qs = qs.filter(iptal=False)
     sayfa = Paginator(qs, 40).get_page(request.GET.get("sayfa"))

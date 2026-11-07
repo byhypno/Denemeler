@@ -42,3 +42,12 @@ def kdv_hesapla(tutar_kurus: int, oran, mod: str, tevkifat_orani=None) -> dict:
         "fatura_toplami_kurus": matrah + kdv,
         "odenecek_kurus": matrah + kdv - tevkifat,
     }
+
+
+def oranlari_dogrula(kdv_orani, tevkifat_orani=None):
+    """KDV ve tevkifat oranı yüzde olarak 0–100 arasında olmalı (aksi halde sıfıra bölme / veritabanı kısıtı hatası olurdu).
+    Geçersizse ValueError(mesaj)."""
+    if kdv_orani is not None and not (0 <= kdv_orani <= 100):
+        raise ValueError("KDV oranı 0 ile 100 arasında olmalı.")
+    if tevkifat_orani is not None and not (0 <= tevkifat_orani <= 100):
+        raise ValueError("Tevkifat oranı 0 ile 100 arasında olmalı (KDV'nin yüzdesi, ör. 50).")

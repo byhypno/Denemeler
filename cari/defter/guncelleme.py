@@ -20,7 +20,7 @@ def veritabani_dolu_mu() -> bool:
     yol = Path(settings.DATABASES["default"]["NAME"])
     if not yol.exists() or yol.stat().st_size == 0:
         return False
-    con = sqlite3.connect(f"file:{yol}?mode=ro", uri=True)
+    con = sqlite3.connect(yd.salt_okunur_uri(yol), uri=True)
     try:
         return con.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'").fetchone()[0] > 0
     finally:

@@ -8,7 +8,10 @@ from decimal import Decimal
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+MAKS_KURUS = 10**13          # 100 milyar TL: bunun üstü yazım hatasıdır ve SQLite SUM() tamsayı taşmasına yol açar
 
 _TR_TUTAR = re.compile(r"^-?(\d{1,3}(\.\d{3})+|\d+)(,\d{1,2})?$")
 
@@ -31,6 +34,8 @@ def tl_ayristir(metin: str) -> int:
     negatif = m.startswith("-")
     tam, _, kesir = m.lstrip("-").partition(",")
     kurus = int(tam.replace(".", "")) * 100 + int((kesir + "00")[:2])
+    if kurus > MAKS_KURUS:
+        raise ValueError(metin)
     return -kurus if negatif else kurus
 
 
@@ -50,7 +55,7 @@ def ondalik_ayristir(metin: str, en_cok: int = 4) -> Decimal:
 
 
 class KurusFormField(forms.CharField):
-    default_error_messages = {"invalid": "Tutarı 1.234,50 biçiminde girin."}
+    default_error_messages = {"invalid": "Tutarı 1.234,50 biçiminde girin (en çok 100.000.000.000 ₺)."}
 
     def to_python(self, value):
         value = super().to_python(value)
@@ -77,6 +82,7 @@ class KurusField(models.BigIntegerField):
     """Kuruş cinsinden tamsayı; formda TL olarak gösterilir."""
 
     description = "Kuruş cinsinden tutar"
+    default_validators = [MaxValueValidator(MAKS_KURUS), MinValueValidator(-MAKS_KURUS)]    # yönetim paneli/doğrudan modelde de üst sınır
 
     def formfield(self, **kwargs):
         # BigIntegerField'ın min/max parametrelerini atlayıp doğrudan kendi alanımızı kullan.

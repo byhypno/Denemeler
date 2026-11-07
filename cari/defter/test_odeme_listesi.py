@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
 
@@ -157,17 +157,17 @@ class EkranTests(ListeTemel):
         self.assertContains(r, "Ödenecekler listesi")
 
     def test_yapilan_ekrani_ve_filtre(self):
-        r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "bas": "2026-01-01",
+        r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "bas": date.today().replace(month=1, day=1).isoformat(),
                                                        "bit": date.today().isoformat()})
         self.assertContains(r, "Bu ayki")
         self.assertContains(r, "400,00 ₺")
         r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "sekil": "NAKIT",
-                                                       "bas": "2026-01-01", "bit": date.today().isoformat()})
+                                                       "bas": date.today().replace(month=1, day=1).isoformat(), "bit": date.today().isoformat()})
         self.assertContains(r, "Bu dönemde ödeme yok")
 
     def test_ters_tarih_yer_degistirir_bozuk_parametre_cokmez(self):
         r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "bas": date.today().isoformat(),
-                                                       "bit": "2026-01-01"})
+                                                       "bit": (date.today() - timedelta(days=400)).isoformat()})
         self.assertContains(r, "yer değiştirdi")
         for kotu in ({"bas": "abc"}, {"liste": "x"}, {"cari": "999999"}, {"cari": "zzz"}, {"sekil": "yok"},
                      {"indir": "pdf"}):
@@ -181,7 +181,7 @@ class EkranTests(ListeTemel):
         ws = openpyxl.load_workbook(BytesIO(r.content)).active
         self.assertEqual(ws["A5"].value, "A TEDARİK")
         self.assertEqual(D(ws["B5"].value), Decimal("1100"))
-        r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "indir": "xlsx", "bas": "2026-01-01",
+        r = self.client.get(reverse("odeme_listesi"), {"liste": "yapilan", "indir": "xlsx", "bas": date.today().replace(month=1, day=1).isoformat(),
                                                        "bit": date.today().isoformat()})
         self.assertIn("yapilan_odemeler_", r["Content-Disposition"])
         self.assertNotIn("\n", r["Content-Disposition"])

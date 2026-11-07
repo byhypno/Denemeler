@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.views.decorators.http import require_POST
+from django.db import IntegrityError
 from django.db.models import Max
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -16,6 +17,11 @@ from .fields import kurus_bicimle
 from .forms import GIRILEBILIR_TURLER, BelgeForm, CariForm
 from .models import Belge, Cari, EkstreMutabakat
 from .yetki import oturum_gerekli, var_mi, yetki_gerekli
+
+def _cariler(**filtre):
+    """Seçici kutuları için cariler, TÜRKÇE alfabe sırasıyla (SQLite ikili sıralaması Ç/Ö/Ş/İ/Ü'yü Z'den sonraya atar)."""
+    return metin.turkce_sirala(Cari.objects.filter(**filtre), lambda c: c.unvan)
+
 
 AYLAR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
 yonetici_gerekli = yetki_gerekli("yonetim")   # yalnızca yönetici (superuser)
@@ -38,8 +44,8 @@ def dashboard(request):
         yil = yillar[-1]
     cari = None
     cari_id = request.GET.get("cari", "")
-    if cari_id.isdigit():
-        cari = Cari.objects.filter(pk=int(cari_id)).first()
+    if metin.guvenli_int(cari_id) is not None:
+        cari = Cari.objects.filter(pk=metin.guvenli_int(cari_id)).first()
 
     aylik = services.aylik_ozet(yil, cari, bugun)
     yas = services.yaslandirma(bugun, cari)
@@ -67,7 +73,7 @@ def dashboard(request):
     takvim = {g["anahtar"]: g for g in services.odeme_takvimi(bugun, cari)["gruplar"]}
     degisimler = {ad: trend.degisim(aylik[ad], yil, bugun) for ad in ("alis", "odeme", "iade", "ay_sonu")}
     return render(request, "defter/dashboard.html", {
-        "yil": yil, "aylik": aylik, "degisimler": degisimler, "takvim": takvim, "yillar": yillar, "cari": cari, "cariler": Cari.objects.all(),
+        "yil": yil, "aylik": aylik, "degisimler": degisimler, "takvim": takvim, "yillar": yillar, "cari": cari, "cariler": _cariler(),
         "guncel_borc": guncel_borc, "yil_alis": sum(aylik["alis"]),
         "yil_odeme": sum(aylik["odeme"]), "yil_iade": sum(aylik["iade"]),
         "acik_fark": acik_fark, "kontrol": kontrol, "yas": yas, "borclular": borclular,
@@ -177,7 +183,7 @@ def odeme_listesi(request):
     sorgu = request.GET.copy()
     sorgu.pop("indir", None)
     return render(request, "defter/odeme_listesi.html", {
-        "liste": liste, "veri": veri, "cari": cari, "cariler": Cari.objects.all(), "sekil": sekil,
+        "liste": liste, "veri": veri, "cari": cari, "cariler": _cariler(), "sekil": sekil,
         "sekiller": Belge.OdemeSekli.choices, "bas": bas, "bit": bit, "hata": hata, "bugun": bugun,
         "kova_etiketleri": ol.KOVA_ETIKETLERI, "excel_sorgu": sorgu.urlencode(), "sayfa": "odemeler",
     })
@@ -233,8 +239,8 @@ def gunluk_sayfasi(request):
         qs = qs.filter(model=f["model"])
     if f["islem"] in IslemGunlugu.Islem.values:
         qs = qs.filter(islem=f["islem"])
-    if f["nesne"].isdigit():
-        qs = qs.filter(nesne_id=int(f["nesne"]))
+    if metin.guvenli_int(f["nesne"]) is not None:
+        qs = qs.filter(nesne_id=metin.guvenli_int(f["nesne"]))
     for anahtar, op in (("bas", "zaman__date__gte"), ("bit", "zaman__date__lte")):
         try:
             if f[anahtar]:
@@ -300,11 +306,11 @@ def odeme_takvimi(request):
     """Vadesi geçen ve yaklaşan borçlar: 'bu hafta kime ne ödeyeceğiz'. Çıktısı yazdırılabilir."""
     bugun = date.today()
     cari = None
-    if request.GET.get("cari", "").isdigit():
-        cari = Cari.objects.filter(pk=int(request.GET["cari"])).first()
+    if metin.guvenli_int(request.GET.get("cari")) is not None:
+        cari = Cari.objects.filter(pk=metin.guvenli_int(request.GET["cari"])).first()
     t = services.odeme_takvimi(bugun, cari)
     return render(request, "defter/odeme_takvimi.html", {
-        "t": t, "bugun": bugun, "cari": cari, "cariler": Cari.objects.filter(aktif=True), "sayfa": "takvim",
+        "t": t, "bugun": bugun, "cari": cari, "cariler": _cariler(aktif=True), "sayfa": "takvim",
         "g": {g["anahtar"]: g for g in t["gruplar"]},
     })
 
@@ -317,8 +323,13 @@ def belge_yeni(request, pk):
     gecerli = {t.value for t in GIRILEBILIR_TURLER}
     if request.method == "POST":
         form = BelgeForm(request.POST, cari=cari)
+        b = None
         if form.is_valid():
-            b = form.save()
+            try:
+                b = form.save()
+            except IntegrityError:           # aynı evrak no'nun eşzamanlı çift gönderimi: veritabanı kısıtı son söz
+                form.add_error("evrak_no", "Bu evrak numarası az önce başka bir kayıtla girildi.")
+        if b is not None:
             messages.success(request, f"Kaydedildi: {b.get_tur_display()} · {kurus_bicimle(b.tutar_kurus)} ₺ ({cari.unvan}).")
             for u in malzeme_servisi.zam_uyarilari(form.olusan_kalemler):          # fiyat hafızası: önceki alışa göre ZAM
                 messages.warning(request, f"Zam: {u['malzeme'].ad} {kurus_bicimle(round(u['onceki']))} ₺ → {kurus_bicimle(round(u['yeni']))} ₺ "

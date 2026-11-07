@@ -19,7 +19,7 @@ import sqlite3
 import tempfile
 import zipfile
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from django.conf import settings
@@ -44,13 +44,19 @@ def _sha256(yol) -> str:
     return h.hexdigest()
 
 
+def salt_okunur_uri(yol) -> str:
+    """SQLite salt-okunur bağlantı adresi. Yol '#', '%', '?' gibi karakter içerse bile doğru çözülsün diye
+    elle birleştirmek yerine yolu URI olarak kodlarız (Windows: file:///C:/...)."""
+    return Path(yol).resolve().as_uri() + "?mode=ro"
+
+
 def _db_yolu() -> Path:
     return Path(settings.DATABASES["default"]["NAME"])
 
 
 def _sayilar(db_yolu) -> dict:
     sonuc = {}
-    con = sqlite3.connect(f"file:{db_yolu}?mode=ro", uri=True)
+    con = sqlite3.connect(salt_okunur_uri(db_yolu), uri=True)
     try:
         for ad, tablo in SAYILAR.items():
             try:
@@ -65,7 +71,7 @@ def _sayilar(db_yolu) -> dict:
 def _butunluk(db_yolu) -> str:
     """'ok' ya da sorunun metni. Dosya hiç veritabanı değilse de istisna değil, hata metni döner."""
     try:
-        con = sqlite3.connect(f"file:{db_yolu}?mode=ro", uri=True)
+        con = sqlite3.connect(salt_okunur_uri(db_yolu), uri=True)
         try:
             return con.execute("PRAGMA integrity_check").fetchone()[0]
         finally:
@@ -194,10 +200,13 @@ def geri_yukle(zip_yol, hedef_dizin) -> dict:
     if not d.ok:
         raise YedekHatasi("Yedek doğrulanamadı: " + "; ".join(d.hatalar))
     hedef.mkdir(parents=True, exist_ok=True)
+    izinli = set(d.manifest.get("dosyalar", {})) if isinstance(d.manifest, dict) else set()
     with zipfile.ZipFile(zip_yol) as z:
         for ad in z.namelist():
             if ad == "MANIFEST.json" or ad.endswith("/"):
                 continue
+            if izinli and ad not in izinli:
+                continue                                              # manifestte olmayan (sonradan eklenmiş) üyeler geri yüklenmez
             yol = Path(safe_join(str(hedef), ad))                   # zip-slip koruması
             yol.parent.mkdir(parents=True, exist_ok=True)
             with z.open(ad) as kaynak, open(yol, "wb") as cikti:
@@ -219,7 +228,7 @@ def geri_yukleme_testi(zip_yol) -> dict:
             return {"ok": False, "hatalar": [str(e)], "sayilar": {}}
         db = hedef / "cari.sqlite3"
         sayilar = _sayilar(db)
-        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        con = sqlite3.connect(salt_okunur_uri(db), uri=True)
         try:
             try:
                 for (yol,) in con.execute("SELECT yol FROM defter_ek"):

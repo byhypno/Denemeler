@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -12,6 +13,7 @@ from .models import Malzeme, MalzemeKategori
 from .yetki import var_mi, yetki_gerekli
 
 SIRALAR = {"ad": "Ada göre", "zam": "Son zam oranına göre", "son": "Son alış tarihine göre", "tutar": "Toplam alış tutarına göre"}
+SAYFA_BOYU = 100
 ZAM_PENCERE_GUN = 90        # "son zamlar" kutusu ve sayaç: son 90 gün içindeki alışlarda görülen zamlar
 
 
@@ -38,8 +40,8 @@ def malzemeler(request):
                 messages.success(request, "Kategori eklendi.")
         elif eylem == "toplu_ata":
             secim = request.POST.get("kategori_toplu", "")
-            kat = MalzemeKategori.objects.filter(pk=int(secim)).first() if secim.isdigit() else None
-            idler = [int(i) for i in request.POST.getlist("sec") if i.isdigit()]
+            kat = MalzemeKategori.objects.filter(pk=metin.guvenli_int(secim)).first() if metin.guvenli_int(secim) is not None else None
+            idler = [n for n in map(metin.guvenli_int, request.POST.getlist("sec")) if n is not None]
             if not idler:
                 messages.error(request, "Önce listeden malzeme seçin.")
             elif secim and kat is None:
@@ -55,7 +57,7 @@ def malzemeler(request):
         elif eylem == "kategori_kaydet":
             n = 0
             kategoriler = {str(k.pk): k for k in MalzemeKategori.objects.all()}
-            for m in Malzeme.objects.filter(pk__in=[int(i) for i in request.POST.getlist("idler") if i.isdigit()]):
+            for m in Malzeme.objects.filter(pk__in=[n for n in map(metin.guvenli_int, request.POST.getlist("idler")) if n is not None]):
                 secim = request.POST.get(f"kategori_{m.pk}", "")
                 yeni = kategoriler.get(secim)           # "" ya da bilinmeyen: kategorisiz
                 if (yeni.pk if yeni else None) != m.kategori_id:
@@ -86,7 +88,7 @@ def malzemeler(request):
             continue
         if kategori == "yok" and m.kategori_id:
             continue
-        if kategori.isdigit() and m.kategori_id != int(kategori):
+        if metin.guvenli_int(kategori) is not None and m.kategori_id != metin.guvenli_int(kategori):
             continue
         if not metin.eslesir(q, m.ad, m.kategori.ad if m.kategori else ""):
             continue
@@ -100,12 +102,15 @@ def malzemeler(request):
     else:
         satirlar.sort(key=lambda r: -(r["o"]["toplam_kurus"] if r["o"] else 0))
 
+    sayfa_nesnesi = Paginator(satirlar, SAYFA_BOYU).get_page(request.GET.get("sayfa"))
+    sorgu = request.GET.copy()
+    sorgu.pop("sayfa", None)
     tumu = Malzeme.objects.filter(aktif=True)
     son_zamlar = sorted((r for r in ({"m": m, "o": ozet[m.pk]} for m in tumu if m.pk in ozet)
                          if r["o"]["degisim"] and r["o"]["degisim"]["yon"] == "yukari" and r["o"]["son"]["tarih"] >= zam_siniri),
                         key=lambda r: -r["o"]["degisim"]["yuzde"])
     return render(request, "defter/malzemeler.html", {
-        "satirlar": satirlar, "q": q, "kategori": kategori, "sadece_zam": sadece_zam, "pasifler": pasifler, "sira": sira, "siralar": SIRALAR,
+        "satirlar": list(sayfa_nesnesi.object_list), "sayfa_nesnesi": sayfa_nesnesi, "sorgu": sorgu.urlencode(), "bulunan": len(satirlar), "q": q, "kategori": kategori, "sadece_zam": sadece_zam, "pasifler": pasifler, "sira": sira, "siralar": SIRALAR,
         "kategoriler": kategoriler, "toplam": tum, "kategorisiz": sum(1 for m in tumu if not m.kategori_id),
         "son_zamlar": son_zamlar[:5], "zam_sayisi": len(son_zamlar), "zam_gun": ZAM_PENCERE_GUN,
         "toplam_tutar": sum(o["toplam_kurus"] for o in ozet.values()), "sayfa": "malzemeler", "yazabilir": var_mi(request.user, "veri_gir"),
@@ -129,13 +134,13 @@ def malzeme_detay(request, pk):
             else:
                 secim = request.POST.get("kategori", "")
                 m.ad = ad
-                m.kategori = MalzemeKategori.objects.filter(pk=int(secim)).first() if secim.isdigit() else None
+                m.kategori = MalzemeKategori.objects.filter(pk=metin.guvenli_int(secim)).first() if metin.guvenli_int(secim) is not None else None
                 m.birim = request.POST.get("birim", "").strip()[:20]
                 m.aktif = request.POST.get("aktif") == "on"
                 m.save()
                 messages.success(request, "Malzeme güncellendi.")
         elif eylem == "birlestir":
-            hedef = Malzeme.objects.filter(pk=int(request.POST["hedef"]), aktif=True).first() if request.POST.get("hedef", "").isdigit() else None
+            hedef = Malzeme.objects.filter(pk=metin.guvenli_int(request.POST.get("hedef")), aktif=True).first() if metin.guvenli_int(request.POST.get("hedef")) is not None else None
             if hedef is None or hedef.pk == m.pk:
                 messages.error(request, "Birleştirilecek malzemeyi seçin.")
             else:

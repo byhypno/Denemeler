@@ -2,8 +2,24 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Max, Q, Sum
 
+from . import metin
 from .fields import KurusField
-from .kdv import KdvModu, kdv_hesapla
+from .kdv import KdvModu, kdv_hesapla, oranlari_dogrula
+
+
+class KatlaBenzersiz:
+    """Ad alanı büyük/küçük harf ve aksan farkı yok sayılarak da benzersiz olmalı ('ERÖZ' ile 'Eroz' aynı kayıttır).
+    SQLite UNIQUE yalnızca birebir aynı metni yakalar; bu kontrol yönetim paneli dahil her ModelForm yolunda çalışır."""
+
+    KATLA_ALAN = "ad"
+
+    def clean(self):
+        super().clean()
+        deger = getattr(self, self.KATLA_ALAN, "") or ""
+        anahtar = metin.katla(deger)
+        if anahtar and any(metin.katla(getattr(o, self.KATLA_ALAN)) == anahtar
+                           for o in type(self).objects.exclude(pk=self.pk)):
+            raise ValidationError({self.KATLA_ALAN: f"'{deger}' zaten kayıtlı (büyük/küçük harf ve aksan farkı yok sayılır)."})
 
 
 class KdvliTutar(models.Model):
@@ -48,6 +64,11 @@ class KdvliTutar(models.Model):
             self.tutar_kurus = h["odenecek_kurus"]
 
     def clean_kdv(self):
+        try:
+            oranlari_dogrula(self.kdv_orani, self.tevkifat_orani)
+        except ValueError as e:
+            alan = "tevkifat_orani" if "Tevkifat" in str(e) else "kdv_orani"
+            raise ValidationError({alan: str(e)})
         if self.kdv_modu != KdvModu.BILINMIYOR and self.kdv_orani is None:
             raise ValidationError({"kdv_orani": "KDV girişi seçildiyse KDV oranı da girilmeli."})
         if self.tevkifat_orani and self.kdv_modu != KdvModu.HARIC:
@@ -64,7 +85,9 @@ class KdvliTutar(models.Model):
         super().save(*args, **kwargs)
 
 
-class Cari(models.Model):
+class Cari(KatlaBenzersiz, models.Model):
+    KATLA_ALAN = "unvan"
+
     class Tur(models.TextChoices):
         TEDARIKCI = "TEDARIKCI", "Tedarikçi"
 
@@ -160,7 +183,7 @@ class Belge(KdvliTutar):
         self.clean_kdv()
 
 
-class MalzemeKategori(models.Model):
+class MalzemeKategori(KatlaBenzersiz, models.Model):
     """Alınan malzemelerin kategorisi (Kaynak malzemeleri, El aletleri...). Silinmez; pasif yapılır."""
 
     ad = models.CharField(max_length=80, unique=True)
@@ -176,7 +199,7 @@ class MalzemeKategori(models.Model):
         return self.ad
 
 
-class Malzeme(models.Model):
+class Malzeme(KatlaBenzersiz, models.Model):
     """Satın alınan malzeme (katalog kaydı). Fiş kalemleri bu kayda bağlanır; alış fiyatı geçmişi kalemlerden hesaplanır
     (ayrı fiyat tablosu yok, bu yüzden fiyat hafızası kalemlerle her zaman tutarlıdır)."""
 
@@ -582,7 +605,7 @@ class IslemGunlugu(models.Model):
         raise ValidationError("İşlem günlüğü kayıtları silinemez.")
 
 
-class GiderKategori(models.Model):
+class GiderKategori(KatlaBenzersiz, models.Model):
     """Genel gider kalemi (Kira, Elektrik, Personel...). Silinmez; kullanılmayacaksa pasif yapılır."""
 
     ad = models.CharField(max_length=80, unique=True)

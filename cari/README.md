@@ -4,7 +4,7 @@ Tek bilgisayarda, yerelde çalışan cari (tedarikçi) ve **Ofis Kasa** takip pr
 Tutarlar veritabanında **tamsayı kuruş** olarak saklanır; kayıt silinmez, **iptal** edilir.
 
 ## Kurulum (Windows)
-1. Python 3.11+ kurun (python.org, "Add to PATH" işaretli).
+1. Python 3.12+ kurun (Django 6 için gerekir) (python.org, "Add to PATH" işaretli).
 2. Bu klasörde PowerShell açın:
    ```powershell
    python -m venv .venv

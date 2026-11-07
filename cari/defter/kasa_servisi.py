@@ -2,7 +2,6 @@
 
 Ofis Kasa (ofis içi küçük harcamalar) cari defterinden TAMAMEN BAĞIMSIZDIR.
 """
-import calendar
 from collections import defaultdict
 from datetime import date
 
@@ -10,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
 
+from . import metin
 from .models import GunSonu, Hesap, KasaHareketi, KasaKategori
 
 KASA_FARKI = "Kasa farkı"
@@ -18,8 +18,8 @@ KASA_FARKI = "Kasa farkı"
 def varsayilan_hesap(hesap_id=None, hesaplar=None):
     """`hesaplar`: kullanıcının görebildiği kasalar (verilmezse tüm aktif kasalar)."""
     qs = hesaplar if hesaplar is not None else Hesap.objects.filter(aktif=True, tur=Hesap.Tur.KASA)
-    if hesap_id and str(hesap_id).isdigit():
-        h = qs.filter(pk=int(hesap_id)).first()
+    if metin.guvenli_int(hesap_id) is not None:
+        h = qs.filter(pk=metin.guvenli_int(hesap_id)).first()
         if h:
             return h
     return qs.order_by("id").first()

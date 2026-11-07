@@ -43,7 +43,7 @@
 </form>
 
 <form method="post" class="kart">{% csrf_token %}
-  <h2>{{ satirlar|length }} malzeme</h2>
+  <h2>{{ bulunan }} malzeme{% if sayfa_nesnesi.paginator.num_pages > 1 %} <span class="not">(sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }})</span>{% endif %}</h2>
   {% if satirlar %}
   {% if yazabilir %}<div class="filtre yazdirma-gizle toplu-ata">
     <label>Seçilenleri şu kategoriye ata <select name="kategori_toplu"><option value="">— kategorisiz —</option>
@@ -72,6 +72,10 @@
   {% if yazabilir %}<p class="form-dugmeler"><button type="submit" name="eylem" value="kategori_kaydet">Kategorileri kaydet</button></p>
     <p class="not">Her satırdaki kategoriyi seçip <b>Kategorileri kaydet</b>'e basın. Süzgeç (ör. Kategorisiz) açıkken kaydederseniz yalnızca görünen satırlar işlenir.</p>{% endif %}
   {% else %}<p class="not">Eşleşen malzeme yok.</p>{% endif %}
+  {% if sayfa_nesnesi.paginator.num_pages > 1 %}<div class="sayfalama yazdirma-gizle">
+    {% if sayfa_nesnesi.has_previous %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.previous_page_number }}">{% ikon "geri" "kucuk" %}Önceki</a>{% endif %}
+    <span class="not">Sayfa {{ sayfa_nesnesi.number }} / {{ sayfa_nesnesi.paginator.num_pages }}</span>
+    {% if sayfa_nesnesi.has_next %}<a href="?{{ sorgu }}&sayfa={{ sayfa_nesnesi.next_page_number }}">Sonraki{% ikon "ok-sag" "kucuk" %}</a>{% endif %}</div>{% endif %}
 </form>
 
 {% if yazabilir %}

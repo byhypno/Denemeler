@@ -3,15 +3,16 @@ from django.db import migrations
 
 def cari_kasayi_kaldir(apps, schema_editor):
     """Cari Kasa kaldırılıyor. Veri kaybolmasın diye:
-    - Hareketi olmayan Cari Kasa hesabı silinir.
-    - Hareketi varsa hesap PASİF kalır (kayıtlar yönetim panelinde durur) ve her hareketin açıklamasına, düşecek
+    - Hareketi ve gün sonu kapanışı olmayan Cari Kasa hesabı silinir.
+    - Hareketi ya da gün sonu kaydı varsa hesap PASİF kalır (kayıtlar yönetim panelinde durur) ve her hareketin açıklamasına, düşecek
       alanların (tedarikçi) bilgisi '[Tedarikçi: ...]' olarak yazılır."""
     Hesap = apps.get_model("defter", "Hesap")
     Hareket = apps.get_model("defter", "KasaHareketi")
+    GunSonu = apps.get_model("defter", "GunSonu")
     for h in Hesap.objects.filter(cari_bagli=True):
         hareketler = Hareket.objects.filter(hesap=h)
-        if not hareketler.exists():
-            h.delete()
+        if not hareketler.exists() and not GunSonu.objects.filter(hesap=h).exists():
+            h.delete()                      # hareketi de gün sonu kaydı da yok: güvenle silinir (GunSonu.hesap PROTECT)
             continue
         for k in hareketler.select_related("cari", "ilgili_odeme"):
             ek = []

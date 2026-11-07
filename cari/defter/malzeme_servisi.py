@@ -9,7 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
 
-from . import metin, trend
+from . import metin
 from .models import BelgeKalem, Malzeme
 
 KURUS = Decimal(1)
@@ -17,7 +17,7 @@ KURUS = Decimal(1)
 
 def birim_fiyat(kalem) -> Decimal:
     """Kalemin birim fiyatı, KURUŞ cinsinden (Decimal, 4 hane)."""
-    if kalem.birim_fiyat is not None:
+    if kalem.birim_fiyat:                               # 0 / boş: tutar ÷ miktar kullanılır
         f = Decimal(kalem.birim_fiyat) * 100
     else:
         f = Decimal(kalem.tutar_kurus) / Decimal(kalem.miktar)
@@ -26,7 +26,7 @@ def birim_fiyat(kalem) -> Decimal:
 
 def _degisim(yeni: Decimal, eski: Decimal):
     """{"yon","yuzde"} (yuzde bir ondalık) ya da None. Kuruşun altındaki fark 'yatay' sayılır."""
-    if eski is None:
+    if eski is None or eski <= 0:                       # fiyatı 0 olan eski kayıt: oran tanımsız (sıfıra bölme olmasın)
         return None
     fark = yeni - eski
     if abs(fark) < Decimal("0.5"):
@@ -74,23 +74,33 @@ def ozet_tablo():
     return sonuc
 
 
-def malzeme_bul_veya_olustur(ad, birim=""):
-    """Açıklamaya (büyük/küçük harf ve aksan farkı yok sayılarak) uyan malzemeyi bulur; yoksa kategorisiz yeni malzeme açar."""
+def katla_haritasi():
+    """{katla(ad): Malzeme} — çok kalemli bir kayıtta tabloyu her kalem için baştan taramamak için BİR kez kurulur."""
+    return {metin.katla(m.ad): m for m in Malzeme.objects.all()}
+
+
+def malzeme_bul_veya_olustur(ad, birim="", harita=None):
+    """Açıklamaya (büyük/küçük harf ve aksan farkı yok sayılarak) uyan malzemeyi bulur; yoksa kategorisiz yeni malzeme açar.
+    `harita` verilirse (katla_haritasi) tablo taranmaz; yeni malzeme haritaya da eklenir."""
     ad = " ".join((ad or "").split())[:200]
     anahtar = metin.katla(ad)
-    for m in Malzeme.objects.all():
-        if metin.katla(m.ad) == anahtar:
-            while m.birlestirildi_id:                  # birleştirilmiş eski ad yazılırsa kayıt birleştirildiği malzemeye gider
-                m = m.birlestirildi
-            return m, False
-    return Malzeme.objects.create(ad=ad, birim=(birim or "")[:20]), True
+    if harita is None:
+        harita = katla_haritasi()
+    m = harita.get(anahtar)
+    if m is not None:
+        while m.birlestirildi_id:                      # birleştirilmiş eski ad yazılırsa kayıt birleştirildiği malzemeye gider
+            m = m.birlestirildi
+        return m, False
+    m = Malzeme.objects.create(ad=ad, birim=(birim or "")[:20])
+    harita[anahtar] = m
+    return m, True
 
 
 def hafiza_verisi():
     """Fiş formu için: aktif malzemeler ve son alış bilgisi (JS ipucu ve zam uyarısı bunu kullanır)."""
     ozet = ozet_tablo()
     veri = []
-    for m in Malzeme.objects.filter(aktif=True).order_by("ad"):
+    for m in metin.turkce_sirala(Malzeme.objects.filter(aktif=True), lambda m: m.ad):
         o = ozet.get(m.pk)
         d = {"ad": m.ad, "birim": m.birim}
         if o:

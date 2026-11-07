@@ -5,7 +5,7 @@
 > İlk kurulumda bir mesajda takılırsanız ekran görüntüsünü paylaşın, düzeltelim.
 
 ## 1. Kurulum (bir kez)
-1. **Python 3.11 veya üstünü** https://www.python.org adresinden kurun. Kurulum penceresinde **"Add python.exe to PATH"** kutusunu işaretleyin.
+1. **Python 3.12 veya üstünü** https://www.python.org adresinden kurun. Kurulum penceresinde **"Add python.exe to PATH"** kutusunu işaretleyin.
 2. Proje klasörünü bilgisayara kopyalayın (ör. `C:\CariProgram`). Başka kullanıcıların yazamadığı bir yer seçin.
 3. **`kur.bat`** dosyasına çift tıklayın. Sırayla: sanal ortamı kurar, paketleri indirir (internet gerekir), veritabanını hazırlar,
    sizden **yönetici kullanıcı adı ve parola** ister (en az 8 karakter), masaüstüne **Cari Program** kısayolunu koyar.
