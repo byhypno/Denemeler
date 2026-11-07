@@ -1,5 +1,5 @@
 {% extends "defter/base.html" %}{% load static defter_filtreleri %}
-{% block baslik %}Yeni cari hareket · {{ cari.unvan }} · Cari Program{% endblock %}
+{% block baslik %}Yeni cari hareket · {{ cari.unvan }} · Cari{% endblock %}
 {% block icerik %}
 <div class="baslik-kisi">{% avatar cari.unvan "buyuk" %}
   <div><h1>Yeni cari hareket</h1><p class="cari-bilgi not">{{ cari.unvan }}{% if cari.vade_gun %} <span class="chip bilgi">Vade {{ cari.vade_gun }} gün</span>{% endif %}</p></div></div>

@@ -1,5 +1,5 @@
 {% extends "defter/base.html" %}{% load static defter_filtreleri %}
-{% block baslik %}{% if hesap %}{{ hesap.ad }}{% else %}Kasa{% endif %} · Cari Program{% endblock %}
+{% block baslik %}{% if hesap %}{{ hesap.ad }}{% else %}Kasa{% endif %} · Cari{% endblock %}
 {% block icerik %}
 {% if not hesap %}
   <div class="kart bos"><h2>Aktif kasa hesabı yok</h2>

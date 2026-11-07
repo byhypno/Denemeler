@@ -242,7 +242,8 @@ class SayfaYapisiTests(TestCase):
         h = self.client.get(reverse("giris")).content.decode()
         self.assertNotIn('class="yan"', h)
         self.assertIn("giris-sayfasi", h)
-        self.assertIn("Cari Program", h)
+        self.assertIn('<p class="giris-marka">Cari</p>', h)
+        self.assertNotIn("Cari Program", h)
         self.assertIn('alt="Egeser Konteyner Prefabrik ve Çelik Yapılar"', h)         # logo, erişilebilir ad
         self.assertEqual(h.count("<h1"), 1)
         self.assertIn('autocomplete="username"', h)
@@ -348,7 +349,8 @@ class LogoTests(TestCase):
         self.assertEqual(h.count('class="marka-logo"'), 2)             # kenar çubuğu + mobil üst şerit
         self.assertIn("img/logo-sembol.png", h)
         self.assertIn('rel="icon"', h)
-        self.assertIn("Cari <span>Program</span>", h)                 # bağlantının erişilebilir adı korunur
+        self.assertEqual(h.count('alt="Egeser" width="68" height="34">Cari</a>'), 2)   # marka yalnızca "Cari"
+        self.assertNotIn("Cari <span>Program</span>", h)
 
     def test_giris_sayfasinda_acik_ve_koyu_logo(self):
         h = self.client.get(reverse("giris")).content.decode()

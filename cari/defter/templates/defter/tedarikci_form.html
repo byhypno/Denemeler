@@ -1,5 +1,5 @@
 {% extends "defter/base.html" %}{% load defter_filtreleri %}
-{% block baslik %}{% if cari %}{{ cari.unvan }} · Düzenle{% else %}Yeni tedarikçi{% endif %} · Cari Program{% endblock %}
+{% block baslik %}{% if cari %}{{ cari.unvan }} · Düzenle{% else %}Yeni tedarikçi{% endif %} · Cari{% endblock %}
 {% block icerik %}
 <h1>{% if cari %}Tedarikçiyi düzenle{% else %}Yeni tedarikçi{% endif %}</h1>
 <p class="not">{% if cari %}Değişiklikler işlem günlüğüne yazılır. Tedarikçi silinmez; kullanılmayacaksa "Aktif" işaretini kaldırın.{% else %}Ünvanı fatura ve ekstredeki gibi yazın. Kaydedince ekstre sayfası açılır.{% endif %}</p>

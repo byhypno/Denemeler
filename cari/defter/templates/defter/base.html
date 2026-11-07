@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>{% block baslik %}Cari Program{% endblock %}</title>
+  <title>{% block baslik %}Cari{% endblock %}</title>
   <script>/* tema, sayfa çizilmeden önce uygulanır (yanıp sönme olmasın) */
     (function () { try { var t = localStorage.getItem('cari_tema'); if (t === 'koyu' || t === 'acik') document.documentElement.dataset.tema = t; } catch (e) {} })();
   </script>
@@ -19,11 +19,11 @@
 <div class="kabuk" id="kabuk">
   <div class="ust-serit">
     <button type="button" id="yan-ac" aria-controls="yan" aria-expanded="false" aria-label="Menüyü aç">{% ikon "menu" %}</button>
-    <a class="yan-marka" href="{% url 'dashboard' %}"><img class="marka-logo" src="{% static 'defter/img/logo-sembol.png' %}" alt="Egeser" width="68" height="34">Cari <span>Program</span></a>
+    <a class="yan-marka" href="{% url 'dashboard' %}"><img class="marka-logo" src="{% static 'defter/img/logo-sembol.png' %}" alt="Egeser" width="68" height="34">Cari</a>
   </div>
   <div class="yan-perde" data-yan-kapat></div>
   <aside class="yan" id="yan" aria-label="Ana menü">
-    <a class="yan-marka" href="{% url 'dashboard' %}"><img class="marka-logo" src="{% static 'defter/img/logo-sembol.png' %}" alt="Egeser" width="68" height="34">Cari <span>Program</span></a>
+    <a class="yan-marka" href="{% url 'dashboard' %}"><img class="marka-logo" src="{% static 'defter/img/logo-sembol.png' %}" alt="Egeser" width="68" height="34">Cari</a>
     <nav aria-label="Sayfalar">
       <ul class="yan-menu">
         {% if "goruntule" in yetkiler %}
