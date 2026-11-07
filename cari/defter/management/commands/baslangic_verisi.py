@@ -75,6 +75,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Başlangıç verisi yüklendi."))
         else:
             self.stdout.write("Yüklenecek yeni başlangıç verisi yok (hepsi zaten yüklü).")
+        self.stdout.write("Programdaki tedarikçiler:")
+        for c in Cari.objects.order_by("unvan"):
+            self.stdout.write(f"  - {c.unvan}: {c.belgeler.count()} hareket, bakiye {kurus_bicimle(c.bakiye_kurus())} TL")
 
     @transaction.atomic
     def _hareketler(self, klasor: Path, k: dict) -> int:
@@ -96,5 +99,5 @@ class Command(BaseCommand):
             if bak != veri["beklenen_bakiye_kurus"]:
                 raise CommandError(f"{unvan}: bakiye {kurus_bicimle(bak)} ₺, ekstrede {kurus_bicimle(veri['beklenen_bakiye_kurus'])} ₺ (eşleşmedi; hiçbir şey kaydedilmedi).")
             g["metin"] = f"Başlangıç verisi: {unvan} · {len(veri['satirlar'])} hareket, bakiye {kurus_bicimle(bak)} ₺"
-        self.stdout.write(f"{unvan}: {len(veri['satirlar'])} hareket yüklendi · bakiye {kurus_bicimle(bak)} ₺ → EŞLEŞTİ")
+        self.stdout.write(f"{unvan}: {len(veri['satirlar'])} hareket yüklendi · bakiye {kurus_bicimle(bak)} TL - EŞLEŞTİ")
         return 1

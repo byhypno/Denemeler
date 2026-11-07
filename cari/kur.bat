@@ -1,5 +1,7 @@
 @echo off
 setlocal
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 echo ============================================================
 echo  EGESER-CARI KURULUMU  (guvenle tekrar calistirilabilir)

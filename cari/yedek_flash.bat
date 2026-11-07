@@ -1,5 +1,7 @@
 @echo off
 setlocal
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 if exist "ayarlar.bat" call "ayarlar.bat"
 if "%CARI_FLASH_YEDEK%"=="" goto ayarsiz
