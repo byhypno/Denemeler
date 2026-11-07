@@ -27,6 +27,26 @@
   });
   dugmeyiGuncelle();
 
+  // Tablolar: ad (en yakın başlık) ve yatay kayan kutular klavyeyle odaklanıp kaydırılabilsin
+  function tabloErisim() {
+    document.querySelectorAll('.tablo-kaydir').forEach(function (k) {
+      var t = k.querySelector('table');
+      if (!t || t.getAttribute('aria-label') || t.querySelector('caption')) return;
+      var kap = k.closest('.kart') || k.parentElement, h = null;
+      for (var n = k.previousElementSibling; n && !h; n = n.previousElementSibling) if (/^H[1-3]$/.test(n.tagName)) h = n;
+      if (!h && kap) h = kap.querySelector('h2, h3');
+      if (!h) h = document.querySelector('h1');
+      if (h) t.setAttribute('aria-label', h.textContent.trim());
+    });
+    document.querySelectorAll('.tablo-kaydir').forEach(function (k) {
+      var kayar = k.scrollWidth > k.clientWidth + 1, t = k.querySelector('table');
+      if (kayar) { k.tabIndex = 0; k.setAttribute('role', 'region'); if (t && t.getAttribute('aria-label')) k.setAttribute('aria-label', t.getAttribute('aria-label')); }
+      else if (k.getAttribute('role') === 'region') { k.removeAttribute('tabindex'); k.removeAttribute('role'); k.removeAttribute('aria-label'); }
+    });
+  }
+  tabloErisim();
+  window.addEventListener('resize', tabloErisim);
+
   // mobil çekmece
   var kabuk = document.getElementById('kabuk'), ac = document.getElementById('yan-ac'), yan = document.getElementById('yan');
   if (!kabuk || !ac || !yan) return;

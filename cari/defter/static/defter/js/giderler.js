@@ -23,7 +23,7 @@
     return new Chart(el, {
       data: { labels: veri.aylar, datasets: seriler },
       options: { ...G.ortak, interaction: { mode: 'index', intersect: false },
-        plugins: { tooltip: ipucu, legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, padding: 14 } } },
+        plugins: { tooltip: ipucu, legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 22 } } },
         scales: { y: { ...G.eksenTL(), stacked: true, beginAtZero: true }, x: { stacked: true, grid: { display: false } } } },
     });
   });
