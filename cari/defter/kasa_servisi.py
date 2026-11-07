@@ -44,6 +44,14 @@ def acik_gunler(hesap, bugun=None):
     return sorted(set(qs.values_list("tarih", flat=True)))
 
 
+def harcayanlar(hesap) -> list:
+    """Bu kasada daha önce girilmiş harcayan adları (forma öneri olarak), Türkçe alfabe sırasıyla; büyük/küçük harf farkı tek sayılır."""
+    gorulen = {}
+    for ad in hesap.hareketler.exclude(harcayan="").values_list("harcayan", flat=True):
+        gorulen.setdefault(metin.katla(ad), ad)
+    return metin.turkce_sirala(gorulen.values())
+
+
 def kasa_ozeti(hesap, bugun=None) -> dict:
     bugun = bugun or date.today()
     ay_bas = bugun.replace(day=1)

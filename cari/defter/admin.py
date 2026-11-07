@@ -160,16 +160,16 @@ def kasa_iptal_et(modeladmin, request, queryset):
 
 @admin.register(KasaHareketi)
 class KasaHareketiAdmin(SilmeKapali, admin.ModelAdmin):
-    list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "aciklama", "iptal")
+    list_display = ("tarih", "hesap", "yon", "tutar", "kategori", "harcayan", "aciklama", "iptal")
     list_filter = ("hesap", "yon", "kategori", "iptal")
-    search_fields = ("aciklama", "makbuz_no")
+    search_fields = ("aciklama", "makbuz_no", "harcayan")
     date_hierarchy = "tarih"
     actions = [kasa_iptal_et]
     readonly_fields = ("matrah_tl", "kdv_tl", "tevkifat_tl", "ekler_bag", "gecmis_bag")
     ekler_bag = ekler_baglantisi("kasa")
     gecmis_bag = gecmis_baglantisi("KasaHareketi")
     fieldsets = (
-        (None, {"fields": ("hesap", "tarih", "yon", "kategori", "makbuz_no",
+        (None, {"fields": ("hesap", "tarih", "yon", "kategori", "harcayan", "makbuz_no",
                            "aciklama", "ekler_bag", "gecmis_bag")}),
         ("Tutar ve KDV", {"fields": ("tutar_kurus", "kdv_modu", "kdv_orani", "tevkifat_orani",
                                      "matrah_tl", "kdv_tl", "tevkifat_tl")}),

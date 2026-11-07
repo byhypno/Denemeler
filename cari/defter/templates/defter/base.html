@@ -28,6 +28,7 @@
       <ul class="yan-menu">
         {% if "goruntule" in yetkiler %}
         <li><a href="{% url 'dashboard' %}" {% if sayfa == 'dashboard' %}aria-current="page"{% endif %}>{% ikon "genel" %}Genel bakış</a></li>
+        {% if "veri_gir" in yetkiler %}<li><a href="{% url 'veri_girisi' %}" {% if sayfa == 'veri_girisi' %}aria-current="page"{% endif %}>{% ikon "arti" %}Veri girişi</a></li>{% endif %}
         <li><a href="{% url 'tedarikciler' %}" {% if sayfa == 'tedarikciler' %}aria-current="page"{% endif %}>{% ikon "tedarikci" %}Tedarikçiler</a></li>
         <li><a href="{% url 'malzemeler' %}" {% if sayfa == 'malzemeler' %}aria-current="page"{% endif %}>{% ikon "kutu" %}Malzemeler</a></li>
         <li><a href="{% url 'giderler' %}" {% if sayfa == 'giderler' %}aria-current="page"{% endif %}>{% ikon "gider" %}Genel giderler</a></li>
@@ -46,7 +47,7 @@
       {% if request.user.is_staff or "yonetim" in yetkiler %}
       <hr class="yan-ayrac">
       <ul class="yan-menu">
-        {% if request.user.is_staff %}<li><a href="{% url 'admin:index' %}">{% ikon "yonetim" %}Veri girişi</a></li>{% endif %}
+        {% if request.user.is_staff %}<li><a href="{% url 'admin:index' %}">{% ikon "yonetim" %}Yönetim paneli</a></li>{% endif %}
         {% if "yonetim" in yetkiler %}
         <li><a href="{% url 'gunluk_sayfasi' %}" {% if sayfa == 'gunluk' %}aria-current="page"{% endif %}>{% ikon "gunluk" %}Günlük</a></li>
         <li><a href="{% url 'yedek_sayfasi' %}" {% if sayfa == 'yedek' %}aria-current="page"{% endif %}>{% ikon "yedek" %}Yedek</a></li>

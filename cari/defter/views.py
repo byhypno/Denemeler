@@ -386,3 +386,18 @@ def aylik_rapor(request):
         "r": r, "yil": yil, "ay": ay, "yillar": yillar, "aylar": list(enumerate(trend.AY_ADLARI, start=1)),
         "sayfa": "rapor", "bugun": bugun,
     })
+
+
+@yetki_gerekli("veri_gir")
+def veri_girisi(request):
+    """Veri girişi merkezi: günlük işlerin hepsi tek yerden (yönetim paneli yalnızca gelişmiş işler için).
+    ?cari=<id>&tur=ALIS_FISI|ODEME|IADE ile seçilen tedarikçi için hareket formuna yönlendirir."""
+    cari_id, tur = metin.guvenli_int(request.GET.get("cari")), request.GET.get("tur", "")
+    if cari_id is not None and Cari.objects.filter(pk=cari_id).exists():
+        gecerli = {t.value for t in GIRILEBILIR_TURLER}
+        return redirect(f"{reverse('belge_yeni', args=[cari_id])}?tur={tur if tur in gecerli else Belge.Tur.ALIS_FISI}")
+    if request.GET.get("cari"):
+        messages.error(request, "Önce tedarikçiyi seçin.")
+    return render(request, "defter/veri_girisi.html", {
+        "cariler": _cariler(aktif=True), "sayfa": "veri_girisi", "kasa_yaz": var_mi(request.user, "kasa_yaz"),
+    })

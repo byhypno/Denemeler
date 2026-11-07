@@ -412,6 +412,10 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .onay-kutu { background: var(--uyari-zemin); border-radius: var(--r-kontrol); padding: var(--b-3) var(--b-4); }
 .onay-kutu .onay { color: var(--uyari); font-weight: 600; display: flex; gap: var(--b-2); align-items: center; }
 th.satir-bas { background: transparent; border: 0; border-bottom: 1px solid var(--cizgi); font-weight: 600; font-size: var(--t-sm); color: var(--metin); border-radius: 0; padding: 13px var(--b-4); }
+.veri-kartlari { display: grid; gap: var(--b-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin-bottom: var(--b-4); }
+.veri-kart { display: flex; align-items: center; gap: var(--b-4); margin: 0; text-decoration: none; color: var(--metin); }
+.veri-kart > span:last-child { display: grid; gap: 2px; }
+.veri-kart:hover { box-shadow: var(--golge-2); border-color: var(--cizgi-guclu); }
 .cari-bilgi { display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-2) var(--b-4); margin: var(--b-1) 0 0; font-size: var(--t-sm); }
 .dosya-kart { display: flex; align-items: center; gap: var(--b-4); flex-wrap: wrap; padding: var(--b-4) var(--b-5); }
 .dosya-kart > div { flex: 1 1 280px; min-width: 0; }

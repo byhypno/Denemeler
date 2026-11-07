@@ -13,7 +13,7 @@ from .models import Belge, BelgeKalem, Cari, KasaHareketi, KasaKategori
 class KasaHareketiForm(forms.ModelForm):
     class Meta:
         model = KasaHareketi
-        fields = ["tarih", "yon", "tutar_kurus", "kategori", "makbuz_no",
+        fields = ["tarih", "yon", "tutar_kurus", "kategori", "harcayan", "makbuz_no",
                   "aciklama", "kdv_modu", "kdv_orani", "tevkifat_orani"]
         widgets = {"tarih": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"})}
 
@@ -26,6 +26,10 @@ class KasaHareketiForm(forms.ModelForm):
         self.fields["tutar_kurus"].help_text = ""
         self.fields["tutar_kurus"].widget.attrs.update({"placeholder": "1.234,50", "inputmode": "decimal"})
         self.fields["kdv_modu"].label = "KDV"
+        self.fields["harcayan"].widget.attrs.update({"list": "harcayan-listesi", "autocomplete": "off", "placeholder": "ör. Mehmet"})
+
+    def clean_harcayan(self):
+        return " ".join(self.cleaned_data.get("harcayan", "").split())
 
 
 class GunSonuForm(forms.Form):

@@ -84,7 +84,7 @@ def kasa_ana(request):
     dagilim = ks.kategori_dagilimi(hesap, yil)
     ozet = ks.kasa_ozeti(hesap, bugun)
     return render(request, "defter/kasa.html", {
-        "hesap": hesap, "hesaplar": gorunur_kasalar(request.user),
+        "hesap": hesap, "hesaplar": gorunur_kasalar(request.user), "harcayanlar": ks.harcayanlar(hesap),
         "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]),
         "yil": yil, "yillar": yillar, "filtre": f, "sayfa_nesnesi": sayfa, "sorgu": sorgu.urlencode(),
         "bakiyeler": ks.hareketler_bakiyeli(hesap), "kategoriler": KasaKategori.objects.filter(aktif=True),

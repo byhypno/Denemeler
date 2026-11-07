@@ -28,8 +28,9 @@
 </section>
 
 {% if "kasa_yaz" in yetkiler %}
-<section class="kart yazdirma-gizle">
+<section class="kart yazdirma-gizle" id="yeni-hareket">
   <h2>Yeni kasa hareketi</h2>
+  <datalist id="harcayan-listesi">{% for a in harcayanlar %}<option value="{{ a }}">{% endfor %}</datalist>
   <form method="post" novalidate>{% csrf_token %}
     {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}
     <div class="form-izgara">
@@ -85,7 +86,7 @@
     <button type="submit">Filtrele</button>
   </form>
   <div class="tablo-kaydir"><table>
-    <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Açıklama</th><th>Makbuz</th>
+    <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Harcayan</th><th>Açıklama</th><th>Makbuz</th>
       <th class="sayi">Tutar</th><th class="sayi">Bakiye</th><th class="yazdirma-gizle">İşlem</th></tr></thead>
     <tbody>
     {% for h in sayfa_nesnesi %}
@@ -93,6 +94,7 @@
         <td>{{ h.tarih|date:"d.m.Y" }}</td>
         <td>{% if h.yon == "GIRIS" %}<span class="yon giris">{% ikon "ok-yukari" "kucuk" %}Giriş</span>{% else %}<span class="yon cikis">{% ikon "ok-asagi" "kucuk" %}Çıkış</span>{% endif %}</td>
         <td>{{ h.kategori|default:"—" }}</td>
+        <td>{{ h.harcayan|default:"—" }}</td>
         <td>{{ h.aciklama|default:"" }}{% if h.iptal %} <i>(iptal: {{ h.iptal_nedeni }})</i>{% endif %}</td>
         <td>{{ h.makbuz_no|default:"" }}{% with n=ek_sayi|sozluk_al:h.pk %}<a class="ek-bag yazdirma-gizle{% if n %} dolu{% endif %}" href="{% url 'ek_sahip' 'kasa' h.pk %}" title="Ekler (fiş/makbuz görseli)">{% ikon "ek" "kucuk" %}{% if n %}<span>{{ n }}</span>{% else %}<span class="sr-only">Ek ekle</span>{% endif %}</a>{% endwith %}</td>
         <td class="sayi">{{ h.tutar_kurus|kurus_say }}</td>
@@ -104,7 +106,7 @@
             <button class="kucuk ikincil dugme" type="submit">İptal</button></form>{% endif %}
         </td>
       </tr>
-    {% empty %}<tr><td colspan="8" class="not">Kayıt yok.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="9" class="not">Kayıt yok.</td></tr>{% endfor %}
     </tbody>
   </table></div>
   <div class="sayfalama yazdirma-gizle">
