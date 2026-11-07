@@ -34,6 +34,6 @@ class Command(BaseCommand):
         uygulama = get_wsgi_application()
         if not tarayici_yok:
             threading.Timer(1.5, webbrowser.open, args=[url]).start()
-        self.stdout.write(self.style.SUCCESS(f"Cari Program çalışıyor: {url}"))
+        self.stdout.write(self.style.SUCCESS(f"Cari çalışıyor: {url}"))
         self.stdout.write("Kapatmak için bu pencereyi kapatın (Ctrl+C). Veriler kaybolmaz.")
         serve(uygulama, host="127.0.0.1", port=port, threads=4, ident=None)

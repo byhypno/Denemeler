@@ -48,11 +48,11 @@ if errorlevel 1 (
 )
 
 echo Masaustu kisayolu olusturuluyor...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop')+'\Cari Program.lnk'); $s.TargetPath='%~dp0baslat.bat'; $s.WorkingDirectory='%~dp0'; $s.WindowStyle=7; $s.Save()"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop')+'\Cari.lnk'); $s.TargetPath='%~dp0baslat.bat'; $s.WorkingDirectory='%~dp0'; $s.WindowStyle=7; $s.Save()"
 
 echo.
 echo ============================================================
-echo  KURULUM TAMAM. Masaustundeki "Cari Program" kisayoluyla acin.
+echo  KURULUM TAMAM. Masaustundeki "Cari" kisayoluyla acin.
 echo  ONEMLI: ayarlar.bat dosyasinda CARI_YEDEK_DIZINLERI satirini
 echo  (ayri disk/USB) doldurun, sonra yedek_gorevi_kur.bat calistirin.
 echo ============================================================

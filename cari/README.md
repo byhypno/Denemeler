@@ -1,4 +1,4 @@
-# Cari Program (Aşama 1–5)
+# Cari (Aşama 1–5)
 
 Tek bilgisayarda, yerelde çalışan cari (tedarikçi) ve **Ofis Kasa** takip programı.
 Tutarlar veritabanında **tamsayı kuruş** olarak saklanır; kayıt silinmez, **iptal** edilir.

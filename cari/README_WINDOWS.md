@@ -8,8 +8,8 @@
 1. **Python 3.12 veya üstünü** https://www.python.org adresinden kurun. Kurulum penceresinde **"Add python.exe to PATH"** kutusunu işaretleyin.
 2. Proje klasörünü bilgisayara kopyalayın (ör. `C:\CariProgram`). Başka kullanıcıların yazamadığı bir yer seçin.
 3. **`kur.bat`** dosyasına çift tıklayın. Sırayla: sanal ortamı kurar, paketleri indirir (internet gerekir), veritabanını hazırlar,
-   sizden **yönetici kullanıcı adı ve parola** ister (en az 8 karakter), masaüstüne **Cari Program** kısayolunu koyar.
-4. Masaüstündeki **Cari Program** kısayolu programı açar (tarayıcıda `http://127.0.0.1:8000`). Pencereyi kapatınca program kapanır;
+   sizden **yönetici kullanıcı adı ve parola** ister (en az 8 karakter), masaüstüne **Cari** kısayolunu koyar.
+4. Masaüstündeki **Cari** kısayolu programı açar (tarayıcıda `http://127.0.0.1:8000`). Pencereyi kapatınca program kapanır;
    veriler kaybolmaz.
 
 ## 1b. Kullanıcılar
