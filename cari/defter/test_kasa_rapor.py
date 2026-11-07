@@ -155,7 +155,8 @@ class PdfTests(Temel):
             self.m(C, 100 + i, date(2026, 10, 2), aciklama=f"Kalem {i} " + "uzun açıklama " * 6, harcayan=f"Kişi {i % 7}")
         r = kr.kasa_raporu(self.h, date(2026, 10, 1), date(2026, 10, 31))
         PdfReader = self.pdf_okuyucu()
-        self.assertGreater(len(PdfReader(BytesIO(kr.rapor_pdf(r))).pages), 2)
+        pdf = PdfReader(BytesIO(kr.rapor_pdf(r)))
+        self.assertGreater(len(pdf.pages), 1)                 # 120 uzun satır tek sayfaya sığmaz; en küçük yazıda çok sayfa
 
     def test_ornek_dosyalari_yaz(self):
         hedef = os.environ.get("RAPOR_ORNEK_DIZINI")
@@ -251,3 +252,20 @@ class GecersizAralikUyariTests(Temel):
         self.assertContains(r, "tarih aralığı geçersiz")
         r = self.client.get(reverse("kasa_rapor"), {"bas": "2026-01-01", "bit": "2026-05-01"})
         self.assertNotContains(r, "tarih aralığı geçersiz")
+
+
+class PdfTekSayfaTests(Temel):
+    def test_dik_a4_ve_makul_kayit_tek_sayfa(self):
+        from pypdf import PdfReader
+        self.m(G, 10**8, date(2026, 10, 1))
+        for i in range(45):
+            self.m(C, 1000 + i, date(2026, 10, 2 + i % 20), aciklama=f"ŞANTİYE YEMEK ÜCRETİ {i}", harcayan=f"Kişi {i % 5}", makbuz_no=str(i))
+        r = kr.kasa_raporu(self.h, date(2026, 10, 1), date(2026, 10, 31))
+        ham = kr.rapor_pdf(r)
+        if os.environ.get("RAPOR_ORNEK_DIZINI"):
+            open(os.path.join(os.environ["RAPOR_ORNEK_DIZINI"], "tek_sayfa.pdf"), "wb").write(ham)
+        pdf = PdfReader(BytesIO(ham))
+        self.assertEqual(len(pdf.pages), 1)
+        genislik, yukseklik = float(pdf.pages[0].mediabox.width), float(pdf.pages[0].mediabox.height)
+        self.assertLess(genislik, yukseklik)                  # dik
+        self.assertIn("ŞANTİYE YEMEK ÜCRETİ 44", pdf.pages[0].extract_text())

@@ -286,19 +286,33 @@ def _yazi_tipleri():
 
 
 def rapor_pdf(r) -> bytes:
+    """Dik A4, dar kenar boşluğu. Mümkünse TEK sayfaya sığdırır: yazı boyutunu kademeli küçültür (en küçük 5,5 pt);
+    yine sığmazsa en küçük boyutta birden çok sayfa üretir."""
+    son = None
+    for fs in (8.5, 8, 7.5, 7, 6.5, 6, 5.5):
+        pdf, sayfa = _pdf_uret(r, fs)
+        son = pdf
+        if sayfa == 1:
+            break
+    return son
+
+
+def _pdf_uret(r, fs):
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
-    from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     normal, kalin = _yazi_tipleri()
     mavi, acik, cizgi = colors.HexColor("#1F4E79"), colors.HexColor("#E3ECF4"), colors.HexColor("#C5CED8")
-    s_n = ParagraphStyle("n", fontName=normal, fontSize=8.5, leading=11)
+    lead = fs * 1.22
+    pad = max(1.2, fs * 0.28)
+    s_n = ParagraphStyle("n", fontName=normal, fontSize=fs, leading=lead)
     s_k = ParagraphStyle("k", parent=s_n, fontName=kalin)
-    s_h2 = ParagraphStyle("h2", fontName=kalin, fontSize=11, leading=14, textColor=mavi, spaceBefore=10, spaceAfter=4)
-    s_h1 = ParagraphStyle("h1", fontName=kalin, fontSize=16, leading=20, textColor=mavi)
-    s_not = ParagraphStyle("not", parent=s_n, textColor=colors.HexColor("#5B6877"), fontSize=8)
+    s_h2 = ParagraphStyle("h2", fontName=kalin, fontSize=fs + 2, leading=fs + 4, textColor=mavi, spaceBefore=fs * 0.7, spaceAfter=2)
+    s_h1 = ParagraphStyle("h1", fontName=kalin, fontSize=fs + 8, leading=fs + 11, textColor=mavi)
+    s_not = ParagraphStyle("not", parent=s_n, textColor=colors.HexColor("#5B6877"), fontSize=max(fs - 1, 5), leading=lead)
 
     def tl(kurus):
         return kurus_bicimle(kurus) + " ₺"
@@ -306,79 +320,106 @@ def rapor_pdf(r) -> bytes:
     def p(metin_, stil=s_n):
         return Paragraph(str(metin_).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), stil)
 
-    def tablo(veri, genislik, sayi_sutunlari=(), toplam_satiri=False, tekrar=1):
-        t = Table(veri, colWidths=genislik, repeatRows=tekrar, hAlign="LEFT")
-        stil = [("FONT", (0, 0), (-1, -1), normal, 8.5), ("FONT", (0, 0), (-1, 0), kalin, 8.5),
-                ("BACKGROUND", (0, 0), (-1, 0), acik), ("GRID", (0, 0), (-1, -1), 0.4, cizgi),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4)]
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    def en(metinler, kalin_=False):
+        """Sütunun içeriğine göre genişlik (pt): en uzun metin + iç boşluk."""
+        return max(stringWidth(str(m), kalin if kalin_ else normal, fs) for m in metinler) + 9
+
+    tarih_w = en(["00.00.0000"])
+
+    def tablo(veri, genislik, sayi_sutunlari=(), toplam_satiri=False):
+        t = Table(veri, colWidths=genislik, repeatRows=1, hAlign="LEFT")
+        stil = [("FONT", (0, 0), (-1, -1), normal, fs), ("FONT", (0, 0), (-1, 0), kalin, fs),
+                ("BACKGROUND", (0, 0), (-1, 0), acik), ("GRID", (0, 0), (-1, -1), 0.3, cizgi),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), pad), ("BOTTOMPADDING", (0, 0), (-1, -1), pad),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3)]
         for c in sayi_sutunlari:
             stil.append(("ALIGN", (c, 0), (c, -1), "RIGHT"))
         if toplam_satiri:
-            stil += [("FONT", (0, -1), (-1, -1), kalin, 8.5), ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#F1F5F9"))]
+            stil += [("FONT", (0, -1), (-1, -1), kalin, fs), ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#F1F5F9"))]
         t.setStyle(TableStyle(stil))
         return t
 
     cikti = BytesIO()
-    sayfa = landscape(A4)
-    genis = sayfa[0] - 24 * mm
-    dok = SimpleDocTemplate(cikti, pagesize=sayfa, leftMargin=12 * mm, rightMargin=12 * mm, topMargin=12 * mm, bottomMargin=14 * mm,
+    kenar = 7 * mm
+    sayfa = A4
+    genis = sayfa[0] - 2 * kenar
+    dok = SimpleDocTemplate(cikti, pagesize=sayfa, leftMargin=kenar, rightMargin=kenar, topMargin=kenar, bottomMargin=kenar + 3 * mm,
                             title=f"{r['hesap'].ad} raporu", author="Egeser Cari")
 
     def alt_bilgi(tuval, doc):
         tuval.saveState()
-        tuval.setFont(normal, 7.5)
+        tuval.setFont(normal, 6.5)
         tuval.setFillColor(colors.HexColor("#5B6877"))
-        tuval.drawString(12 * mm, 8 * mm, f"{r['hesap'].ad} · {r['bas']:%d.%m.%Y} – {r['bit']:%d.%m.%Y} · Hazırlanma: {date.today():%d.%m.%Y}")
-        tuval.drawRightString(sayfa[0] - 12 * mm, 8 * mm, f"Sayfa {doc.page}")
+        tuval.drawString(kenar, 4.5 * mm, f"{r['hesap'].ad} · {r['bas']:%d.%m.%Y} – {r['bit']:%d.%m.%Y} · Hazırlanma: {date.today():%d.%m.%Y}")
+        tuval.drawRightString(sayfa[0] - kenar, 4.5 * mm, f"Sayfa {doc.page}")
         tuval.restoreState()
 
     ogeler = []
-    baslik = [[Image(str(LOGO), width=34 * mm, height=34 * mm * 0.5, kind="proportional") if LOGO.exists() else "",
-               [p(f"{r['hesap'].ad} raporu", s_h1), p(f"{r['bas']:%d.%m.%Y} – {r['bit']:%d.%m.%Y}", s_n)]]]
-    bt = Table(baslik, colWidths=[40 * mm, genis - 40 * mm])
-    bt.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
-    ogeler += [bt, Spacer(1, 6)]
+    logo = Image(str(LOGO), width=24 * mm, height=12 * mm, kind="proportional") if LOGO.exists() else ""
+    bt = Table([[logo, [p(f"{r['hesap'].ad} raporu", s_h1), p(f"{r['bas']:%d.%m.%Y} – {r['bit']:%d.%m.%Y}", s_n)]]],
+               colWidths=[28 * mm, genis - 28 * mm])
+    bt.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+    ogeler += [bt, Spacer(1, 4)]
 
     kpi_veri = [[p("Devir", s_not), p("Para girişleri", s_not), p("Para çıkışları", s_not), p("KALAN", s_not)],
                 [p(tl(r["devir"]), s_k), p(tl(r["giris_toplam"]), s_k), p(tl(r["cikis_toplam"]), s_k),
-                 p(tl(r["kalan"]), ParagraphStyle("kal", parent=s_k, fontSize=12, leading=15, textColor=mavi))]]
+                 p(tl(r["kalan"]), ParagraphStyle("kal", parent=s_k, fontSize=fs + 3, leading=fs + 5, textColor=mavi))]]
     kt = Table(kpi_veri, colWidths=[genis / 4] * 4)
-    kt.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, cizgi), ("INNERGRID", (0, 0), (-1, -1), 0.4, cizgi),
-                            ("BACKGROUND", (0, 0), (-1, 0), acik), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
-    ogeler += [kt, Spacer(1, 4),
+    kt.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.5, cizgi), ("INNERGRID", (0, 0), (-1, -1), 0.3, cizgi),
+                            ("BACKGROUND", (0, 0), (-1, 0), acik), ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
+    ogeler += [kt, Spacer(1, 2),
                p(f"Devir + girişler − çıkışlar = kalan. Günlük ortalama çıkış {tl(r['ortalama_gunluk_cikis'])}. "
                  f"Fişi girilmemiş çıkış: {r['fissiz_adet']} adet ({tl(r['fissiz_toplam'])}). İptal edilen kayıtlar dahil değildir.", s_not)]
 
-    # Girişler
-    veri = [["Tarih", "Açıklama", "Tutar"], [f"{r['bas']:%d.%m.%Y}", p("DEVİR", s_k), tl(r["devir"])]]
-    veri += [[f"{h.tarih:%d.%m.%Y}", p(h.aciklama or "PARA GİRİŞİ"), tl(h.tutar_kurus)] for h in r["girisler"]]
-    veri.append(["", "TOPLAM", tl(r["devir"] + r["giris_toplam"])])
-    ogeler += [p("Para girişleri", s_h2), tablo(veri, [26 * mm, genis * 0.62 - 26 * mm, 36 * mm], (2,), True)]
-
-    # Çıkışlar
-    veri = [["Tarih", "Açıklama", "Fiş no", "Harcayan", "Kategori", "Tutar"]]
-    veri += [[f"{h.tarih:%d.%m.%Y}", p(h.aciklama), p(h.makbuz_no), p(_ad(h) if h.harcayan else ""),
-              p(h.kategori.ad if h.kategori else ""), tl(h.tutar_kurus)] for h in r["cikislar"]]
-    if not r["cikislar"]:
-        veri.append(["", p("Bu dönemde çıkış yok."), "", "", "", ""])
-    veri.append(["", "TOPLAM", "", "", "", tl(r["cikis_toplam"])])
-    ogeler += [p("Para çıkışları", s_h2),
-               tablo(veri, [24 * mm, genis - 24 * mm - 22 * mm - 36 * mm - 34 * mm - 32 * mm, 22 * mm, 36 * mm, 34 * mm, 32 * mm], (5,), True)]
-
-    # Özetler
+    # Girişler (sol) + kişi bazında harcama (sağ) yan yana: dikey yer kazanır
+    yarim = genis / 2 - 1.5 * mm
+    giris = [["Tarih", "Açıklama", "Tutar"], [f"{r['bas']:%d.%m.%Y}", p("DEVİR", s_k), tl(r["devir"])]]
+    giris += [[f"{h.tarih:%d.%m.%Y}", p(h.aciklama or "PARA GİRİŞİ"), tl(h.tutar_kurus)] for h in r["girisler"]]
+    giris.append(["", "TOPLAM", tl(r["devir"] + r["giris_toplam"])])
+    g_tutar = en([tl(r["devir"] + r["giris_toplam"])] + [tl(h.tutar_kurus) for h in r["girisler"]], True)
+    g_kol = [tarih_w, yarim - tarih_w - g_tutar, g_tutar]
     kisi = [["Harcayan", "Adet", "Tutar", "Pay"]] + [
         [p(k["ad"]), str(k["adet"]), tl(k["toplam"]), f"%{round(k['toplam'] * 100 / r['cikis_toplam'])}" if r["cikis_toplam"] else ""]
         for k in r["kisiler"]] + [["TOPLAM", "", tl(r["cikis_toplam"]), ""]]
-    kat = [["Kategori", "Adet", "Tutar", "Pay"]] + [
-        [p(k["ad"]), str(k["adet"]), tl(k["toplam"]), f"%{round(k['toplam'] * 100 / r['cikis_toplam'])}" if r["cikis_toplam"] else ""]
-        for k in r["kategoriler"]] + [["TOPLAM", "", tl(r["cikis_toplam"]), ""]]
-    yarim = genis / 2 - 3 * mm
-    kolon = [yarim - 15 * mm - 28 * mm - 14 * mm, 15 * mm, 28 * mm, 14 * mm]
-    ikili = Table([[tablo(kisi, kolon, (1, 2, 3), True), tablo(kat, kolon, (1, 2, 3), True)]],
-                  colWidths=[genis / 2, genis / 2])
-    ikili.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm)]))
-    ogeler += [KeepTogether([p("Kişi bazında (harcayan) ve kategori bazında harcama", s_h2), ikili])]
+    k_tutar = en([tl(k["toplam"]) for k in r["kisiler"]] + [tl(r["cikis_toplam"])], True)
+    k_kol = [0, en(["Adet", "999"]), k_tutar, en(["%100"])]
+    k_kol[0] = yarim - sum(k_kol[1:])
+    ust = Table([[[p("Para girişleri", s_h2), tablo(giris, g_kol, (2,), True)],
+                  [p("Kişi bazında harcama (harcayan)", s_h2), tablo(kisi, k_kol, (1, 2, 3), True)]]], colWidths=[genis / 2, genis / 2])
+    ust.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                             ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+    ogeler.append(ust)
+
+    # Çıkışlar: kategori sütunu yalnızca kullanılıyorsa
+    kategorili = any(h.kategori for h in r["cikislar"])
+    baslik = ["Tarih", "Açıklama", "Fiş no", "Harcayan"] + (["Kategori"] if kategorili else []) + ["Tutar"]
+    veri = [baslik]
+    for h in r["cikislar"]:
+        satir = [f"{h.tarih:%d.%m.%Y}", p(h.aciklama), p(h.makbuz_no), p(_ad(h) if h.harcayan else "")]
+        if kategorili:
+            satir.append(p(h.kategori.ad if h.kategori else ""))
+        veri.append(satir + [tl(h.tutar_kurus)])
+    if not r["cikislar"]:
+        veri.append(["", p("Bu dönemde çıkış yok.")] + [""] * (len(baslik) - 2))
+    veri.append(["", "TOPLAM"] + [""] * (len(baslik) - 3) + [tl(r["cikis_toplam"])])
+    c_tutar = en([tl(h.tutar_kurus) for h in r["cikislar"]] + [tl(r["cikis_toplam"])], True)
+    c_fis = min(max(en([h.makbuz_no for h in r["cikislar"]] + ["Fiş no"]), en(["Fiş no"])), 70)
+    c_kisi = min(en([_ad(h) for h in r["cikislar"] if h.harcayan] + ["Harcayan"]), 110)
+    c_kat = min(en([h.kategori.ad for h in r["cikislar"] if h.kategori] + ["Kategori"]), 90) if kategorili else 0
+    kolonlar = [tarih_w, genis - tarih_w - c_fis - c_kisi - c_kat - c_tutar, c_fis, c_kisi] + ([c_kat] if kategorili else []) + [c_tutar]
+    ogeler += [p("Para çıkışları", s_h2), tablo(veri, kolonlar, (len(baslik) - 1,), True)]
+
+    # Kategori özeti: yalnızca kategori kullanılıyorsa
+    if kategorili:
+        kat = [["Kategori", "Adet", "Tutar", "Pay"]] + [
+            [p(k["ad"]), str(k["adet"]), tl(k["toplam"]), f"%{round(k['toplam'] * 100 / r['cikis_toplam'])}" if r["cikis_toplam"] else ""]
+            for k in r["kategoriler"]] + [["TOPLAM", "", tl(r["cikis_toplam"]), ""]]
+        kk = [0, en(["Adet", "999"]), en([tl(k["toplam"]) for k in r["kategoriler"]] + [tl(r["cikis_toplam"])], True), en(["%100"])]
+        kk[0] = yarim - sum(kk[1:])
+        ogeler += [p("Kategori bazında harcama", s_h2), tablo(kat, kk, (1, 2, 3), True)]
 
     dok.build(ogeler, onFirstPage=alt_bilgi, onLaterPages=alt_bilgi)
-    return cikti.getvalue()
+    return cikti.getvalue(), dok.page
