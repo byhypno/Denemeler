@@ -14,7 +14,7 @@ from . import metin
 from . import kasa_rapor as kr
 from . import kasa_servisi as ks
 from .fields import kurus_bicimle
-from .forms import GunSonuForm, KasaHareketiForm
+from .forms import GunSonuForm, KasaHareketiDuzeltForm, KasaHareketiForm
 from .models import GunSonu, KasaHareketi, KasaKategori
 from .views import AYLAR
 from .yetki import gorunur_kasalar, yetki_gerekli
@@ -205,3 +205,29 @@ def kasa_harcayan_duzelt(request):
         return redirect(f"{reverse('kasa_harcayan_duzelt')}?hesap={hesap.pk}")
     return render(request, "defter/kasa_harcayan.html", {"hesap": hesap, "satirlar": ozet, "sayfa": "kasa",
                                                           "hesaplar": gorunur_kasalar(request.user)})
+
+
+@yetki_gerekli("kasa_yaz")
+def kasa_hareket_duzelt(request, pk):
+    """Kasa hareketinin açıklama, kategori, fiş no ve harcayan bilgisini düzeltir. Tutar/tarih/yön değişmez;
+    iptal edilmiş ya da kapanışı yapılmış güne ait kayıt düzeltilemez. Değişiklik işlem günlüğüne yazılır."""
+    h = get_object_or_404(KasaHareketi.objects.select_related("hesap", "kategori"), pk=pk)
+    if not gorunur_kasalar(request.user).filter(pk=h.hesap_id).exists():
+        raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
+    geri = f"{reverse('kasa')}?hesap={h.hesap_id}"
+    sinir = h.hesap.kilit_siniri()
+    if h.iptal or (sinir and h.tarih <= sinir):
+        messages.error(request, "İptal edilmiş ya da kapanışı yapılmış güne ait kayıt düzeltilemez.")
+        return redirect(geri)
+    form = KasaHareketiDuzeltForm(request.POST or None, instance=h)
+    if request.method == "POST" and form.is_valid():
+        try:
+            form.instance.full_clean()
+            form.save()
+        except ValidationError as e:
+            messages.error(request, _hata_metni(e))
+        else:
+            messages.success(request, "Kayıt düzeltildi.")
+            return redirect(geri)
+    return render(request, "defter/kasa_hareket_duzelt.html", {
+        "h": h, "hesap": h.hesap, "form": form, "harcayanlar": ks.harcayanlar(h.hesap), "sayfa": "kasa", "geri": geri})

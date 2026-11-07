@@ -15,6 +15,28 @@ def _temiz_satir(deger: str) -> str:
     return " ".join("".join(c if c.isprintable() or c.isspace() else " " for c in (deger or "")).split())
 
 
+class KasaHareketiDuzeltForm(forms.ModelForm):
+    """Yalnızca üst veri: tutar, tarih ve yön değişmez (bakiye ve kapanışlar bozulmasın). Yanlış tutar için iptal + yeni kayıt."""
+
+    class Meta:
+        model = KasaHareketi
+        fields = ["kategori", "harcayan", "makbuz_no", "aciklama"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["kategori"].queryset = KasaKategori.objects.filter(aktif=True)
+        self.fields["harcayan"].widget.attrs.update({"list": "harcayan-listesi", "autocomplete": "off"})
+
+    def clean_harcayan(self):
+        return _temiz_satir(self.cleaned_data.get("harcayan", ""))
+
+    def clean_aciklama(self):
+        return _temiz_satir(self.cleaned_data.get("aciklama", ""))
+
+    def clean_makbuz_no(self):
+        return _temiz_satir(self.cleaned_data.get("makbuz_no", ""))
+
+
 class KasaHareketiForm(forms.ModelForm):
     class Meta:
         model = KasaHareketi

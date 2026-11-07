@@ -31,6 +31,7 @@ urlpatterns = [
     path("ek/<int:pk>/indir/", ek_views.ek_indir, name="ek_indir"),
     path("ek/<int:pk>/kaldir/", ek_views.ek_kaldir, name="ek_kaldir"),
     path("kasa/", kasa_views.kasa_ana, name="kasa"),
+    path("kasa/hareket/<int:pk>/duzelt/", kasa_views.kasa_hareket_duzelt, name="kasa_hareket_duzelt"),
     path("kasa/hareket/<int:pk>/iptal/", kasa_views.kasa_hareket_iptal, name="kasa_hareket_iptal"),
     path("kasa/rapor/", kasa_views.kasa_rapor, name="kasa_rapor"),
     path("kasa/harcayan-duzelt/", kasa_views.kasa_harcayan_duzelt, name="kasa_harcayan_duzelt"),

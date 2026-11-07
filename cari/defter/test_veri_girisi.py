@@ -99,3 +99,51 @@ class HarcayanTests(TestCase):
         self.h("Mehmet")
         kayit = IslemGunlugu.objects.filter(model="KasaHareketi").latest("id")
         self.assertIn("Mehmet", str(kayit.degisiklik))
+
+
+class KasaDuzeltTests(TestCase):
+    def setUp(self):
+        self.kasa = Hesap.objects.get(ad="Ofis Kasa")
+        self.h = KasaHareketi.objects.create(hesap=self.kasa, yon=KasaHareketi.Yon.CIKIS, tutar_kurus=5000,
+                                             tarih=date.today(), aciklama="eski", harcayan="Ali")
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        self.url = reverse("kasa_hareket_duzelt", args=[self.h.pk])
+
+    def test_ust_veri_duzelir_tutar_tarih_yon_degismez(self):
+        r = self.client.post(self.url, {"aciklama": " yeni\x0b açıklama ", "harcayan": "Veli", "makbuz_no": "7",
+                                        "tutar_kurus": "999,00", "tarih": "2001-01-01", "yon": "GIRIS"})
+        self.assertEqual(r.status_code, 302)
+        self.h.refresh_from_db()
+        self.assertEqual((self.h.aciklama, self.h.harcayan, self.h.makbuz_no), ("yeni açıklama", "Veli", "7"))
+        self.assertEqual((self.h.tutar_kurus, self.h.tarih, self.h.yon), (5000, date.today(), KasaHareketi.Yon.CIKIS))
+
+    def test_gunluge_yazilir(self):
+        self.client.post(self.url, {"aciklama": "yeni", "harcayan": "Veli", "makbuz_no": ""})
+        kayit = IslemGunlugu.objects.filter(model="KasaHareketi", islem="DEGISTI").latest("id")
+        self.assertIn("Veli", str(kayit.degisiklik))
+
+    def test_iptal_edilmis_duzeltilemez(self):
+        KasaHareketi.objects.filter(pk=self.h.pk).update(iptal=True, iptal_nedeni="x")
+        r = self.client.post(self.url, {"aciklama": "yeni", "harcayan": "Z", "makbuz_no": ""})
+        self.assertEqual(r.status_code, 302)
+        self.h.refresh_from_db()
+        self.assertEqual(self.h.harcayan, "Ali")
+
+    def test_kapali_gun_duzeltilemez(self):
+        from unittest import mock
+        with mock.patch.object(Hesap, "kilit_siniri", return_value=date.today()):
+            self.client.post(self.url, {"aciklama": "yeni", "harcayan": "Z", "makbuz_no": ""})
+        self.h.refresh_from_db()
+        self.assertEqual(self.h.harcayan, "Ali")
+
+    def test_yetki(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(self.url).status_code, 302)
+        self.client.force_login(rol_kullanici("g", "Görüntüleyici"))
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        self.client.force_login(rol_kullanici("k", "Kasiyer"))
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_form_sayfasi_ve_baglanti(self):
+        self.assertContains(self.client.get(self.url), "Kasa kaydını düzelt")
+        self.assertContains(self.client.get(reverse("kasa")), self.url)

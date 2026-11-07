@@ -114,7 +114,8 @@
           {% if h.iptal %}—{% elif "kasa_yaz" not in yetkiler %}—{% elif kilit_siniri and h.tarih <= kilit_siniri %}<span class="chip">{% ikon "kilit" "kucuk" %}kapalı gün</span>
           {% else %}<form class="satir-form" method="post" action="{% url 'kasa_hareket_iptal' h.pk %}">{% csrf_token %}
             <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">
-            <button class="kucuk ikincil dugme" type="submit">İptal</button></form>{% endif %}
+            <button class="kucuk ikincil dugme" type="submit">İptal</button></form>
+            <a class="kucuk ikincil dugme" href="{% url 'kasa_hareket_duzelt' h.pk %}">Düzenle</a>{% endif %}
         </td>
       </tr>
     {% empty %}<tr><td colspan="9" class="not">Kayıt yok.</td></tr>{% endfor %}
