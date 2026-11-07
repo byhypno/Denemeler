@@ -135,7 +135,7 @@ class SunucuKomutuTests(TestCase):
 class WindowsBetikleriTests(TestCase):
     """Windows'ta denenemeyen betiklerin bozulmasına karşı asgari koruma."""
 
-    BETIKLER = ["kur.bat", "baslat.bat", "yedek_al.bat", "yedek_gorevi_kur.bat", "ayarlar.ornek.bat", "kisayol_olustur.ps1", "tani.bat", "tani.ps1"]
+    BETIKLER = ["kur.bat", "baslat.bat", "yedek_al.bat", "yedek_flash.bat", "yedek_gorevi_kur.bat", "ayarlar.ornek.bat", "kisayol_olustur.ps1", "tani.bat", "tani.ps1"]
 
     def test_crlf_ve_ascii(self):
         for ad in self.BETIKLER:
