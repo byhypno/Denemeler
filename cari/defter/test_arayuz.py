@@ -277,3 +277,53 @@ class SayfaYapisiTests(TestCase):
         self.assertIn("fontlar.css", h)
         self.assertIn("cari_tema", h)                                    # tema uygulamayla eşleşir
         self.assertLess(h.index("cari_tema"), h.index("theme.js"))       # panelin kendi betiğinden ÖNCE
+
+
+class UiDenetimDuzeltmeTests(TestCase):
+    """UI denetiminde bulunan kayma/taşma düzeltmelerinin geri gelmemesi için (CSS/JS kaynağı üzerinden)."""
+
+    def kural(self, secici):
+        m = re.search(re.escape(secici) + r"\s*\{([^}]*)\}", CSS)
+        self.assertIsNotNone(m, secici)
+        return m.group(1)
+
+    def test_kaydirma_kutusu_konumlandirma_baglami_tasir(self):
+        """Mutlak konumlu .sr-only öğeleri kaydırma kutusunun dışında kalıp sayfayı yatay kaydırmasın."""
+        self.assertIn("position: relative", self.kural(".tablo-kaydir"))
+        self.assertIn("position: absolute", self.kural(".sr-only"))
+
+    def test_mesaj_serit_flex_degil(self):
+        """Flex olursa içindeki metin/bağlantı ayrı sütunlara bölünür."""
+        self.assertNotIn("display: flex", self.kural(".mesaj"))
+
+    def test_kpi_rakami_karta_gore_kuculur_ve_sarar(self):
+        self.assertIn("container-type: inline-size", CSS)
+        self.assertIn("cqi", CSS)
+        self.assertNotRegex(self.kural(".kpi .deger, .ozet .deger"), r"white-space:\s*nowrap")
+
+    def test_kalem_tablosu_dar_ekranda_ezilmez(self):
+        self.assertRegex(self.kural(".kalem-tablo"), r"min-width:\s*\d{3}px")
+
+    def test_cekmece_acikken_icerik_inert(self):
+        js = (STATIK / "js" / "arayuz.js").read_text(encoding="utf-8")
+        self.assertIn(".inert = acik", js)
+
+    def test_baslik_kaynaklari_cumle_duzeninde(self):
+        """<title>, H1 ve menüyle tutarlı olsun: 'Ekstre Mutabakatı' gibi Title Case başlık kalmasın."""
+        for ad in ("mutabakat_liste", "gunluk", "ek_depo", "odeme_listesi"):
+            s = (BASE / "templates" / "defter" / f"{ad}.html").read_text(encoding="utf-8")
+            baslik = re.search(r"\{% block baslik %\}(.*?)\{% endblock %\}", s).group(1)
+            kelimeler = [k for k in re.split(r"[\s:]+", baslik.split("·")[0]) if k.isalpha()]
+            self.assertTrue(all(not k[0].isupper() for k in kelimeler[1:]), f"{ad}: {baslik}")
+
+    def test_yazdirmada_uyari_ve_dugmeler_gizli(self):
+        yazdir = blok(CSS, "@media print")
+        self.assertIn(".mesaj", yazdir)
+        self.assertIn("button", yazdir)
+
+    def test_ekstre_menude_tedarikciler_isaretli(self):
+        from .models import Cari
+        c = Cari.objects.create(unvan="Menü Tedarik")
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        h = self.client.get(reverse("cari_ekstre", args=[c.pk])).content.decode()
+        self.assertRegex(h, r'<a href="/tedarikciler/" aria-current="page">')

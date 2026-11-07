@@ -122,7 +122,7 @@ def cari_ekstre(request, pk):
         "ek_sayi": es.ek_sayilari([b.pk for b, _ in satirlar], "belge"),
         "cari_ek_sayisi": cari.ekler.filter(kaldirildi=False).count(),
         "cari": cari, "onceki": onceki, "satirlar": satirlar, "kapanis": kapanis, "gruplar": gruplar,
-        "bas": bas, "bit": bit, "hata": hata, "sayfa": "ekstre", "aylar": aylar, "eksi_ay": eksi_ay,
+        "bas": bas, "bit": bit, "hata": hata, "sayfa": "tedarikciler", "aylar": aylar, "eksi_ay": eksi_ay,
         "guncel_borc": services.bakiye_kurus(cari),
         "bakiye_seri": [g["kapanis"] for g in gruplar],
         "alis_toplam": topla(Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI),

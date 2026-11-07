@@ -161,3 +161,5 @@ html[data-theme="dark"] :focus-visible { outline-color: #A5B4FC; }
 @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) :focus-visible { outline-color: #A5B4FC; } }
 .messagelist li { border-radius: 10px; }
 .object-tools a { border-radius: 999px; }
+
+input::placeholder, textarea::placeholder { color: var(--body-quiet-color); opacity: 1; }

@@ -5,7 +5,7 @@
 <section class="ozet">
   <div class="kart"><div class="not">Son başarılı yedek</div>
     <div class="deger orta">{% if durum.son %}{{ durum.son.zaman|date:"d.m.Y H:i" }}{% else %}Hiç yok{% endif %}</div>
-    <div>{% if durum.uyari %}<span class="chip hata">{{ durum.mesaj }}</span>{% else %}<span class="chip tamam">Güncel</span>{% endif %}</div></div>
+    <div>{% if durum.uyari %}<span class="chip hata uzun">{{ durum.mesaj }}</span>{% else %}<span class="chip tamam">Güncel</span>{% endif %}</div></div>
   <div class="kart"><div class="not">Saklama kuralı</div>
     <div class="deger orta">Son {{ gunluk }} gün: hepsi</div><div class="not">Daha eskiler: ayda bir yedek ({{ aylik }} ay)</div></div>
 </section>
@@ -18,7 +18,7 @@
 {% else %}
 <div class="kart"><h2>Şimdi yedekle</h2>
   <p>Hedefler: {% for h in hedefler %}<code>{{ h }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-  {% if ayni_disk %}<p><span class="chip uyari">Şu hedef verinin diskinde: {{ ayni_disk|join:", " }}. Disk bozulursa yedek de kaybolur.</span></p>{% endif %}
+  {% if ayni_disk %}<p><span class="chip uyari uzun">Şu hedef verinin diskinde: {{ ayni_disk|join:", " }}. Disk bozulursa yedek de kaybolur.</span></p>{% endif %}
   <form method="post" action="{% url 'yedek_al' %}">{% csrf_token %}<button type="submit">Şimdi yedek al</button></form>
   <p class="not">Yedek; veritabanını (tutarlı anlık görüntü) ve ek dosyaları içerir, hash'lerle doğrulanır ve geçici klasöre
     <b>gerçekten geri yüklenerek test edilir</b>. Gizli anahtar yedeğe konmaz. <b>Yedek şifrelenmez:</b> parola özetleri ve tüm mali veri içerir;

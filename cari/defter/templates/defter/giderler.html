@@ -75,7 +75,7 @@
     <thead><tr><th>Kategori</th>{% for no, ad in aylar %}<th class="sayi{% if no == ay %} secili{% endif %}"><a href="?yil={{ yil }}&ay={{ no }}">{{ ad }}</a></th>{% endfor %}<th class="sayi">Toplam</th></tr></thead>
     <tbody>
     {% for r in tablo.satirlar %}
-      <tr><th scope="row">{{ r.kategori.ad }}</th>
+      <tr><th scope="row" title="{{ r.kategori.ad }}">{{ r.kategori.ad }}</th>
         {% for v in r.aylar %}<td class="sayi{% if forloop.counter == ay %} secili{% endif %}">{% if v %}{{ v|kurus_say }}{% else %}—{% endif %}</td>{% endfor %}
         <td class="sayi"><b>{{ r.toplam|kurus_say }}</b></td></tr>
     {% endfor %}

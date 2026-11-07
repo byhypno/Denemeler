@@ -1,5 +1,5 @@
 {% extends "defter/base.html" %}{% load defter_filtreleri %}
-{% block baslik %}{% if liste == "yapilan" %}Yapılan Ödemeler{% else %}Ödenecekler{% endif %} · Cari Program{% endblock %}
+{% block baslik %}Ödeme listesi: {% if liste == "yapilan" %}yapılan ödemeler{% else %}ödenecekler{% endif %} · Cari Program{% endblock %}
 {% block icerik %}
 <h1 class="yazdirma-gizle">Ödeme listesi</h1>
 <nav class="sekmeler yazdirma-gizle" aria-label="Liste türü">

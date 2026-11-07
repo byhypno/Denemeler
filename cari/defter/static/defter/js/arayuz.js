@@ -34,6 +34,8 @@
     kabuk.classList.toggle('yan-acik', acik);
     ac.setAttribute('aria-expanded', acik ? 'true' : 'false');
     ac.setAttribute('aria-label', acik ? 'Menüyü kapat' : 'Menüyü aç');
+    var ana = document.getElementById('icerik');
+    if (ana) ana.inert = acik;                       // çekmece açıkken arka plan Tab ile erişilemez (odak çekmecede kalır)
     if (acik) { var ilk = yan.querySelector('a, button'); if (ilk) ilk.focus(); } else { ac.focus(); }
   }
   ac.addEventListener('click', function () { ayarla(!kabuk.classList.contains('yan-acik')); });
