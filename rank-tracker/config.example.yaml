@@ -1,0 +1,24 @@
+# Kopyalayin: cp config.example.yaml config.yaml
+database: data/ranks.db
+
+# Veri kaynagi: "gsc" (Search Console) veya "mock" (deneme amacli sahte veri)
+provider: gsc
+
+# Search Console servis hesabi JSON dosyasi yolu (ya da GSC_CREDENTIALS_FILE ortam degiskeni)
+# Servis hesabi e-postasini her sitenin Search Console'unda kullanici olarak ekleyin.
+credentials_file: ~
+
+# Search Console verisi 2-3 gun gecikmeli gelir; kac gun geriye bakilsin
+gsc_lag_days: 3
+
+sites:
+  - name: Site 1
+    # Search Console'daki mulk adi: "sc-domain:ornek.com" veya "https://www.ornek.com/"
+    property: "sc-domain:ornek1.com"
+    keywords:
+      - anahtar kelime bir
+      - anahtar kelime iki
+  - name: Site 2
+    property: "sc-domain:ornek2.com"
+    keywords:
+      - baska kelime

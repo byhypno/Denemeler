@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rank-tracker"
+version = "0.1.0"
+description = "Track daily Google rankings for your own websites (Search Console API)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+gsc = ["google-api-python-client>=2.0", "google-auth>=2.0"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+rank = "ranktracker.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

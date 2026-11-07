@@ -1,0 +1,9 @@
+config.yaml
+*.json
+!package.json
+data/
+site/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
