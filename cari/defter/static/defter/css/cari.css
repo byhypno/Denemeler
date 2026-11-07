@@ -464,3 +464,7 @@ th.satir-bas { background: transparent; border: 0; border-bottom: 1px solid var(
 
 /* ---------- 6. HAREKET ---------- */
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* Kasa raporu: hazır dönem düğmeleri */
+.chip-grup { display: flex; gap: var(--b-2); flex-wrap: wrap; }
+.chip-grup .dugme.secili { background: var(--vurgu-zemin); color: var(--vurgu-metin); border-color: var(--vurgu); font-weight: 600; }

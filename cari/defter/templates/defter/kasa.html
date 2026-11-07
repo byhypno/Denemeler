@@ -9,6 +9,7 @@
 {% url 'kasa' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
 <p class="yazdirma-gizle">
   <a class="dugme ikincil" href="{% url 'kasa_gun_sonu' %}?hesap={{ hesap.pk }}">Gün sonu{% if "kasa_yaz" in yetkiler %} kapanışı{% else %} kayıtları{% endif %}</a>
+  <a class="dugme ikincil" href="{% url 'kasa_rapor' %}?hesap={{ hesap.pk }}">{% ikon "rapor" "kucuk" %}Rapor (Excel / PDF)</a>
   {% if request.user.is_staff %}<a class="dugme ikincil" href="{% url 'admin:defter_kasakategori_changelist' %}">Kategoriler</a>{% endif %}
 </p>
 <p class="not">Ofis içi küçük harcamalar için kasa. Şirketin asıl kasası burada tutulmaz; bu kasa cari defterinden tamamen bağımsızdır.</p>

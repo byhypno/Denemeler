@@ -66,12 +66,17 @@ def dosyalar():
     return sorted(secilen)
 
 
+PYTHON_SURUMLERI = ("3.12", "3.13", "3.14")     # kur.bat 3.12 ve üzerini kabul eder; ikili (Pillow) paketler sürüme özeldir
+
+
 def wheels_indir(hedef: Path):
-    """Windows için paketleri indirir (hepsi saf Python tekerleği; python sürümünden bağımsız). tzdata Windows'ta Django için şart:
-    pip işaretçileri bu (Linux) makineye göre değerlendirdiğinden açıkça istenir."""
-    komut = [sys.executable, "-m", "pip", "download", "-r", str(KOK / "requirements.txt"), "tzdata", "-d", str(hedef),
-             "--only-binary=:all:", "--platform", "win_amd64", "--python-version", "3.12", "--implementation", "cp", "-q"]
-    subprocess.run(komut, check=True)
+    """Windows için paketleri indirir. Saf Python tekerlekleri her sürümde aynıdır; ikili olanlar (Pillow, charset-normalizer
+    — PDF raporu için reportlab ister) 3.12/3.13/3.14 için ayrı indirilir, böylece kullanıcıda hangisi kuruluysa çalışır.
+    tzdata Windows'ta Django için şart: pip işaretçileri bu (Linux) makineye göre değerlendirdiğinden açıkça istenir."""
+    for surum in PYTHON_SURUMLERI:
+        komut = [sys.executable, "-m", "pip", "download", "-r", str(KOK / "requirements.txt"), "tzdata", "-d", str(hedef),
+                 "--only-binary=:all:", "--platform", "win_amd64", "--python-version", surum, "--implementation", "cp", "-q"]
+        subprocess.run(komut, check=True)
 
 
 def paket_olustur(cikti_dizin, wheels=True, baslangic_verisi=None) -> Path:

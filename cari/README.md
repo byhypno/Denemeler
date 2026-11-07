@@ -67,6 +67,9 @@ Simge ile yazı arasındaki satır farklıysa `--sembol-alt-sinir <piksel>` veri
 - **Ödeme takvimi** (menü): açık borçlar **vade tarihine** göre (belge tarihi + carinin vade günü) gruplanır: vadesi geçmiş, bu hafta, 8–30 gün, 30+ gün,
   vadesi tanımsız. Vade günü girilmemiş tedarikçiler gecikmiş sayılmaz, uyarı çıkar. Genel Bakış sayfasında vadesi geçen / bu hafta ödenecek uyarısı görünür.
   Ödemeler en eski borca mahsup edilir (FIFO varsayımı).
+- **Veri girişi** (menü): tedarikçi seçip alış/ödeme/iade girme, kasa hareketi, aylık gider ve malzemeler tek sayfada. Yönetim paneli yalnızca seyrek/gelişmiş işler içindir.
+- **Kasa raporu** (Kasa → "Rapor"): dönem seçilir (bu ay, önceki ay, son para girişinden bugüne, bu yıl, özel aralık). Ekranda, **Excel** (Kasa defteri: solda girişler, sağda çıkışlar + TOPLAM/KALAN; Özet; Günlük sayfaları) ve **PDF** olarak alınır.
+  Kasa hareketindeki **Harcayan** alanı kişi bazında toplam verir; fişi girilmemiş çıkışlar uyarılır. PDF için `reportlab` gerekir (Windows paketinde hazır gelir; Türkçe/₺ yazı tipi `defter/static/defter/fonts/pdf/` içindedir).
 - **Aylık rapor** (menü): seçilen ayın tedarikçi hareketleri (ay başı bakiye + alışlar + devir/düzeltme − iadeler − ödemeler = ay sonu bakiye), net genel gider,
   Ofis Kasa harcamaları; önceki aya göre değişim. **Excel** (Özet, Tedarikçiler, Genel gider, Kasa sayfaları) ve **Yazdır / PDF** (tarayıcının "PDF olarak kaydet"i). Varsayılan ay: önceki tam ay.
 

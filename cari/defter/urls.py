@@ -32,5 +32,6 @@ urlpatterns = [
     path("ek/<int:pk>/kaldir/", ek_views.ek_kaldir, name="ek_kaldir"),
     path("kasa/", kasa_views.kasa_ana, name="kasa"),
     path("kasa/hareket/<int:pk>/iptal/", kasa_views.kasa_hareket_iptal, name="kasa_hareket_iptal"),
+    path("kasa/rapor/", kasa_views.kasa_rapor, name="kasa_rapor"),
     path("kasa/gun-sonu/", kasa_views.kasa_gun_sonu, name="kasa_gun_sonu"),
 ]
