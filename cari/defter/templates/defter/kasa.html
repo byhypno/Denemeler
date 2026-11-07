@@ -83,9 +83,19 @@
       <option value="CIKIS" {% if filtre.yon == "CIKIS" %}selected{% endif %}>Çıkış</option></select></label>
     <label>Kategori <select name="kategori"><option value="">Tümü</option>
       {% for k in kategoriler %}<option value="{{ k.pk }}" {% if filtre.kategori == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.ad }}</option>{% endfor %}</select></label>
+    <label>Harcayan <select name="harcayan"><option value="">Tümü</option>
+      <option value="-" {% if filtre.harcayan == "-" %}selected{% endif %}>(belirtilmemiş)</option>
+      {% for a in harcayanlar %}<option value="{{ a }}" {% if filtre.harcayan == a %}selected{% endif %}>{{ a }}</option>{% endfor %}</select></label>
+    <label class="ara-kutu">Ara <input type="search" name="q" value="{{ filtre.q }}" placeholder="açıklama, makbuz, harcayan…" autocomplete="off"></label>
     <label><span>İptaller</span><span><input type="checkbox" name="iptal" value="1" {% if filtre.iptal == "1" %}checked{% endif %}> göster</span></label>
     <button type="submit">Filtrele</button>
+    <a class="dugme ikincil" href="{% url 'kasa' %}?hesap={{ hesap.pk }}&amp;yil={{ yil }}">Temizle</a>
   </form>
+  <p class="not">Listedeki (iptaller hariç) {{ liste_toplami.adet }} kayıt: giriş <b>{{ liste_toplami.giris|kurus_tl }}</b> ·
+    çıkış <b>{{ liste_toplami.cikis|kurus_tl }}</b> · net <b>{{ liste_toplami.net|kurus_tl }}</b>
+    <span class="yazdirma-gizle"> ·
+    <a href="?{{ sorgu }}&amp;indir=xlsx">{% ikon "rapor" "kucuk" %}Bu listeyi Excel'e aktar</a>
+    {% if "kasa_yaz" in yetkiler %} · <a href="{% url 'kasa_harcayan_duzelt' %}?hesap={{ hesap.pk }}">Harcayan adlarını düzelt</a>{% endif %}</span></p>
   <div class="tablo-kaydir"><table>
     <thead><tr><th>Tarih</th><th>Yön</th><th>Kategori</th><th>Harcayan</th><th>Açıklama</th><th>Makbuz</th>
       <th class="sayi">Tutar</th><th class="sayi">Bakiye</th><th class="yazdirma-gizle">İşlem</th></tr></thead>

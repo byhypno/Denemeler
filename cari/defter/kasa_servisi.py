@@ -146,3 +146,115 @@ def gun_sonu_kapat(hesap, tarih, sayilan_kurus: int, aciklama="", farki_isle=Fal
     return GunSonu.objects.create(
         hesap=hesap, tarih=tarih, beklenen_kurus=beklenen, sayilan_kurus=sayilan_kurus,
         fark_kurus=fark, fark_islendi=islendi, aciklama=aciklama[:250], kilitli=True)
+
+
+# ------------------------------------------------------------------ liste süzgeci, toplam, dışa aktarma, harcayan düzeltme
+def hareket_sorgusu(hesap, istek):
+    """Kasa hareket listesinin süzgeci (ekran ve Excel aynı kuralı kullanır).
+
+    istek: bas, bit (YYYY-MM-DD), yon, kategori, harcayan ('-' = harcayanı boş), q (açıklama/makbuz/harcayan/kategori;
+    büyük-küçük harf ve aksan farkı yok sayılır), iptal ('1' = iptaller de).
+    Dönüş: (sorgu, temizlenmiş süzgeç sözlüğü).
+    """
+    qs = hesap.hareketler.select_related("kategori").order_by("-tarih", "-id")
+    f = {k: (istek.get(k, "") or "").strip() for k in ("bas", "bit", "yon", "kategori", "iptal", "harcayan", "q")}
+    for alan, op in (("bas", "tarih__gte"), ("bit", "tarih__lte")):
+        try:
+            if f[alan]:
+                qs = qs.filter(**{op: date.fromisoformat(f[alan])})
+        except ValueError:
+            f[alan] = ""
+    if f["yon"] in ("GIRIS", "CIKIS"):
+        qs = qs.filter(yon=f["yon"])
+    else:
+        f["yon"] = ""
+    if metin.guvenli_int(f["kategori"]) is not None:
+        qs = qs.filter(kategori_id=metin.guvenli_int(f["kategori"]))
+    if f["harcayan"] == "-":
+        qs = qs.filter(harcayan="")
+    elif f["harcayan"]:
+        # büyük/küçük harf ve aksan farkı yok sayılır (SQLite LIKE Türkçe harfleri ayırt eder)
+        hedef = metin.katla(f["harcayan"])
+        ids = [pk for pk, ad in hesap.hareketler.exclude(harcayan="").values_list("pk", "harcayan")
+               if metin.katla(ad) == hedef]
+        qs = qs.filter(pk__in=ids)
+    if f["iptal"] != "1":
+        qs = qs.filter(iptal=False)
+    if f["q"]:
+        ids = [h.pk for h in qs if metin.eslesir(f["q"], h.aciklama, h.makbuz_no, h.harcayan, h.kategori)]
+        qs = qs.filter(pk__in=ids)
+    return qs, f
+
+
+def sorgu_toplami(qs) -> dict:
+    """Süzülmüş listenin giriş/çıkış/net toplamı (iptal kayıtlar sayılmaz)."""
+    gecerli = qs.filter(iptal=False)
+    giris = _toplam(gecerli.filter(yon=KasaHareketi.Yon.GIRIS))
+    cikis = _toplam(gecerli.filter(yon=KasaHareketi.Yon.CIKIS))
+    return {"giris": giris, "cikis": cikis, "net": giris - cikis, "adet": gecerli.count()}
+
+
+def hareketler_xlsx(hesap, qs) -> bytes:
+    """Süzülmüş hareket listesi Excel olarak (tutarlar kuruşlu sayı; '=' ile başlayan metin formül olmaz)."""
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    from .kasa_rapor import PARA_BICIMI, _lira, _yaz
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Hareketler"
+    basliklar = ["Tarih", "Yön", "Kategori", "Harcayan", "Açıklama", "Makbuz no", "Tutar (₺)", "Durum"]
+    for j, b in enumerate(basliklar, 1):
+        _yaz(ws, 1, j, b, kalin=True)
+    satir = 1
+    for h in qs.order_by("tarih", "id"):
+        satir += 1
+        _yaz(ws, satir, 1, h.tarih).number_format = "DD.MM.YYYY"
+        _yaz(ws, satir, 2, h.get_yon_display())
+        _yaz(ws, satir, 3, str(h.kategori) if h.kategori else "")
+        _yaz(ws, satir, 4, h.harcayan)
+        _yaz(ws, satir, 5, h.aciklama)
+        _yaz(ws, satir, 6, h.makbuz_no)
+        _yaz(ws, satir, 7, _lira(h.tutar_kurus), para=True)
+        _yaz(ws, satir, 8, f"İptal: {h.iptal_nedeni}" if h.iptal else "")
+    for harf, g in zip("ABCDEFGH", (12, 8, 18, 18, 40, 14, 14, 30)):
+        ws.column_dimensions[harf].width = g
+    cikti = BytesIO()
+    wb.save(cikti)
+    return cikti.getvalue()
+
+
+def harcayan_duzelt(hesap, eski: str, yeni: str) -> dict:
+    """
+    Bu kasadaki hareketlerde harcayan adını toplu düzeltir (yazım farkı: 'ali' / 'Ali ' -> 'Ali'; ya da boş harcayanı doldurma: eski='-').
+    Eşleşme büyük/küçük harf ve aksan farkına bakmaz. Kapanış kilidi altındaki günlerin kayıtlarına DOKUNULMAZ (atlanır ve sayılır).
+    Her kayıt tek tek kaydedilir; değişiklik işlem günlüğüne düşer. Tutar/tarih/yön değişmez, bakiye etkilenmez.
+    Dönüş: {"degisen": n, "kilitli": n}
+    """
+    eski, yeni = (eski or "").strip(), " ".join((yeni or "").split())
+    if not eski:
+        raise ValidationError("Düzeltilecek harcayanı seçin.")
+    if not yeni:
+        raise ValidationError("Yeni harcayan adını yazın.")
+    if len(yeni) > 80:
+        raise ValidationError("Harcayan adı en çok 80 karakter olabilir.")
+    sinir = hesap.kilit_siniri()
+    if eski == "-":
+        adaylar = list(hesap.hareketler.filter(harcayan="", iptal=False))
+    else:
+        hedef = metin.katla(eski)
+        adaylar = [h for h in hesap.hareketler.exclude(harcayan="") if metin.katla(h.harcayan) == hedef]
+    degisen = kilitli = 0
+    with transaction.atomic():
+        for h in adaylar:
+            if h.harcayan == yeni:
+                continue
+            if sinir and h.tarih <= sinir:
+                kilitli += 1
+                continue
+            h.harcayan = yeni
+            h.save()
+            degisen += 1
+    return {"degisen": degisen, "kilitli": kilitli}

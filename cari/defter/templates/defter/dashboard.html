@@ -48,6 +48,10 @@
   <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">Kontrol bekleyen</span></div>
     <div class="deger">{{ kontrol.adet }}</div>
     <div class="alt">{% if kontrol.adet %}<span class="chip uyari">Aşağıdaki listeye bakın</span>{% else %}<span class="chip tamam">Sorun yok</span>{% endif %}</div></div>
+  {% if kasa_bakiye is not None %}<a class="kart ton-vurgu kpi-bag" href="{% url 'kasa' %}"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kasa" %}</span><span class="etiket">Ofis Kasa bakiyesi</span></div>
+    <div class="deger">{{ kasa_bakiye|kurus_tl }}</div><div class="alt">Cari defterinden bağımsız</div></a>{% endif %}
+  <a class="kart ton-bilgi kpi-bag" href="{% url 'giderler' %}?yil={{ bugun.year }}&amp;ay={{ bugun.month }}"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "rapor" %}</span><span class="etiket">{{ bugun|date:"F Y" }} net genel gider</span></div>
+    <div class="deger">{% if gider_ay %}{{ gider_ay|kurus_tl }}{% else %}Girilmedi{% endif %}</div><div class="alt">KDV hariç, aylık genel giderler</div></a>
 </section>
 
 <section class="kart">
