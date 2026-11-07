@@ -42,6 +42,7 @@ $env:CARI_EXCEL_YOL="C:\yol\Egeser_Tedarikci_Cari_Takip.xlsx"; python manage.py 
 Giriş yaptıktan sonra ana sayfa **Genel Bakış**'tır (`http://127.0.0.1:8000`):
 - **Göstergeler:** güncel borç, yıllık alış/ödeme/iade, açık mutabakat farkı, kontrol bekleyen kayıt sayısı.
 - **Grafikler:** aylık alış/iade/ödeme ve ay sonu bakiye, açık borç yaşlandırması, en borçlu cariler, en çok alınan kalemler. Yıl ve cari filtresi vardır.
+- **Ofis içi göstergeler:** Genel Bakış'ta **Ofis Kasa bakiyesi** (kasa görüntüleme yetkisi olanlara) ve **bu ayın net genel gideri** (girilmediyse "Girilmedi") kartları; tıklayınca ilgili sayfa açılır. Cari filtresinden etkilenmezler ve cari rakamlarına karışmaz.
 - **Kontrol gerektirenler:** ekstre farkı, ay sonu bakiyesi eksiye düşen aylar, aynı tedarikçi evrak numarasının tekrarı, KDV'si girilmemiş alışlar.
 - **Ekstre Mutabakatı:** tedarikçi ekstresiyle kayıtlarımızı karşılaştırır; bakiye farkının ne kadarının satırlarla açıklandığını, ne kadarının **açıklanamadığını** gösterir. Yeni mutabakat Yönetim panelinden girilir.
 - **Cari ekstresi:** tarih aralığı, dönem başı bakiye, yürüyen bakiye, yazdırma.
@@ -115,6 +116,10 @@ Yeni kasa eklemek için Yönetim > Hesaplar.
   "Kasa farkı" kategorili bir hareket olarak işlenir. **Kapatılan gün ve öncesi kilitlenir**: o günlere kayıt eklenemez,
   o günlerin kayıtları değiştirilemez/iptal edilemez. Yanlış için güncel tarihli *ters kayıt* girilir.
   (Kilidi kaldırmak yalnızca Yönetim > Gün sonu kapanışları > "Kilitli" kutusundandır; bilinçli ve nadir bir işlemdir.)
+- **Hareket listesinde arama ve süzgeç:** tarih, yön, kategori, **Harcayan** ve metin araması (açıklama / makbuz / harcayan / kategori; büyük-küçük harf ve aksan farkı yok sayılır).
+  Listenin altında süzülmüş kayıtların giriş/çıkış/net toplamı (iptaller hariç) görünür; **Bu listeyi Excel'e aktar** aynı süzgeçle dosya verir.
+- **Harcayan adlarını düzelt** (Yönetici/Muhasebe/Kasiyer): "ali / Ali / ALİ" gibi yazım farklarını tek adda toplar ya da harcayanı boş kayıtları doldurur.
+  Yalnızca ad değişir (tutar/bakiye etkilenmez), her kayıt işlem günlüğüne düşer; **kapanışı yapılmış günlerin kayıtlarına dokunulmaz** (atlanır, sayısı bildirilir).
 - **Kasa dashboard'u:** güncel bakiye, bugün/bu ay giriş-çıkış, aylık giriş/çıkış ve ay sonu bakiye grafiği,
   kategoriye göre çıkışlar, en büyük çıkışlar, kapanış bekleyen günler.
 

@@ -1,0 +1,26 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Harcayan düzelt · Cari{% endblock %}
+{% block icerik %}
+<h1>Harcayan adlarını düzelt</h1>
+<p class="not">{{ hesap.ad }}</p>
+{% url 'kasa' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
+<p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
+<p class="not">Aynı kişinin farklı yazılmış adlarını (ali / Ali / ALİ) ya da harcayanı boş bırakılmış kayıtları tek adda toplayın.
+Tutar, tarih ve bakiye değişmez; yalnızca ad düzelir ve işlem günlüğüne yazılır. <b>Kapanışı yapılmış günlerin kayıtlarına dokunulmaz.</b></p>
+<section class="kart">
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Harcayan</th><th class="sayi">Kayıt</th><th>Yazılışlar</th><th>Yeni ad</th></tr></thead>
+    <tbody>
+    {% for s in satirlar %}
+      <tr><td>{% if s.ad == "-" %}<i>(belirtilmemiş)</i>{% else %}{{ s.ad }}{% endif %}</td>
+        <td class="sayi">{{ s.adet }}</td>
+        <td>{% if s.varyant %}<span class="chip uyari">{% for a in s.adlar %}{{ a }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}—{% endif %}</td>
+        <td><form class="satir-form" method="post">{% csrf_token %}
+          <input type="hidden" name="hesap" value="{{ hesap.pk }}"><input type="hidden" name="eski" value="{{ s.ad }}">
+          <input name="yeni" value="{% if s.ad != '-' %}{{ s.ad }}{% endif %}" maxlength="80" required aria-label="Yeni harcayan adı">
+          <button class="kucuk ikincil dugme" type="submit">Düzelt</button></form></td></tr>
+    {% empty %}<tr><td colspan="4" class="not">Kayıt yok.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

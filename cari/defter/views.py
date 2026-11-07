@@ -12,7 +12,7 @@ from django.urls import reverse
 
 from . import ek_servisi as es
 from . import odeme_listesi as ol
-from . import malzeme_servisi, metin, services, trend
+from . import gider_servisi, kasa_servisi as ks, malzeme_servisi, metin, services, trend
 from .fields import kurus_bicimle
 from .forms import GIRILEBILIR_TURLER, BelgeForm, CariForm
 from .models import Belge, Cari, EkstreMutabakat
@@ -70,6 +70,12 @@ def dashboard(request):
         "borclu_etiket": [c.unvan for c, _ in borclular], "borclu_deger": [b for _, b in borclular],
         "kalem_etiket": [a for a, _ in kalemler], "kalem_deger": [t for _, t in kalemler],
     }
+    # Ofis içi göstergeler (cari filtresinden bağımsız): kasa bakiyesi ve bu ayın net genel gideri
+    kasa_bakiye = None
+    if var_mi(request.user, "kasa_goruntule"):
+        kasa = ks.varsayilan_hesap()
+        kasa_bakiye = kasa.bakiye_kurus() if kasa else None
+    gider_ay = gider_servisi.ay_toplami(bugun.year, bugun.month)
     takvim = {g["anahtar"]: g for g in services.odeme_takvimi(bugun, cari)["gruplar"]}
     degisimler = {ad: trend.degisim(aylik[ad], yil, bugun) for ad in ("alis", "odeme", "iade", "ay_sonu")}
     return render(request, "defter/dashboard.html", {
@@ -79,6 +85,7 @@ def dashboard(request):
         "acik_fark": acik_fark, "kontrol": kontrol, "yas": yas, "borclular": borclular,
         "grafik": grafik, "veri_var": Belge.objects.filter(iptal=False).exists(),
         "bugun": bugun, "sayfa": "dashboard",
+        "kasa_bakiye": kasa_bakiye, "gider_ay": gider_ay,
     })
 
 

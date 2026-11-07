@@ -63,31 +63,25 @@ def kasa_ana(request):
     if yil not in yillar:
         yil = yillar[-1]
 
-    # --- Hareket listesi + filtreler
-    qs = hesap.hareketler.select_related("kategori").order_by("-tarih", "-id")
-    f = {k: request.GET.get(k, "") for k in ("bas", "bit", "yon", "kategori", "iptal")}
-    for alan, op in (("bas", "tarih__gte"), ("bit", "tarih__lte")):
-        try:
-            if f[alan]:
-                qs = qs.filter(**{op: date.fromisoformat(f[alan])})
-        except ValueError:
-            f[alan] = ""
-    if f["yon"] in ("GIRIS", "CIKIS"):
-        qs = qs.filter(yon=f["yon"])
-    if metin.guvenli_int(f["kategori"]) is not None:
-        qs = qs.filter(kategori_id=metin.guvenli_int(f["kategori"]))
-    if f["iptal"] != "1":
-        qs = qs.filter(iptal=False)
+    # --- Hareket listesi + filtreler (ekran ve Excel aynı süzgeci kullanır)
+    qs, f = ks.hareket_sorgusu(hesap, request.GET)
+    liste_toplami = ks.sorgu_toplami(qs)
+    if request.GET.get("indir") == "xlsx":
+        yanit = HttpResponse(ks.hareketler_xlsx(hesap, qs),
+                             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        yanit["Content-Disposition"] = f'attachment; filename="ofis_kasa_hareketler_{bugun:%Y%m%d}.xlsx"'
+        return yanit
     sayfa = Paginator(qs, 40).get_page(request.GET.get("sayfa"))
     sorgu = request.GET.copy()
     sorgu.pop("sayfa", None)
+    sorgu.pop("indir", None)
 
     aylik = ks.kasa_aylik(hesap, yil, bugun)
     dagilim = ks.kategori_dagilimi(hesap, yil)
     ozet = ks.kasa_ozeti(hesap, bugun)
     return render(request, "defter/kasa.html", {
         "hesap": hesap, "hesaplar": gorunur_kasalar(request.user), "harcayanlar": ks.harcayanlar(hesap),
-        "form": form, "ozet": ozet, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]),
+        "form": form, "ozet": ozet, "liste_toplami": liste_toplami, "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "yil_cikis": sum(aylik["cikis"]),
         "yil": yil, "yillar": yillar, "filtre": f, "sayfa_nesnesi": sayfa, "sorgu": sorgu.urlencode(),
         "bakiyeler": ks.hareketler_bakiyeli(hesap), "kategoriler": KasaKategori.objects.filter(aktif=True),
         "en_buyuk": ks.en_buyuk_cikislar(hesap, yil),
@@ -178,3 +172,36 @@ def kasa_rapor(request):
         "donemler": [("bu_ay", "Bu ay"), ("onceki_ay", "Önceki ay"), ("son_giris", "Son para girişinden bugüne"), ("yil", "Bu yıl")],
         "sorgu": f"hesap={hesap.pk}&bas={bas.isoformat()}&bit={bit.isoformat()}",
     })
+
+
+@yetki_gerekli("kasa_yaz")
+def kasa_harcayan_duzelt(request):
+    """Harcayan adını toplu düzeltir (yazım farkları, boş harcayanı doldurma). Kapalı günlerdeki kayıtlara dokunmaz."""
+    hesap = _hesap_veya_yok(request, request.POST.get("hesap") or request.GET.get("hesap"))
+    if hesap is None:
+        return redirect("kasa")
+    ozet = []
+    sayac = {}
+    for h in hesap.hareketler.filter(iptal=False):
+        ad = h.harcayan or "-"
+        k = metin.katla(ad) if ad != "-" else "-"
+        sayac.setdefault(k, {"ad": ad, "adet": 0, "adlar": set()})
+        sayac[k]["adet"] += 1
+        sayac[k]["adlar"].add(ad)
+    for k, v in sayac.items():
+        v["varyant"] = len(v["adlar"]) > 1
+        ozet.append(v)
+    ozet.sort(key=lambda v: (v["ad"] != "-", metin.katla(v["ad"])))
+    if request.method == "POST":
+        try:
+            sonuc = ks.harcayan_duzelt(hesap, request.POST.get("eski", ""), request.POST.get("yeni", ""))
+        except ValidationError as e:
+            messages.error(request, _hata_metni(e))
+        else:
+            mesaj = f"{sonuc['degisen']} kayıtta harcayan düzeltildi."
+            if sonuc["kilitli"]:
+                mesaj += f" {sonuc['kilitli']} kayıt kapalı güne ait olduğu için değiştirilmedi."
+            messages.success(request, mesaj)
+        return redirect(f"{reverse('kasa_harcayan_duzelt')}?hesap={hesap.pk}")
+    return render(request, "defter/kasa_harcayan.html", {"hesap": hesap, "satirlar": ozet, "sayfa": "kasa",
+                                                          "hesaplar": gorunur_kasalar(request.user)})
