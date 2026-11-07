@@ -142,9 +142,18 @@ code { overflow-wrap: anywhere; font-family: ui-monospace, "Cascadia Mono", Cons
 .yan-marka { display: flex; align-items: center; gap: var(--b-3); padding: 0 var(--b-3) var(--b-5); color: var(--metin);
   font: 700 1.2rem/1 var(--font); letter-spacing: -.02em; text-decoration: none; }
 .yan-marka span { font-weight: 500; color: var(--metin-2); }
-.marka-isaret { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; color: #fff;
-  background: linear-gradient(135deg, var(--marka-1), var(--marka-2)); box-shadow: var(--golge-2); }
-.marka-isaret .ikon { width: 20px; height: 20px; stroke-width: 2; }
+.marka-logo { height: 34px; width: auto; flex: none; display: block; }
+.giris-logo { text-align: center; margin: 0 0 var(--b-2); }
+.giris-logo img { max-width: 100%; height: auto; }
+.giris-marka { text-align: center; margin: 0 0 var(--b-4); font: 700 1.1rem/1 var(--font); letter-spacing: -.01em; color: var(--metin-2); }
+.logo-koyu { display: none; }
+:root[data-tema="koyu"] .logo-acik { display: none; }
+:root[data-tema="koyu"] .logo-koyu { display: inline-block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="acik"]) .logo-acik { display: none; }
+  :root:not([data-tema="acik"]) .logo-koyu { display: inline-block; }
+}
+.yazdirma-logo { max-width: 150px; height: auto; margin: 0 0 var(--b-3); }
 .yan-menu { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .yan-menu a { display: flex; align-items: center; gap: var(--b-3); padding: 10px var(--b-3); border-radius: var(--r-kontrol);
   color: var(--yan-metin-2); text-decoration: none; font-weight: 500; font-size: var(--t-md); }
@@ -441,6 +450,7 @@ th.satir-bas { background: transparent; border: 0; border-bottom: 1px solid var(
   .gider-form input { border: 0; padding: 0; background: transparent; box-shadow: none; }
   a { color: inherit; text-decoration: none; }
   .sadece-yazdir { display: block; }
+  img.sadece-yazdir { display: block; }
   .yazdirma-baslik { font: 700 1.75rem/1.2 var(--font); margin: 0 0 var(--b-2); }
   .imza { display: flex; }
   th.yazdirma-sutun, td.yazdirma-sutun { display: table-cell; min-width: 120px; height: 34px; border: 1px solid #888; }

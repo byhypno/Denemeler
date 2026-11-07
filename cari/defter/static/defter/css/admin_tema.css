@@ -163,3 +163,4 @@ html[data-theme="dark"] :focus-visible { outline-color: #A5B4FC; }
 .object-tools a { border-radius: 999px; }
 
 input::placeholder, textarea::placeholder { color: var(--body-quiet-color); opacity: 1; }
+.admin-logo { height: 23px; width: auto; vertical-align: -5px; margin-right: 10px; }

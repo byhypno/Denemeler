@@ -242,7 +242,8 @@ class SayfaYapisiTests(TestCase):
         h = self.client.get(reverse("giris")).content.decode()
         self.assertNotIn('class="yan"', h)
         self.assertIn("giris-sayfasi", h)
-        self.assertIn("Cari <span>Program</span>", h)
+        self.assertIn("Cari Program", h)
+        self.assertIn('alt="Egeser Konteyner Prefabrik ve Çelik Yapılar"', h)         # logo, erişilebilir ad
         self.assertEqual(h.count("<h1"), 1)
         self.assertIn('autocomplete="username"', h)
         self.assertIn('autocomplete="current-password"', h)
@@ -327,3 +328,104 @@ class UiDenetimDuzeltmeTests(TestCase):
         self.client.force_login(rol_kullanici("m", "Muhasebe"))
         h = self.client.get(reverse("cari_ekstre", args=[c.pk])).content.decode()
         self.assertRegex(h, r'<a href="/tedarikciler/" aria-current="page">')
+
+
+class LogoTests(TestCase):
+    """Marka logosu: dosyalar, yerleşim, koyu tema varyantı, yazdırma, yönetim paneli."""
+    IMG = STATIK / "img"
+
+    def test_dosyalar_var_ve_makul_boyutta(self):
+        for ad in ("logo.png", "logo-koyu.png", "logo-sembol.png", "favicon.png"):
+            yol = self.IMG / ad
+            self.assertTrue(yol.is_file(), ad)
+            self.assertLess(yol.stat().st_size, 150_000, ad)            # çevrimdışı/yerel: küçük tutulur
+            self.assertEqual(yol.read_bytes()[:8], b"\x89PNG\r\n\x1a\n", ad)
+
+    def test_menu_ve_ust_serit_simge_kullanir(self):
+        k = rol_kullanici("m", "Muhasebe")
+        self.client.force_login(k)
+        h = self.client.get(reverse("dashboard")).content.decode()
+        self.assertEqual(h.count('class="marka-logo"'), 2)             # kenar çubuğu + mobil üst şerit
+        self.assertIn("img/logo-sembol.png", h)
+        self.assertIn('rel="icon"', h)
+        self.assertIn("Cari <span>Program</span>", h)                 # bağlantının erişilebilir adı korunur
+
+    def test_giris_sayfasinda_acik_ve_koyu_logo(self):
+        h = self.client.get(reverse("giris")).content.decode()
+        self.assertIn("img/logo.png", h)
+        self.assertIn("img/logo-koyu.png", h)
+        self.assertEqual(h.count('alt="Egeser Konteyner'), 1)         # koyu varyant dekoratif: ikinci kez okunmaz
+        self.assertIn('rel="icon"', h)
+
+    def test_koyu_tema_kurallari_css_te(self):
+        self.assertIn(".logo-koyu { display: none; }", CSS)
+        self.assertRegex(CSS, r':root\[data-tema="koyu"\] \.logo-acik \{ display: none; \}')
+        self.assertRegex(CSS, r'prefers-color-scheme: dark\) \{\s*:root:not\(\[data-tema="acik"\]\) \.logo-acik')
+
+    def test_yazdirma_logosu_yalniz_girisli_sayfada(self):
+        self.assertNotIn("yazdirma-logo", self.client.get(reverse("giris")).content.decode())
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        h = self.client.get(reverse("dashboard")).content.decode()
+        self.assertIn('class="sadece-yazdir yazdirma-logo"', h)
+        self.assertIn("img.sadece-yazdir", CSS)
+
+    def test_yonetim_paneli_logosu_ve_favicon(self):
+        self.client.force_login(rol_kullanici("y", is_superuser=True, is_staff=True))
+        h = self.client.get(reverse("admin:index")).content.decode()
+        self.assertIn("admin-logo", h)
+        self.assertIn('rel="icon"', h)
+
+    def test_logolar_statik_olarak_sunulur(self):
+        for ad in ("logo.png", "logo-koyu.png", "logo-sembol.png", "favicon.png"):
+            r = self.client.get(f"/static/defter/img/{ad}")
+            self.assertEqual(r.status_code, 200, ad)
+
+
+class LogoUretTests(TestCase):
+    """araclar/logo_uret.py: logo değiştirildiğinde varyantlar doğru üretilmeli (Pillow yoksa atlanır)."""
+
+    def setUp(self):
+        try:
+            from PIL import Image  # noqa: F401
+        except ImportError:
+            self.skipTest("Pillow yok")
+
+    def kaynak(self, dizin, seffaf=True):
+        from PIL import Image, ImageDraw
+        im = Image.new("RGBA", (400, 400), (0, 0, 0, 0) if seffaf else (255, 255, 255, 255))
+        d = ImageDraw.Draw(im)
+        d.rectangle((100, 40, 300, 200), fill=(237, 28, 36, 255))          # kırmızı simge
+        d.rectangle((40, 300, 360, 360), fill=(0, 0, 0, 255))              # siyah yazı
+        yol = Path(dizin) / "kaynak.png"
+        im.save(yol)
+        return yol
+
+    def test_varyantlar_uretilir_siyah_yazi_koyuda_acilir_kirmizi_kalir(self):
+        import importlib.util, tempfile
+        from PIL import Image
+        spec = importlib.util.spec_from_file_location("logo_uret", BASE.parent / "araclar" / "logo_uret.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as t:
+            boyut = mod.uret(self.kaynak(t), sembol_alt=250, hedef=Path(t) / "cikti")
+            self.assertEqual(set(boyut), {"logo.png", "logo-koyu.png", "logo-sembol.png", "favicon.png"})
+            acik = Image.open(Path(t) / "cikti" / "logo.png").convert("RGBA")
+            koyu = Image.open(Path(t) / "cikti" / "logo-koyu.png").convert("RGBA")
+            sembol = Image.open(Path(t) / "cikti" / "logo-sembol.png").convert("RGBA")
+            self.assertEqual(acik.size, koyu.size)
+            yazi = (acik.width // 2, acik.height - 20)                       # siyah şerit (alt kısım)
+            self.assertEqual(acik.getpixel(yazi)[:3], (0, 0, 0))
+            self.assertGreater(min(koyu.getpixel(yazi)[:3]), 200)            # koyu temada açık renk
+            kirmizi = (acik.width // 2, 70)
+            self.assertEqual(acik.getpixel(kirmizi), koyu.getpixel(kirmizi))  # renkli simge aynen kalır
+            self.assertLess(sembol.height, acik.height * 0.7)                # simge varyantı yazıyı içermez
+            self.assertEqual(Image.open(Path(t) / "cikti" / "favicon.png").size, (128, 128))
+
+    def test_seffaf_olmayan_kaynak_reddedilir(self):
+        import importlib.util, tempfile
+        spec = importlib.util.spec_from_file_location("logo_uret", BASE.parent / "araclar" / "logo_uret.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        with tempfile.TemporaryDirectory() as t:
+            with self.assertRaises(SystemExit):
+                mod.uret(self.kaynak(t, seffaf=False), hedef=Path(t) / "c")

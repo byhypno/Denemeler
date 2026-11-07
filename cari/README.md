@@ -51,6 +51,12 @@ Grafikler internet gerektirmez (Chart.js yerel kopya olarak gelir).
 **Yaşlandırma varsayımı:** ödeme ve iadeler *en eski borca* mahsup edilir (FIFO), çünkü ödemeler tek tek faturalara bağlanmıyor.
 Açık kalemlerin toplamı cari bakiyesine eşittir. "Vadesi geçmiş" yalnızca **vade günü tanımlı** carilerde hesaplanır.
 
+## Logo
+Egeser logosu programa yerleşiktir (`defter/static/defter/img/`, internet gerekmez): menü ve mobil üst şeritte **simge**, giriş sayfasında **tam logo**
+(koyu temada yazısı açık renge çevrilmiş sürüm), yönetim panelinde simge, tarayıcı sekmesinde simge (favicon), **yazdırılan sayfaların** (ekstre, rapor, takvim…) üstünde tam logo.
+Logoyu değiştirmek için (şeffaf arka planlı PNG): `pip install pillow` ve `python araclar/logo_uret.py yeni_logo.png`; tüm varyantlar yeniden üretilir.
+Simge ile yazı arasındaki satır farklıysa `--sembol-alt-sinir <piksel>` verin.
+
 ## Günlük kullanım: giriş, ödeme takvimi, aylık rapor
 - **Arayüzden hareket girişi:** Tedarikçi ekstresinde **Yeni alış / Yeni ödeme / Yeni iade** düğmeleri (Yönetici ve Muhasebe). Tedarikçi zaten seçili gelir;
   tür, tarih, evrak no, tutar ve isteğe bağlı KDV girilir. *Kaydet ve yenisini ekle* ile arka arkaya fiş girilir.

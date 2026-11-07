@@ -8,6 +8,7 @@
   <script>/* tema, sayfa çizilmeden önce uygulanır (yanıp sönme olmasın) */
     (function () { try { var t = localStorage.getItem('cari_tema'); if (t === 'koyu' || t === 'acik') document.documentElement.dataset.tema = t; } catch (e) {} })();
   </script>
+  <link rel="icon" type="image/png" href="{% static 'defter/img/favicon.png' %}">
   <link rel="stylesheet" href="{% static 'defter/css/fontlar.css' %}">
   <link rel="stylesheet" href="{% static 'defter/css/cari.css' %}">
 </head>
@@ -18,11 +19,11 @@
 <div class="kabuk" id="kabuk">
   <div class="ust-serit">
     <button type="button" id="yan-ac" aria-controls="yan" aria-expanded="false" aria-label="Menüyü aç">{% ikon "menu" %}</button>
-    <a class="yan-marka" href="{% url 'dashboard' %}"><span class="marka-isaret">{% ikon "defter" %}</span>Cari <span>Program</span></a>
+    <a class="yan-marka" href="{% url 'dashboard' %}"><img class="marka-logo" src="{% static 'defter/img/logo-sembol.png' %}" alt="Egeser" width="68" height="34">Cari <span>Program</span></a>
   </div>
   <div class="yan-perde" data-yan-kapat></div>
   <aside class="yan" id="yan" aria-label="Ana menü">
-    <a class="yan-marka" href="{% url 'dashboard' %}"><span class="marka-isaret">{% ikon "defter" %}</span>Cari <span>Program</span></a>
+    <a class="yan-marka" href="{% url 'dashboard' %}"><img class="marka-logo" src="{% static 'defter/img/logo-sembol.png' %}" alt="Egeser" width="68" height="34">Cari <span>Program</span></a>
     <nav aria-label="Sayfalar">
       <ul class="yan-menu">
         {% if "goruntule" in yetkiler %}
@@ -66,6 +67,7 @@
 {% else %}
   <main class="giris-sayfasi" id="icerik" tabindex="-1">
 {% endif %}
+    {% if request.user.is_authenticated %}<img class="sadece-yazdir yazdirma-logo" src="{% static 'defter/img/logo.png' %}" alt="Egeser Konteyner Prefabrik ve Çelik Yapılar">{% endif %}
     {% if yedek_durumu.uyari and sayfa != 'yedek' %}<div class="mesaj error" role="alert">{{ yedek_durumu.mesaj }} <a href="{% url 'yedek_sayfasi' %}">Yedek sayfasına git</a></div>{% endif %}
     {% for m in messages %}<div class="mesaj {{ m.tags }}" role="{% if m.level >= 40 %}alert{% else %}status{% endif %}">{{ m }}</div>{% endfor %}
     {% block icerik %}{% endblock %}
