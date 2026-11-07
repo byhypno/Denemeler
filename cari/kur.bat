@@ -2,23 +2,35 @@
 setlocal
 cd /d "%~dp0"
 echo ============================================================
-echo  CARI PROGRAM KURULUMU  (guvenle tekrar calistirilabilir)
+echo  EGESER-CARI KURULUMU  (guvenle tekrar calistirilabilir)
 echo ============================================================
 
 where python >nul 2>nul
-if errorlevel 1 (
-  echo Python bulunamadi. https://www.python.org adresinden Python 3.12 veya uzerini kurun.
-  echo Kurulumda "Add python.exe to PATH" kutusunu ISARETLEYIN, sonra bu dosyayi tekrar calistirin.
-  pause
-  exit /b 1
-)
-python -c "import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)"
-if errorlevel 1 (
-  echo Python 3.12 veya uzeri gerekli (Django 6).
-  python --version
-  pause
-  exit /b 1
-)
+if errorlevel 1 goto python_yok
+python -c "import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
+if errorlevel 1 goto python_yok
+goto python_tamam
+
+:python_yok
+echo Python 3.12 veya uzeri bulunamadi ya da calismiyor.
+echo ^(Windows "Microsoft Store" Python kisayolu varsa o calismaz; gercek Python gerekir.^)
+where winget >nul 2>nul
+if errorlevel 1 goto python_elle
+echo winget ile Python 3.12 kuruluyor ^(internet gerekir, birkac dakika surer^)...
+winget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements
+if errorlevel 1 goto python_elle
+echo.
+echo Python kuruldu. Bu pencereyi KAPATIN ve kur.bat dosyasini TEKRAR calistirin.
+pause
+exit /b 0
+
+:python_elle
+echo https://www.python.org adresinden Python 3.12 veya uzerini kurun.
+echo Kurulumda "Add python.exe to PATH" kutusunu ISARETLEYIN, sonra kur.bat dosyasini tekrar calistirin.
+pause
+exit /b 1
+
+:python_tamam
 
 if not exist ".venv\Scripts\python.exe" (
   echo Sanal ortam olusturuluyor...
@@ -26,9 +38,14 @@ if not exist ".venv\Scripts\python.exe" (
   if errorlevel 1 ( echo Sanal ortam olusturulamadi. & pause & exit /b 1 )
 )
 
-echo Gerekli paketler kuruluyor (internet gerekir)...
-".venv\Scripts\python.exe" -m pip install --upgrade pip
-".venv\Scripts\python.exe" -m pip install -r requirements.txt
+if exist "wheels\*.whl" (
+  echo Gerekli paketler yerel klasorden kuruluyor ^(internet gerekmez^)...
+  ".venv\Scripts\python.exe" -m pip install --no-index --find-links=wheels -r requirements.txt
+) else (
+  echo Gerekli paketler kuruluyor ^(internet gerekir^)...
+  ".venv\Scripts\python.exe" -m pip install --upgrade pip
+  ".venv\Scripts\python.exe" -m pip install -r requirements.txt
+)
 if errorlevel 1 ( echo Paketler kurulamadi. Internet baglantisini kontrol edin. & pause & exit /b 1 )
 
 if not exist "ayarlar.bat" copy "ayarlar.ornek.bat" "ayarlar.bat" >nul
@@ -47,12 +64,13 @@ if errorlevel 1 (
   echo Yonetici hesabi zaten var, olusturma atlandi.
 )
 
-echo Masaustu kisayolu olusturuluyor...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop')+'\Cari.lnk'); $s.TargetPath='%~dp0baslat.bat'; $s.WorkingDirectory='%~dp0'; $s.WindowStyle=7; $s.Save()"
+echo Egeser-Cari kisayolu ^(logolu simgeyle^) masaustune ve Baslat menusune olusturuluyor...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0kisayol_olustur.ps1"
+if errorlevel 1 echo Kisayol olusturulamadi; programi baslat.bat dosyasina cift tiklayarak da acabilirsiniz.
 
 echo.
 echo ============================================================
-echo  KURULUM TAMAM. Masaustundeki "Cari" kisayoluyla acin.
+echo  KURULUM TAMAM. Masaustundeki "Egeser-Cari" kisayoluyla acin.
 echo  ONEMLI: ayarlar.bat dosyasinda CARI_YEDEK_DIZINLERI satirini
 echo  (ayri disk/USB) doldurun, sonra yedek_gorevi_kur.bat calistirin.
 echo ============================================================

@@ -2,3 +2,4 @@ Django>=6.0,<7
 openpyxl>=3.1
 whitenoise>=6.7
 waitress>=3.0
+tzdata>=2024.1; sys_platform == "win32"

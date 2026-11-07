@@ -4,7 +4,8 @@ Kullanım:  python araclar/logo_uret.py <kaynak_logo.png> [--sembol-alt-sinir 61
 
 Kaynak: şeffaf arka planlı (RGBA) kare ya da yatay logo; üstte simge (ev + dalga), altta yazı.
 Üretilenler (defter/static/defter/img/): logo.png (açık tema), logo-koyu.png (koyu tema: siyah yazı açık renge çevrilir),
-logo-sembol.png (yalnızca simge; menü, üst şerit, yönetim paneli), favicon.png (simge).
+logo-sembol.png (yalnızca simge; menü, üst şerit, yönetim paneli), favicon.png (simge) ve cari/Egeser-Cari.ico
+(Windows kısayol simgesi: büyük boyutlarda tam logo, küçüklerde simge, beyaz yuvarlak plaka üzerinde).
 `--sembol-alt-sinir`: simgenin bittiği, yazının başladığı satır (piksel, kaynak boyutunda).
 """
 import argparse
@@ -49,6 +50,40 @@ def kare(im: Image.Image, boyut: int) -> Image.Image:
     return tuval
 
 
+def _plaka(boyut: int, icerik: Image.Image, dolgu: float) -> Image.Image:
+    """Beyaz yuvarlatılmış kare plaka üzerine ortalanmış içerik (masaüstü/görev çubuğunda her zeminde okunur)."""
+    tuval = Image.new("RGBA", (boyut, boyut), (0, 0, 0, 0))
+    from PIL import ImageDraw
+    ImageDraw.Draw(tuval).rounded_rectangle((0, 0, boyut - 1, boyut - 1), radius=max(2, boyut // 6), fill=(255, 255, 255, 255))
+    ic = icerik.copy()
+    ic.thumbnail((int(boyut * (1 - 2 * dolgu)),) * 2, Image.LANCZOS)
+    tuval.alpha_composite(ic, ((boyut - ic.width) // 2, (boyut - ic.height) // 2))
+    return tuval
+
+
+def ico_yaz(tam: Image.Image, sembol: Image.Image, yol) -> list:
+    """Çok boyutlu .ico (PNG gömülü, Windows Vista+). Büyük boyutlarda TAM logo (yazılı), küçüklerde yalnızca SİMGE
+    (yazı 48 px altında okunmaz). Pillow'un tek kaynaktan ölçekleyen ICO yazıcısı yerine elle yazılır ki her boyuta
+    ayrı çizim konabilsin."""
+    import io
+    import struct
+    boyutlar = [16, 24, 32, 48, 64, 128, 256]
+    veriler = []
+    for b in boyutlar:
+        im = _plaka(b, tam if b >= 96 else sembol, 0.07 if b >= 96 else 0.08)
+        buf = io.BytesIO()
+        im.save(buf, "PNG", optimize=True)
+        veriler.append(buf.getvalue())
+    ofset = 6 + 16 * len(boyutlar)
+    baslik = struct.pack("<HHH", 0, 1, len(boyutlar))
+    girdiler = b""
+    for b, v in zip(boyutlar, veriler):
+        girdiler += struct.pack("<BBBBHHII", b % 256, b % 256, 0, 0, 1, 32, len(v), ofset)     # 256 -> 0 (ICO kuralı)
+        ofset += len(v)
+    Path(yol).write_bytes(baslik + girdiler + b"".join(veriler))
+    return boyutlar
+
+
 def uret(kaynak, sembol_alt=610, hedef=HEDEF):
     hedef = Path(hedef)
     hedef.mkdir(parents=True, exist_ok=True)
@@ -69,6 +104,8 @@ def uret(kaynak, sembol_alt=610, hedef=HEDEF):
                 "logo-sembol.png": kaydet(sembol, "logo-sembol.png", 360)}
     kare(sembol, 128).save(hedef / "favicon.png", optimize=True)          # yalnızca simge: açık ve koyu sekmede de okunur
     boyutlar["favicon.png"] = (128, 128)
+    ico_yaz(tam, sembol, hedef.parent.parent.parent.parent / "Egeser-Cari.ico" if hedef == HEDEF else hedef / "Egeser-Cari.ico")
+    boyutlar["Egeser-Cari.ico"] = (256, 256)
     return boyutlar
 
 

@@ -7,7 +7,7 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 if exist "ayarlar.bat" call "ayarlar.bat"
-title Cari
+title Egeser-Cari
 ".venv\Scripts\python.exe" manage.py sunucu
 if errorlevel 1 (
   echo.

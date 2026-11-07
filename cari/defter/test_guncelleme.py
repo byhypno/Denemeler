@@ -135,7 +135,7 @@ class SunucuKomutuTests(TestCase):
 class WindowsBetikleriTests(TestCase):
     """Windows'ta denenemeyen betiklerin bozulmasına karşı asgari koruma."""
 
-    BETIKLER = ["kur.bat", "baslat.bat", "yedek_al.bat", "yedek_gorevi_kur.bat", "ayarlar.ornek.bat"]
+    BETIKLER = ["kur.bat", "baslat.bat", "yedek_al.bat", "yedek_gorevi_kur.bat", "ayarlar.ornek.bat", "kisayol_olustur.ps1"]
 
     def test_crlf_ve_ascii(self):
         for ad in self.BETIKLER:
@@ -146,7 +146,7 @@ class WindowsBetikleriTests(TestCase):
 
     def test_onemli_satirlar(self):
         kur = (BASE / "kur.bat").read_text()
-        for parca in ("venv", "requirements.txt", "veritabani_guncelle", "createsuperuser", "WScript.Shell"):
+        for parca in ("venv", "requirements.txt", "veritabani_guncelle", "createsuperuser", "kisayol_olustur.ps1"):
             self.assertIn(parca, kur)
         self.assertIn("manage.py sunucu", (BASE / "baslat.bat").read_text())
         self.assertIn("schtasks /create", (BASE / "yedek_gorevi_kur.bat").read_text())
@@ -163,3 +163,71 @@ class WindowsBetikleriTests(TestCase):
         self.assertIn("cari/ayarlar.bat", gi)
         self.assertIn("cari/veri/", gi)
         self.assertIn("*.bat text eol=crlf", (BASE.parent / ".gitattributes").read_text())
+
+
+class KurulumPaketiDosyalariTests(TestCase):
+    """Egeser-Cari Windows kurulumu: logolu simge, kısayol adı, internetsiz paket kurulumu."""
+
+    def test_ico_gecerli_ve_cok_boyutlu(self):
+        import struct
+        v = (BASE / "Egeser-Cari.ico").read_bytes()
+        sifir, tur, adet = struct.unpack("<HHH", v[:6])
+        self.assertEqual((sifir, tur), (0, 1))                         # ICO başlığı
+        boyutlar = []
+        for i in range(adet):
+            g, y, _, _, _, bit, uzun, ofset = struct.unpack("<BBBBHHII", v[6 + 16 * i:22 + 16 * i])
+            boyutlar.append(g or 256)
+            self.assertEqual(v[ofset:ofset + 8], b"\x89PNG\r\n\x1a\n")      # gömülü PNG
+            self.assertEqual(len(v[ofset:ofset + uzun]), uzun)
+        self.assertEqual(boyutlar, [16, 24, 32, 48, 64, 128, 256])
+
+    def test_kisayol_adi_ve_simge(self):
+        ps = (BASE / "kisayol_olustur.ps1").read_text()
+        for parca in ("'Egeser-Cari'", "WScript.Shell", ".ico", "IconLocation", "baslat.bat", "'Cari.lnk'", "GetFolderPath('Desktop')", "GetFolderPath('Programs')"):
+            self.assertIn(parca, ps)
+        self.assertIn("title Egeser-Cari", (BASE / "baslat.bat").read_text())
+        kur = (BASE / "kur.bat").read_text()
+        self.assertIn('"Egeser-Cari" kisayoluyla', kur)
+
+    def test_kur_bat_internetsiz_paket_ve_python_yedek_yolu(self):
+        kur = (BASE / "kur.bat").read_text()
+        self.assertIn("--no-index --find-links=wheels", kur)           # paket klasörü varsa internet gerekmez
+        self.assertIn("winget install -e --id Python.Python.3.12", kur)
+        self.assertIn(":python_yok", kur)
+        self.assertEqual(kur.count("createsuperuser"), 1)
+
+    def test_windows_icin_tzdata_gerekli(self):
+        self.assertIn("tzdata", (BASE / "requirements.txt").read_text())
+
+
+class PaketHazirlaTests(TestCase):
+    """araclar/paket_hazirla.py: pakete yalnızca program girer; gerçek veri, ayarlar ve testler girmez."""
+
+    def modul(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("paket_hazirla", BASE / "araclar" / "paket_hazirla.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    def test_dosya_secimi(self):
+        yollar = {p.as_posix() for p in self.modul().dosyalar()}
+        for var in ("kur.bat", "baslat.bat", "kisayol_olustur.ps1", "Egeser-Cari.ico", "manage.py", "requirements.txt",
+                    "defter/models.py", "defter/static/defter/img/logo.png", "araclar/logo_uret.py"):
+            self.assertIn(var, yollar)
+        for yok in ("ayarlar.bat", "defter/tests.py", "defter/test_arayuz.py", "veri/cari.sqlite3", "veri/secret.key"):
+            self.assertNotIn(yok, yollar)
+        self.assertFalse([y for y in yollar if y.startswith(("veri/", ".venv/", "dist/")) or "__pycache__" in y or y.endswith(".pyc")])
+
+    def test_zip_kok_klasoru_ve_bat_satir_sonlari(self):
+        import tempfile
+        import zipfile
+        with tempfile.TemporaryDirectory() as t:
+            yol = self.modul().paket_olustur(t, wheels=False)
+            with zipfile.ZipFile(yol) as z:
+                ad = z.namelist()
+                self.assertTrue(all(a.startswith("Egeser-Cari/") for a in ad))
+                self.assertIn("Egeser-Cari/KURULUM.txt", ad)
+                self.assertIn(b"\r\n", z.read("Egeser-Cari/kur.bat"))
+                self.assertTrue(z.read("Egeser-Cari/Egeser-Cari.ico")[:4] == b"\x00\x00\x01\x00")
+                self.assertTrue(z.read("Egeser-Cari/KURULUM.txt").startswith(b"\xef\xbb\xbf"))     # Not Defteri UTF-8 imzası

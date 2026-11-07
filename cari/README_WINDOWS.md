@@ -4,13 +4,19 @@
 > yalnızca yerel dinleme) orada gerçekten çalıştırılarak doğrulandı, ama `.bat` dosyalarının kendisi **Windows'ta henüz denenmedi**.
 > İlk kurulumda bir mesajda takılırsanız ekran görüntüsünü paylaşın, düzeltelim.
 
-## 1. Kurulum (bir kez)
-1. **Python 3.12 veya üstünü** https://www.python.org adresinden kurun. Kurulum penceresinde **"Add python.exe to PATH"** kutusunu işaretleyin.
-2. Proje klasörünü bilgisayara kopyalayın (ör. `C:\CariProgram`). Başka kullanıcıların yazamadığı bir yer seçin.
-3. **`kur.bat`** dosyasına çift tıklayın. Sırayla: sanal ortamı kurar, paketleri indirir (internet gerekir), veritabanını hazırlar,
-   sizden **yönetici kullanıcı adı ve parola** ister (en az 8 karakter), masaüstüne **Cari** kısayolunu koyar.
-4. Masaüstündeki **Cari** kısayolu programı açar (tarayıcıda `http://127.0.0.1:8000`). Pencereyi kapatınca program kapanır;
+## 1. Kurulum (bir kez) — Egeser-Cari kurulum paketi
+En kolay yol hazır **`Egeser-Cari-Kurulum.zip`** paketidir (program + Windows paketleri; **kurulum için internet gerekmez**):
+1. Zip'i **kalıcı bir klasöre** açın (ör. `C:\Egeser-Cari`; "Tümünü ayıkla" deyin, zip içinden çalıştırmayın). Klasörü sonradan taşımayın.
+2. **`kur.bat`**'a çift tıklayın. Python yoksa kendisi `winget` ile kurmayı dener (kurduysa pencereyi kapatıp `kur.bat`'ı **tekrar** çalıştırın).
+   Sırayla: sanal ortam, paketler (pakette `wheels` klasörü varsa internetsiz), veritabanı, **yönetici kullanıcı adı ve parola** (en az 8 karakter),
+   ve **logolu `Egeser-Cari` kısayolu** (masaüstü + Başlat menüsü).
+3. Masaüstündeki **Egeser-Cari** kısayolu programı açar (tarayıcıda `http://127.0.0.1:8000`). Pencereyi kapatınca program kapanır;
    veriler kaybolmaz.
+
+Paketi kaynak koddan kendiniz üretmek için (internet gerekir): `python araclar/paket_hazirla.py` → `dist/Egeser-Cari-Kurulum.zip`.
+Zip yerine proje klasörünü elle kopyaladıysanız Python 3.12+ kurup (python.org, "Add python.exe to PATH") aynı `kur.bat`'ı çalıştırın; `wheels`
+klasörü yoksa paketleri internetten indirir.
+**Kısayol simgesi** `Egeser-Cari.ico` (logo) dosyasından gelir; logo değişirse `araclar/logo_uret.py` ile yeniden üretilir.
 
 ## 1b. Kullanıcılar
 `kur.bat` yönetici hesabını oluşturur. Diğer kullanıcılar için (parolayı sorar):

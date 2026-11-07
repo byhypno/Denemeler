@@ -410,7 +410,8 @@ class LogoUretTests(TestCase):
         spec.loader.exec_module(mod)
         with tempfile.TemporaryDirectory() as t:
             boyut = mod.uret(self.kaynak(t), sembol_alt=250, hedef=Path(t) / "cikti")
-            self.assertEqual(set(boyut), {"logo.png", "logo-koyu.png", "logo-sembol.png", "favicon.png"})
+            self.assertEqual(set(boyut), {"logo.png", "logo-koyu.png", "logo-sembol.png", "favicon.png", "Egeser-Cari.ico"})
+            self.assertEqual((Path(t) / "cikti" / "Egeser-Cari.ico").read_bytes()[:4], b"\x00\x00\x01\x00")
             acik = Image.open(Path(t) / "cikti" / "logo.png").convert("RGBA")
             koyu = Image.open(Path(t) / "cikti" / "logo-koyu.png").convert("RGBA")
             sembol = Image.open(Path(t) / "cikti" / "logo-sembol.png").convert("RGBA")
