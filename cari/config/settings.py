@@ -132,3 +132,22 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 DATA_UPLOAD_MAX_NUMBER_FILES = 25
 FILE_UPLOAD_PERMISSIONS = 0o600
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Sunucu kaydı: neden durduğunu/hata verdiğini sonradan görebilmek için veri klasöründe dönen (rotating) kayıt dosyası.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"d": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {
+        "dosya": {"class": "logging.handlers.RotatingFileHandler", "filename": str(VERI_DIZINI / "sunucu.log"),
+                  "maxBytes": 1_000_000, "backupCount": 3, "encoding": "utf-8", "formatter": "d", "delay": True},
+    },
+    "loggers": {
+        "defter.sunucu": {"handlers": ["dosya"], "level": "INFO", "propagate": True},
+        "django.request": {"handlers": ["dosya"], "level": "ERROR", "propagate": True},
+        "django.server": {"handlers": ["dosya"], "level": "ERROR", "propagate": True},
+        "waitress": {"handlers": ["dosya"], "level": "WARNING", "propagate": True},
+    },
+}
+

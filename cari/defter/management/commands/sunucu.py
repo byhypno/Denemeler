@@ -1,11 +1,16 @@
+import logging
 import os
 import socket
 import threading
 import webbrowser
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from defter import guncelleme, yedek
+
+
+kayit = logging.getLogger("defter.sunucu")
 
 
 class Command(BaseCommand):
@@ -35,5 +40,15 @@ class Command(BaseCommand):
         if not tarayici_yok:
             threading.Timer(1.5, webbrowser.open, args=[url]).start()
         self.stdout.write(self.style.SUCCESS(f"Cari çalışıyor: {url}"))
-        self.stdout.write("Kapatmak için bu pencereyi kapatın (Ctrl+C). Veriler kaybolmaz.")
-        serve(uygulama, host="127.0.0.1", port=port, threads=4, ident=None)
+        self.stdout.write("Bu pencereyi KAPATMAYIN (simge durumuna küçültebilirsiniz). Kapatırsanız program kapanır; veriler kaybolmaz.")
+        self.stdout.write(f"Sorun olursa kayıt dosyası: {settings.VERI_DIZINI / 'sunucu.log'}")
+        kayit.info("Sunucu başlıyor: %s (pid %s)", url, os.getpid())
+        try:
+            serve(uygulama, host="127.0.0.1", port=port, threads=4, ident=None)
+        except KeyboardInterrupt:
+            kayit.info("Sunucu Ctrl+C ile kapatıldı.")
+        except BaseException:
+            kayit.exception("Sunucu BEKLENMEDİK şekilde durdu.")           # neden durduğu kayda geçsin; kod 1 ile çıkılır (baslat.bat yeniden dener)
+            raise
+        else:
+            kayit.info("Sunucu normal kapandı.")
