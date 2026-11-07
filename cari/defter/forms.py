@@ -10,6 +10,11 @@ from .kdv import KdvModu, kdv_hesapla, oranlari_dogrula
 from .models import Belge, BelgeKalem, Cari, KasaHareketi, KasaKategori
 
 
+def _temiz_satir(deger: str) -> str:
+    """Denetim karakterlerini (\x0b, \x01 …) atar, boşlukları tek aralığa indirir."""
+    return " ".join("".join(c if c.isprintable() or c.isspace() else " " for c in (deger or "")).split())
+
+
 class KasaHareketiForm(forms.ModelForm):
     class Meta:
         model = KasaHareketi
@@ -29,7 +34,13 @@ class KasaHareketiForm(forms.ModelForm):
         self.fields["harcayan"].widget.attrs.update({"list": "harcayan-listesi", "autocomplete": "off", "placeholder": "ör. Mehmet"})
 
     def clean_harcayan(self):
-        return " ".join(self.cleaned_data.get("harcayan", "").split())
+        return _temiz_satir(self.cleaned_data.get("harcayan", ""))
+
+    def clean_aciklama(self):
+        return _temiz_satir(self.cleaned_data.get("aciklama", ""))
+
+    def clean_makbuz_no(self):
+        return _temiz_satir(self.cleaned_data.get("makbuz_no", ""))
 
 
 class GunSonuForm(forms.Form):

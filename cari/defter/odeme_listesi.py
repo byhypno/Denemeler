@@ -4,6 +4,7 @@ from decimal import Decimal
 from io import BytesIO
 
 import openpyxl
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
@@ -56,6 +57,8 @@ def yapilan_odemeler(bas, bit, cari=None, sekil="") -> dict:
 
 # ------------------------------------------------------------------ Excel
 def _yaz(ws, satir, sutun, deger, kalin=False, para=False, doldur=None):
+    if isinstance(deger, str):
+        deger = ILLEGAL_CHARACTERS_RE.sub("", deger)   # \x0b gibi denetim karakterleri Excel dosyasını bozar
     h = ws.cell(row=satir, column=sutun, value=deger)
     if isinstance(deger, str):
         h.data_type = "s"          # '=' ile başlayan metin formüle dönüşmesin (Excel formül enjeksiyonu)

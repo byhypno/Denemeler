@@ -69,7 +69,7 @@ def kasa_ozeti(hesap, bugun=None) -> dict:
 
 def kasa_aylik(hesap, yil: int, bugun=None) -> dict:
     bugun = bugun or date.today()
-    onceki = hesap.bakiye_kurus(tarih_kadar=date(yil - 1, 12, 31))
+    onceki = hesap.bakiye_kurus(tarih_kadar=date(yil - 1, 12, 31)) if yil > 1 else hesap.acilis_bakiye_kurus
     giris, cikis = [0] * 12, [0] * 12
     qs = hesap.hareketler.filter(iptal=False, tarih__year=yil)
     for tarih, yon, tutar in qs.values_list("tarih", "yon", "tutar_kurus"):

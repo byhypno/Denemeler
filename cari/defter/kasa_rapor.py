@@ -11,6 +11,7 @@ from pathlib import Path
 
 from django.conf import settings
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
@@ -118,6 +119,8 @@ def _lira(kurus):
 
 
 def _yaz(ws, satir, sutun, deger, kalin=False, para=False, dolgu=None, cerceve=False, hiza=None):
+    if isinstance(deger, str):
+        deger = ILLEGAL_CHARACTERS_RE.sub("", deger)   # \x0b gibi denetim karakterleri Excel dosyasını bozar
     h = ws.cell(row=satir, column=sutun, value=deger)
     if isinstance(deger, str):
         h.data_type = "s"          # '=' ile başlayan metin formüle dönüşmesin

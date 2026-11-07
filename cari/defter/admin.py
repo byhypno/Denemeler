@@ -55,7 +55,7 @@ class KalemInline(admin.TabularInline):
 
 
 @admin.register(Cari)
-class CariAdmin(admin.ModelAdmin):
+class CariAdmin(SilmeKapali, admin.ModelAdmin):
     list_display = ("unvan", "kisa_kod", "bakiye", "vade_gun", "aktif")
     search_fields = ("unvan", "kisa_kod", "vergi_bilgisi")
     list_filter = ("aktif",)
@@ -136,7 +136,7 @@ class HesapAdmin(SilmeKapali, admin.ModelAdmin):
 
 
 @admin.register(KasaKategori)
-class KasaKategoriAdmin(admin.ModelAdmin):
+class KasaKategoriAdmin(SilmeKapali, admin.ModelAdmin):
     list_display = ("ad", "tur", "genel_gider_grubu", "aktif")
 
 
@@ -211,7 +211,7 @@ class EkstreSatiriInline(admin.TabularInline):
 
 
 @admin.register(EkstreMutabakat)
-class EkstreMutabakatAdmin(admin.ModelAdmin):
+class EkstreMutabakatAdmin(SilmeKapali, admin.ModelAdmin):
     list_display = ("cari", "ekstre_tarihi", "ekstre_bakiye")
     autocomplete_fields = ("cari",)
     inlines = [EkstreSatiriInline]

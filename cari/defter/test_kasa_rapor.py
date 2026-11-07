@@ -216,3 +216,29 @@ class EkranTests(Temel):
         self.giris()
         for q in ({"hesap": "abc"}, {"bas": "zzz", "bit": "2026-01-01"}, {"donem": "<script>"}, {"indir": "exe"}):
             self.assertEqual(self.client.get(reverse("kasa_rapor"), q).status_code, 200, q)
+
+
+class DenetimDuzeltmeTests(Temel):
+    def test_denetim_karakterli_metin_excel_bozmaz(self):
+        self.m(G, 100, date(2026, 10, 2))
+        self.m(C, 50, date(2026, 10, 2), aciklama="a\x0bb\x01c", harcayan="x\x01y")
+        r = kr.kasa_raporu(self.h, date(2026, 10, 1), date(2026, 10, 31))
+        self.assertTrue(kr.rapor_xlsx(r))
+
+    def test_formdan_gelen_denetim_karakteri_temizlenir(self):
+        self.m(G, 100000, date(2026, 10, 1))
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        r = self.client.post(reverse("kasa"), {"tarih": "2026-10-02", "yon": "CIKIS", "tutar_kurus": "5,00", "kdv_modu": "BILINMIYOR",
+                                               "aciklama": "a\x0bb", "harcayan": "x\x01y", "makbuz_no": "1\x02"})
+        self.assertEqual(r.status_code, 302)
+        h = KasaHareketi.objects.get(yon=C)
+        self.assertEqual((h.aciklama, h.harcayan, h.makbuz_no), ("a b", "x y", "1"))
+
+    def test_uc_tarih_reddedilir_ve_yil_secici_cokmez(self):
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        for t in ("0001-01-01", "2206-01-01"):
+            r = self.client.post(reverse("kasa"), {"tarih": t, "yon": "GIRIS", "tutar_kurus": "5,00", "kdv_modu": "BILINMIYOR"})
+            self.assertEqual(r.status_code, 200, t)
+        self.assertFalse(KasaHareketi.objects.exists())
+        from . import kasa_servisi as ks
+        self.assertEqual(ks.kasa_aylik(self.h, 1)["giris"], [0] * 12)

@@ -7,6 +7,12 @@ from .fields import KurusField
 from .kdv import KdvModu, kdv_hesapla, oranlari_dogrula
 
 
+def makul_tarih(d):
+    """Yazım hatası kayıtları (0001-01-01, 2206 …) raporları ve yıl seçicileri bozmasın."""
+    if d is not None and not (2000 <= d.year <= 2100):
+        raise ValidationError("Tarih 2000–2100 yılları arasında olmalı.")
+
+
 class KatlaBenzersiz:
     """Ad alanı büyük/küçük harf ve aksan farkı yok sayılarak da benzersiz olmalı ('ERÖZ' ile 'Eroz' aynı kayıttır).
     SQLite UNIQUE yalnızca birebir aynı metni yakalar; bu kontrol yönetim paneli dahil her ModelForm yolunda çalışır."""
@@ -142,7 +148,7 @@ class Belge(KdvliTutar):
     cari = models.ForeignKey(Cari, on_delete=models.PROTECT, related_name="belgeler",
                              verbose_name="Cari")
     tur = models.CharField("Evrak türü", max_length=14, choices=Tur.choices)
-    tarih = models.DateField()
+    tarih = models.DateField(validators=[makul_tarih])
     evrak_no = models.CharField("Evrak / fiş no", max_length=40, blank=True)
     harici_evrak_no = models.CharField("Tedarikçi evrak no", max_length=40, blank=True)
     aciklama = models.CharField("Açıklama", max_length=250, blank=True)
@@ -309,7 +315,7 @@ class KasaHareketi(KdvliTutar):
         CIKIS = "CIKIS", "Çıkış"
 
     hesap = models.ForeignKey(Hesap, on_delete=models.PROTECT, related_name="hareketler")
-    tarih = models.DateField()
+    tarih = models.DateField(validators=[makul_tarih])
     yon = models.CharField("Yön", max_length=5, choices=Yon.choices)
     kategori = models.ForeignKey(KasaKategori, null=True, blank=True, on_delete=models.PROTECT)
     harcayan = models.CharField("Harcayan", max_length=80, blank=True, help_text="Parayı kimin harcadığı/aldığı (rapor kişi bazında toplar).")
