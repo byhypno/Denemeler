@@ -135,7 +135,7 @@ class SunucuKomutuTests(TestCase):
 class WindowsBetikleriTests(TestCase):
     """Windows'ta denenemeyen betiklerin bozulmasına karşı asgari koruma."""
 
-    BETIKLER = ["kur.bat", "baslat.bat", "yedek_al.bat", "yedek_gorevi_kur.bat", "ayarlar.ornek.bat", "kisayol_olustur.ps1"]
+    BETIKLER = ["kur.bat", "baslat.bat", "yedek_al.bat", "yedek_gorevi_kur.bat", "ayarlar.ornek.bat", "kisayol_olustur.ps1", "tani.bat", "tani.ps1"]
 
     def test_crlf_ve_ascii(self):
         for ad in self.BETIKLER:
@@ -231,3 +231,32 @@ class PaketHazirlaTests(TestCase):
                 self.assertIn(b"\r\n", z.read("Egeser-Cari/kur.bat"))
                 self.assertTrue(z.read("Egeser-Cari/Egeser-Cari.ico")[:4] == b"\x00\x00\x01\x00")
                 self.assertTrue(z.read("Egeser-Cari/KURULUM.txt").startswith(b"\xef\xbb\xbf"))     # Not Defteri UTF-8 imzası
+
+
+class TaniAraciTests(TestCase):
+    """Windows'ta açılmayan/duran program için tek tıkla rapor (tani.bat): neleri topladığı ve veriye dokunmadığı."""
+
+    def test_rapor_bolumleri(self):
+        ps = (BASE / "tani.ps1").read_text()
+        for parca in ("tani.txt", ".venv", "manage.py check", "sunucu.log", "Port 8000", "Sunucu denemesi", "netstat", "LISTENING",
+                      "Start-Process", "HasExited", "Invoke-WebRequest", "127.0.0.1:8000/giris/"):
+            self.assertIn(parca, ps)
+        self.assertIn("tani.ps1", (BASE / "tani.bat").read_text())
+
+    def test_veriye_dokunmaz(self):
+        ps = (BASE / "tani.ps1").read_text().lower()
+        for tehlikeli in ("remove-item", "del ", "rmdir", "migrate", "veritabani_guncelle", "yedek_geri", "sifirla"):
+            if tehlikeli == "remove-item":
+                # yalnızca kendi geçici çıktı dosyalarını siler
+                self.assertEqual(ps.count("remove-item"), 1)
+                self.assertIn("remove-item $cikti, $hata", ps)
+            else:
+                self.assertNotIn(tehlikeli, ps)
+
+    def test_pakete_girer(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("paket_hazirla", BASE / "araclar" / "paket_hazirla.py")
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        yollar = {p.as_posix() for p in m.dosyalar()}
+        self.assertTrue({"tani.bat", "tani.ps1"} <= yollar)

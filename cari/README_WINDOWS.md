@@ -68,3 +68,9 @@ Yeni program dosyalarını aynı klasöre kopyalayın (`veri` klasörüne ve `ay
 | Tarayıcı açılmadı | Adres çubuğuna `http://127.0.0.1:8000` yazın. |
 | Güncelleme "yedek doğrulanamadı" diyor | Veritabanı değiştirilmedi. Yedek klasörünün yazılabilir ve disk dolu olmadığını kontrol edin. |
 | Antivirüs uyarısı | Proje klasörünü antivirüs istisnasına ekleyin (Python betikleri bazen yanlış işaretlenir). |
+
+## Program açılmıyor / tarayıcı "bağlantıyı reddetti" diyor
+Bu hata **programın çalışmadığı** anlamına gelir (siyah sunucu penceresi kapanmış ya da hiç açılmamış olabilir). Önce masaüstündeki **Egeser-Cari**
+kısayoluna tekrar tıklayın; **siyah pencereyi kapatmayın** (simge durumuna küçültebilirsiniz). Yine açılmazsa klasördeki **`tani.bat`**'a çift tıklayın:
+sunucuyu 10 saniye deneyip nedenini `tani.txt` dosyasına yazar (veriye dokunmaz); dosyanın içeriğini gönderin. Sunucu kaydı ayrıca `veri\sunucu.log` dosyasındadır.
+
