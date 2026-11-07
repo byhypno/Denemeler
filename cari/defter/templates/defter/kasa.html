@@ -31,6 +31,7 @@
 {% if "kasa_yaz" in yetkiler %}
 <section class="kart yazdirma-gizle" id="yeni-hareket">
   <h2>Yeni kasa hareketi</h2>
+  <p class="not">Birden çok kayıt girecekseniz: <a href="{% url 'kasa_toplu' %}?hesap={{ hesap.pk }}">Toplu giriş (10 satır)</a></p>
   <datalist id="harcayan-listesi">{% for a in harcayanlar %}<option value="{{ a }}">{% endfor %}</datalist>
   <form method="post" novalidate>{% csrf_token %}
     {% if form.non_field_errors %}<div class="hata-kutu">{{ form.non_field_errors|join:" " }}</div>{% endif %}

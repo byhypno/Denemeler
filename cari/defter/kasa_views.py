@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,7 +15,7 @@ from . import metin
 from . import kasa_rapor as kr
 from . import kasa_servisi as ks
 from .fields import kurus_bicimle
-from .forms import GunSonuForm, KasaHareketiDuzeltForm, KasaHareketiForm
+from .forms import GunSonuForm, KasaHareketiDuzeltForm, KasaHareketiForm, KasaTopluSatirForm
 from .models import GunSonu, KasaHareketi, KasaKategori
 from .views import AYLAR
 from .yetki import gorunur_kasalar, yetki_gerekli
@@ -234,3 +235,57 @@ def kasa_hareket_duzelt(request, pk):
             return redirect(geri)
     return render(request, "defter/kasa_hareket_duzelt.html", {
         "h": h, "hesap": h.hesap, "form": form, "harcayanlar": ks.harcayanlar(h.hesap), "sayfa": "kasa", "geri": geri})
+
+
+TOPLU_SATIR = 10
+_TOPLU_ALANLAR = ("tutar_kurus", "kategori", "harcayan", "makbuz_no", "aciklama")
+
+
+@yetki_gerekli("kasa_yaz")
+def kasa_toplu(request):
+    """Birden çok kasa hareketini tek seferde girer. Geçerli satırlar kaydedilir; hatalı satırlar hata mesajıyla ekranda kalır.
+    Satırlar sırayla işlenir (kapalı gün, bakiye vb. kurallar her satırda ayrı ayrı denetlenir; her kayıt günlüğe ayrı yazılır)."""
+    hesap = _hesap_veya_yok(request, request.GET.get("hesap") or request.POST.get("hesap"))
+    if hesap is None:
+        raise PermissionDenied("Aktif kasa yok.")
+    bugun = date.today()
+    if request.method == "POST":
+        try:
+            sayi = min(max(int(request.POST.get("satir_sayisi", "")), 1), 200)
+        except ValueError:
+            sayi = TOPLU_SATIR
+        kaydedilen, hatali = 0, []
+        for i in range(sayi):
+            on_ek = f"s{i}"
+            if not any((request.POST.get(f"{on_ek}-{a}") or "").strip() for a in _TOPLU_ALANLAR):
+                continue                                                  # boş satır atlanır
+            f = KasaTopluSatirForm(request.POST, hesap=hesap, prefix=on_ek)
+            if f.is_valid():
+                try:
+                    with transaction.atomic():
+                        f.save()
+                    kaydedilen += 1
+                    continue
+                except (IntegrityError, ValidationError) as e:
+                    f.add_error(None, _hata_metni(e) if isinstance(e, ValidationError) else "Kayıt yazılamadı.")
+            hatali.append((i, f))
+        if kaydedilen:
+            messages.success(request, f"{kaydedilen} kayıt kaydedildi.")
+        if not hatali:
+            if not kaydedilen:
+                messages.info(request, "Doldurulmuş satır yok.")
+            return redirect(f"{reverse('kasa')}?hesap={hesap.pk}")
+        messages.error(request, f"{len(hatali)} satır kaydedilemedi; hataları düzeltip tekrar kaydedin. Kaydedilen satırlar listeden çıkarıldı.")
+        sonraki = max(i for i, _ in hatali) + 1
+        bos = max(0, 5 - len(hatali))                                    # devam edebilmek için birkaç boş satır
+        satirlar = hatali + [(sonraki + k, KasaTopluSatirForm(hesap=hesap, prefix=f"s{sonraki + k}",
+                                                              initial={"tarih": bugun, "yon": KasaHareketi.Yon.CIKIS})) for k in range(bos)]
+        sonraki += bos
+    else:
+        satirlar = [(i, KasaTopluSatirForm(hesap=hesap, prefix=f"s{i}", initial={"tarih": bugun, "yon": KasaHareketi.Yon.CIKIS}))
+                    for i in range(TOPLU_SATIR)]
+        sonraki = TOPLU_SATIR
+    return render(request, "defter/kasa_toplu.html", {
+        "hesap": hesap, "satirlar": satirlar, "sonraki": sonraki, "harcayanlar": ks.harcayanlar(hesap),
+        "sayfa": "kasa", "kilit_siniri": hesap.kilit_siniri(),
+    })

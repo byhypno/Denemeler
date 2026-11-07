@@ -52,7 +52,8 @@ class KasaHareketiForm(forms.ModelForm):
         self.fields["tutar_kurus"].label = "Tutar (₺)"
         self.fields["tutar_kurus"].help_text = ""
         self.fields["tutar_kurus"].widget.attrs.update({"placeholder": "1.234,50", "inputmode": "decimal"})
-        self.fields["kdv_modu"].label = "KDV"
+        if "kdv_modu" in self.fields:
+            self.fields["kdv_modu"].label = "KDV"
         self.fields["harcayan"].widget.attrs.update({"list": "harcayan-listesi", "autocomplete": "off", "placeholder": "ör. Mehmet"})
 
     def clean_harcayan(self):
@@ -63,6 +64,13 @@ class KasaHareketiForm(forms.ModelForm):
 
     def clean_makbuz_no(self):
         return _temiz_satir(self.cleaned_data.get("makbuz_no", ""))
+
+
+class KasaTopluSatirForm(KasaHareketiForm):
+    """Toplu giriş satırı: tek kayıtlık formun KDV'siz hâli (KDV 'bilinmiyor' kalır; gerekirse kayıt sonra tek tek düzenlenir)."""
+
+    class Meta(KasaHareketiForm.Meta):
+        fields = ["tarih", "yon", "tutar_kurus", "kategori", "harcayan", "makbuz_no", "aciklama"]
 
 
 class GunSonuForm(forms.Form):

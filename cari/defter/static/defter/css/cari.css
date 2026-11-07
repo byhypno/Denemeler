@@ -484,3 +484,16 @@ th.satir-bas { background: transparent; border: 0; border-bottom: 1px solid var(
 .chip-grup { display: flex; gap: var(--b-2); flex-wrap: wrap; }
 .chip-grup .dugme.secili { background: var(--vurgu-zemin); color: var(--vurgu-metin); border-color: var(--vurgu); font-weight: 600; }
 p.form-dugmeler { margin-bottom: var(--b-5); max-width: none; }
+
+/* Toplu kasa girişi */
+.toplu-tablo { table-layout: auto; }
+.toplu-tablo td { vertical-align: top; padding: var(--b-1) var(--b-2); }
+.toplu-tablo input, .toplu-tablo select { width: 100%; min-width: 0; }
+.toplu-tablo td:nth-child(1) { min-width: 150px; }
+.toplu-tablo td:nth-child(2) { min-width: 100px; }
+.toplu-tablo td:nth-child(3) { min-width: 110px; }
+.toplu-tablo td:nth-child(4) { min-width: 140px; }
+.toplu-tablo td:nth-child(7) { min-width: 200px; }
+.toplu-tablo tr.hatali td { background: var(--negatif-zemin); }
+.toplu-tablo tr.hatali-not td { background: var(--negatif-zemin); padding-top: 0; }
+.toplu-tablo .hata { color: var(--negatif); font-size: var(--t-sm); }
