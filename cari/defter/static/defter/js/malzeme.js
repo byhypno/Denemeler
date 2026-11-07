@@ -10,7 +10,7 @@
       borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6, tension: 0 })) },
     options: { ...G.ortak, interaction: { mode: 'nearest', intersect: false },
       plugins: { tooltip: { ...G.ipucuStilKullan(), callbacks: { label: (c) => `${c.dataset.label}: ${G.tl.format(c.parsed.y)}` } },
-        legend: { display: veri.seriler.length > 1, position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, padding: 14 } } },
+        legend: { display: veri.seriler.length > 1, position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 22 } } },
       scales: { y: { ...G.eksenTL(), beginAtZero: false }, x: { grid: { display: false } } } },
   }));
 })();

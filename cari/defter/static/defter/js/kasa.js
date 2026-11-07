@@ -14,7 +14,7 @@
         ],
       },
       options: { ...G.ortak, interaction: { mode: 'index', intersect: false },
-        plugins: { tooltip: G.ipucu(), legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, padding: 16 } } },
+        plugins: { tooltip: G.ipucu(), legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 22 } } },
         scales: { y: G.eksenTL(), x: { grid: { display: false } } } },
     });
     return [aylik, G.yatay('g-kasa-kategori', veri.kat_etiket, veri.kat_deger, 'Çıkış', '--g-iade')];
