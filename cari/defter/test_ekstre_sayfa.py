@@ -69,7 +69,6 @@ class EkstreSayfaTests(TestCase):
         self.assertEqual([g["ad"] for g in r.context["gruplar"]], ["Ocak 2026", "Şubat 2026", "Mart 2026"])
         self.assertEqual(r.context["eksi_ay"], 2)          # şubat -50.000, mart -35.000
         self.assertContains(r, "Bakiye 2 ay sonunda eksiye düşüyor")
-        self.assertContains(r, "Ay sonu bakiye eksi")
 
     def test_eksi_yoksa_uyari_yok(self):
         Belge.objects.create(cari=self.cari, tur=Belge.Tur.ALIS_FISI, tarih=date(2026, 4, 1), tutar_kurus=10**7)
@@ -96,8 +95,9 @@ class EkstreSayfaTests(TestCase):
         self.assertIn("Ek ekle", h)                        # ekran okuyucu için ad var
         from .ek_servisi import ek_sayilari  # noqa: F401  (ek yükleme ayrıntısı test_ek.py'de)
 
-    def test_ay_basligi_toplamlari(self):
+    def test_aylik_ara_toplam_satiri_yok(self):
         r = self.client.get(self.url)
         h = r.content.decode()
-        self.assertIn("Mart 2026", h)
-        self.assertIn("ay-baslik", h)
+        self.assertNotIn("ay-baslik", h)                   # ay başlığı/ara toplam satırları kaldırıldı
+        self.assertNotIn("Ay sonu bakiye eksi", h)
+        self.assertIn("Dönem toplamı", h)                  # genel dönem toplamı durur

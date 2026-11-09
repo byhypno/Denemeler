@@ -60,8 +60,6 @@
   {% if bas %}<tbody><tr><td colspan="6"><i>Dönem başı bakiye</i></td><td class="sayi">{{ onceki|kurus_tl }}</td></tr></tbody>{% endif %}
   {% for g in gruplar %}
   <tbody class="ay-grup">
-    <tr class="ay-baslik"><th colspan="4">{{ g.ad }}{% if g.kapanis < 0 %} <span class="chip uyari">Ay sonu bakiye eksi</span>{% endif %}</th>
-      <th class="sayi">{{ g.artis|kurus_say }}</th><th class="sayi">{{ g.azalis|kurus_say }}</th><th class="sayi">{{ g.kapanis|kurus_say }}</th></tr>
     {% for b, bakiye in g.satirlar %}
     <tr><td>{{ b.tarih|date:"d.m.Y" }}</td><td>{{ b.get_tur_display }}</td>
       <td>{{ b.evrak_no|default:"—" }}{% with n=ek_sayi|sozluk_al:b.pk %}<a class="ek-bag yazdirma-gizle{% if n %} dolu{% endif %}" href="{% url 'ek_sahip' 'belge' b.pk %}" title="Ekler">{% ikon "ek" "kucuk" %}{% if n %}<span>{{ n }}</span>{% else %}<span class="sr-only">Ek ekle</span>{% endif %}</a>{% endwith %}</td>
