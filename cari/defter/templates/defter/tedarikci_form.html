@@ -6,14 +6,27 @@
 <form method="post" class="kart" novalidate>{% csrf_token %}
   {% if form.non_field_errors %}<div class="hata-kutu" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
   <div class="form-izgara">
-    {% for alan in form %}
+    {% for alan in form %}{% if alan.name != "acilis_tutar" and alan.name != "acilis_yon" and alan.name != "acilis_tarih" %}
     <label class="{% if alan.name == 'unvan' or alan.name == 'not_metni' %}genis{% endif %}" for="{{ alan.id_for_label }}"><span>{{ alan.label }}{% if alan.field.required %} <span class="zorunlu" aria-hidden="true">*</span>{% endif %}</span>
       {{ alan }}
       {% if alan.help_text %}<span class="not">{{ alan.help_text }}</span>{% endif %}
       {% for h in alan.errors %}<span class="hata" role="alert">{{ h }}</span>{% endfor %}
     </label>
-    {% endfor %}
+    {% endif %}{% endfor %}
   </div>
+  {% if form.acilis_tutar %}
+  <fieldset class="kart-ic acilis-bolum">
+    <legend>Açılış bakiyesi <span class="not">(isteğe bağlı)</span></legend>
+    <p class="not">Programa başlarken bu tedarikçiyle aranızdaki mevcut bakiye. Yoksa boş bırakın; sonra ekstreden hareket girersiniz. Ekstrede "Açılış bakiyesi" satırı olarak görünür.</p>
+    <div class="form-izgara">
+      {% for alan in form %}{% if alan.name == "acilis_tutar" or alan.name == "acilis_yon" or alan.name == "acilis_tarih" %}
+      <label for="{{ alan.id_for_label }}"><span>{{ alan.label }}</span>{{ alan }}
+        {% if alan.name != "acilis_tutar" and alan.help_text %}<span class="not">{{ alan.help_text }}</span>{% endif %}
+        {% for h in alan.errors %}<span class="hata" role="alert">{{ h }}</span>{% endfor %}</label>
+      {% endif %}{% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
   <p class="form-dugmeler"><button type="submit">{% if cari %}Kaydet{% else %}Tedarikçiyi ekle{% endif %}</button>
     <a class="dugme ikincil" href="{% if cari %}{% url 'cari_ekstre' cari.pk %}{% else %}{% url 'tedarikciler' %}{% endif %}">Vazgeç</a></p>
 </form>

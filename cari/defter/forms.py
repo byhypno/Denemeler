@@ -97,6 +97,41 @@ class CariForm(forms.ModelForm):
                   "tedarikcideki_kodumuz": "Tedarikçideki cari kodumuz", "not_metni": "Not", "aktif": "Aktif tedarikçi"}
         help_texts = {"vade_gun": "Boş bırakılırsa vade takibi yapılmaz.", "aktif": "Pasif tedarikçi yeni kayıt seçeneklerinde çıkmaz; geçmişi durur."}
 
+    # ---- yalnızca YENİ tedarikçide: açılış bakiyesi (view, düzenlemede bu alanları kaldırır)
+    acilis_tutar = KurusFormField(required=False, label="Açılış bakiyesi (₺)",
+                                  help_text="Programa başlarken bu tedarikçiyle aranızdaki mevcut bakiye. Yoksa boş bırakın; sonra ekstreden hareket girersiniz.")
+    acilis_yon = forms.ChoiceField(required=False, label="Açılış bakiyesi yönü", initial="BORC",
+                                   choices=[("BORC", "Tedarikçiye borcumuz var"), ("ALACAK", "Tedarikçiden alacağımız var (avans)")])
+    acilis_tarih = forms.DateField(required=False, label="Bakiye tarihi", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+                                   help_text="Bakiyenin geçerli olduğu gün (ör. programa başladığınız gün).")
+    field_order = ["unvan", "kisa_kod", "vergi_bilgisi", "yetkili", "telefon", "eposta", "vade_gun", "tedarikcideki_kodumuz",
+                   "acilis_tutar", "acilis_yon", "acilis_tarih", "not_metni", "aktif"]
+
+    def clean_acilis_tarih(self):
+        t = self.cleaned_data.get("acilis_tarih")
+        if t is not None and not (2000 <= t.year <= 2100):
+            raise forms.ValidationError("Tarih 2000–2100 yılları arasında olmalı.")
+        return t
+
+    def clean(self):
+        d = super().clean()
+        if d.get("acilis_tutar") and not d.get("acilis_tarih") and "acilis_tarih" not in self.errors:
+            self.add_error("acilis_tarih", "Açılış bakiyesi için bakiye tarihini girin.")
+        if d.get("acilis_tutar") is not None and d.get("acilis_tutar") <= 0 and "acilis_tutar" not in self.errors:
+            self.add_error("acilis_tutar", "Açılış bakiyesi sıfırdan büyük olmalı (yön ayrıca seçilir). Bakiye yoksa boş bırakın.")
+        return d
+
+    @transaction.atomic
+    def save(self, commit=True):
+        yeni = self.instance._state.adding
+        cari = super().save(commit=True)
+        tutar = self.cleaned_data.get("acilis_tutar") if yeni else None
+        if tutar:
+            alacak = self.cleaned_data.get("acilis_yon") == "ALACAK"
+            Belge.objects.create(cari=cari, tur=Belge.Tur.DUZELTME_EKSI if alacak else Belge.Tur.ACILIS, tarih=self.cleaned_data["acilis_tarih"],
+                                 tutar_kurus=tutar, aciklama="Açılış bakiyesi" + (" (alacak / avans)" if alacak else ""), kaynak_notu="Tedarikçi oluşturulurken girildi")
+        return cari
+
     def clean_unvan(self):
         unvan = " ".join(self.cleaned_data["unvan"].split())
         ayni = [c for c in Cari.objects.exclude(pk=self.instance.pk) if metin.katla(c.unvan) == metin.katla(unvan)]

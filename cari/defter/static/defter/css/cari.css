@@ -501,3 +501,7 @@ p.form-dugmeler { margin-bottom: var(--b-5); max-width: none; }
 /* Fiş kalemi tutarı otomatik hesaplanır: elle değiştirilemez */
 .kalem-tablo input.kalem-tutar { background: var(--kart-2); cursor: default; font-weight: 600; }
 .kalem-tablo input.kalem-tutar:focus { outline: none; }
+
+/* Tedarikçi formu: açılış bakiyesi bölümü */
+.acilis-bolum { border: 1px solid var(--cizgi); border-radius: var(--r-kontrol); padding: var(--b-4); margin: var(--b-5) 0 var(--b-4); }
+.acilis-bolum legend { font-weight: 600; padding: 0 var(--b-2); }

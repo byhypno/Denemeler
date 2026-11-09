@@ -301,6 +301,11 @@ def tedarikci_form(request, pk=None):
     form = CariForm(request.POST or None, instance=cari)
     if not pk:
         del form.fields["aktif"]
+        if request.method != "POST":
+            form.initial.setdefault("acilis_tarih", date.today())
+    else:
+        for ad in ("acilis_tutar", "acilis_yon", "acilis_tarih"):         # açılış bakiyesi yalnızca ilk kayıtta; sonra ekstreden hareket girilir
+            del form.fields[ad]
     if request.method == "POST" and form.is_valid():
         kayit = form.save()
         messages.success(request, f"{kayit.unvan} {'güncellendi' if pk else 'eklendi'}.")
