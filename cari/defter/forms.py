@@ -220,10 +220,10 @@ class BelgeForm(forms.ModelForm):
             d["odeme_sekli"] = ""                      # ödeme şekli yalnızca ödemede anlamlı
             self.instance.odeme_sekli = ""
         if tur and no:
-            if Belge.objects.filter(cari=self.cari, tur=tur, evrak_no=no, iptal=False).exists():
+            if self._diger_belgeler().filter(tur=tur, evrak_no=no).exists():
                 self.add_error("evrak_no", f"Bu tedarikçide {no} numaralı {dict(Belge.Tur.choices)[tur].lower()} zaten kayıtlı.")
         if tur and d.get("tarih") and d.get("tutar_kurus") and not self.errors and not self.yinelenme:
-            benzer = Belge.objects.filter(cari=self.cari, tur=tur, tarih=d["tarih"], iptal=False)
+            benzer = self._diger_belgeler().filter(tur=tur, tarih=d["tarih"])
             odenecek = self._odenecek_tutar(d)             # KDV'li girişte veritabanına yazılacak (çevrilmiş) tutar
             if any(b.tutar_kurus in (odenecek, d["tutar_kurus"]) for b in benzer) \
                     and not d.get("yine_de"):
@@ -232,6 +232,11 @@ class BelgeForm(forms.ModelForm):
                     "Aynı gün aynı türde aynı tutarda bir kayıt zaten var. Çift giriş olmadığından eminseniz "
                     "'Uyarıyı gördüm; yine de kaydet' kutusunu işaretleyip tekrar kaydedin.")
         return d
+
+    def _diger_belgeler(self):
+        """Çift giriş / evrak no denetimi için bu carinin aktif belgeleri (düzeltmede kayıt kendisi hariç)."""
+        qs = Belge.objects.filter(cari=self.cari, iptal=False)
+        return qs.exclude(pk=self.instance.pk) if self.instance.pk else qs
 
     @staticmethod
     def _odenecek_tutar(d) -> int:
@@ -245,15 +250,65 @@ class BelgeForm(forms.ModelForm):
                 return tutar
         return tutar
 
+    def _kalemleri_yaz(self, belge):
+        self.olusan_kalemler = []
+        harita = malzeme_servisi.katla_haritasi()
+        for sira, (aciklama, miktar, birim, fiyat, tutar) in enumerate(self.kalemler_temiz, start=1):
+            malzeme, _ = malzeme_servisi.malzeme_bul_veya_olustur(aciklama, birim, harita)     # katalog kendiliğinden büyür
+            self.olusan_kalemler.append(BelgeKalem.objects.create(
+                belge=belge, malzeme=malzeme, sira=sira, aciklama=aciklama, miktar=miktar, birim=birim,
+                birim_fiyat=fiyat, tutar_kurus=tutar))
+
     def save(self, commit=True):
         """Belge + fiş kalemleri TEK işlemde kaydedilir (biri başarısızsa hiçbiri kalmaz)."""
         with transaction.atomic():
             belge = super().save(commit=True)
+            self._kalemleri_yaz(belge)
+        return belge
+
+
+def _sayi_metni(d) -> str:
+    """Decimal('13.500') -> '13,5' (forma geri doldurmak için)."""
+    if d is None:
+        return ""
+    return format(d.normalize(), "f").replace(".", ",")
+
+
+class BelgeDuzeltForm(BelgeForm):
+    """Var olan cari hareketini (fiş) düzeltir. Cari ve evrak TÜRÜ değişmez; tarih, no, açıklama, tutar, KDV ve fiş kalemleri düzelir.
+    Değişiklik işlem günlüğüne eski/yeni değerle yazılır. Bakiye geriye dönük olarak yeni tutara göre hesaplanır."""
+
+    def __init__(self, *args, belge, **kwargs):
+        super().__init__(*args, instance=belge, cari=belge.cari, **kwargs)
+        self.belge = belge
+        self.fields["tur"].choices = [(belge.tur, belge.get_tur_display())]
+        self.fields["tur"].disabled = True
+        if not self.is_bound:
+            self.initial["tutar_kurus"] = self._girilen_tutar(belge)
+            self.kalem_satirlari = [
+                {"aciklama": k.aciklama, "miktar": _sayi_metni(k.miktar), "birim": k.birim, "fiyat": _sayi_metni(k.birim_fiyat),
+                 "tutar": kurus_bicimle(k.tutar_kurus)} for k in belge.kalemler.order_by("sira")]
+
+    @staticmethod
+    def _girilen_tutar(b) -> int:
+        """KDV'li kayıtta formda 'girilen' tutar gösterilir (kayıtta ödenecek tutara çevrilmişti); kaydederken yeniden çevrilir."""
+        if b.kdv_modu == KdvModu.HARIC and b.matrah_kurus is not None:
+            return b.matrah_kurus
+        if b.kdv_modu == KdvModu.DAHIL and b.matrah_kurus is not None and b.kdv_kurus is not None:
+            return b.matrah_kurus + b.kdv_kurus
+        return b.tutar_kurus
+
+    def _post_clean(self):
+        # eski KDV çözümü yeni tutarla uyuşmaz: temizle, save() yeniden hesaplar
+        self.instance.matrah_kurus = self.instance.kdv_kurus = self.instance.tevkifat_kurus = None
+        super()._post_clean()
+
+    def save(self, commit=True):
+        with transaction.atomic():
+            belge = forms.ModelForm.save(self, commit=True)
             self.olusan_kalemler = []
-            harita = malzeme_servisi.katla_haritasi()
-            for sira, (aciklama, miktar, birim, fiyat, tutar) in enumerate(self.kalemler_temiz, start=1):
-                malzeme, _ = malzeme_servisi.malzeme_bul_veya_olustur(aciklama, birim, harita)     # katalog kendiliğinden büyür
-                self.olusan_kalemler.append(BelgeKalem.objects.create(
-                    belge=belge, malzeme=malzeme, sira=sira, aciklama=aciklama, miktar=miktar, birim=birim,
-                    birim_fiyat=fiyat, tutar_kurus=tutar))
+            mevcut = [(k.aciklama, k.miktar, k.birim, k.birim_fiyat, k.tutar_kurus) for k in belge.kalemler.order_by("sira")]
+            if mevcut != self.kalemler_temiz:             # kalemler değişmediyse dokunma (günlük gürültüsü olmasın)
+                belge.kalemler.all().delete()
+                self._kalemleri_yaz(belge)
         return belge

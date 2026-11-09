@@ -14,6 +14,7 @@ urlpatterns = [
     path("tedarikciler/yeni/", views.tedarikci_form, name="tedarikci_yeni"),
     path("tedarikciler/<int:pk>/duzenle/", views.tedarikci_form, name="tedarikci_duzenle"),
     path("cari/<int:pk>/belge/yeni/", views.belge_yeni, name="belge_yeni"),
+    path("belge/<int:pk>/duzelt/", views.belge_duzelt, name="belge_duzelt"),
     path("belge/<int:pk>/iptal/", views.belge_iptal, name="belge_iptal"),
     path("cari/<int:pk>/ekstre/", views.cari_ekstre, name="cari_ekstre"),
     path("malzemeler/", malzeme_views.malzemeler, name="malzemeler"),

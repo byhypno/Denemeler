@@ -14,7 +14,7 @@ from . import ek_servisi as es
 from . import odeme_listesi as ol
 from . import gider_servisi, kasa_servisi as ks, malzeme_servisi, metin, services, trend
 from .fields import kurus_bicimle
-from .forms import GIRILEBILIR_TURLER, BelgeForm, CariForm
+from .forms import GIRILEBILIR_TURLER, BelgeDuzeltForm, BelgeForm, CariForm
 from .models import Belge, Cari, EkstreMutabakat
 from .yetki import oturum_gerekli, var_mi, yetki_gerekli
 
@@ -350,6 +350,34 @@ def belge_yeni(request, pk):
     satirlar += [{k: "" for k in BelgeForm.ALANLAR} for _ in range(max(0, 8 - len(satirlar)))]      # en az 8 satır görünür
     return render(request, "defter/belge_form.html", {
         "form": form, "cari": cari, "kalem_satirlari": list(enumerate(satirlar)), "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "sayfa": "tedarikciler",
+        "yinelenme": getattr(form, "yinelenme", False), "hafiza": malzeme_servisi.hafiza_verisi(),
+    })
+
+
+@yetki_gerekli("veri_gir")
+def belge_duzelt(request, pk):
+    """Var olan cari hareketini düzeltir (tür ve cari değişmez). İptal edilmiş kayıt düzeltilemez. Değişiklik işlem günlüğüne yazılır."""
+    belge = get_object_or_404(Belge.objects.select_related("cari"), pk=pk)
+    if belge.iptal:
+        messages.error(request, "İptal edilmiş kayıt düzeltilemez.")
+        return redirect("cari_ekstre", pk=belge.cari_id)
+    form = BelgeDuzeltForm(request.POST or None, belge=belge)
+    if request.method == "POST" and form.is_valid():
+        try:
+            b = form.save()
+        except IntegrityError:
+            form.add_error("evrak_no", "Bu evrak numarası başka bir kayıtla çakışıyor.")
+        else:
+            messages.success(request, f"Düzeltildi: {b.get_tur_display()} · {kurus_bicimle(b.tutar_kurus)} ₺ ({belge.cari.unvan}).")
+            for u in malzeme_servisi.zam_uyarilari(form.olusan_kalemler):
+                messages.warning(request, f"Zam: {u['malzeme'].ad} {kurus_bicimle(round(u['onceki']))} ₺ → {kurus_bicimle(round(u['yeni']))} ₺ "
+                                          f"(%{malzeme_servisi.yuzde_metni(u['yuzde'])} arttı; önceki alış {u['onceki_tarih']:%d.%m.%Y}, {u['onceki_cari']}).")
+            return redirect("cari_ekstre", pk=belge.cari_id)
+    satirlar = list(form.kalem_satirlari)
+    satirlar += [{k: "" for k in BelgeForm.ALANLAR} for _ in range(max(0, 8 - len(satirlar)))]
+    return render(request, "defter/belge_form.html", {
+        "form": form, "cari": belge.cari, "belge": belge, "duzenle": True, "kalem_satirlari": list(enumerate(satirlar)),
+        "kdv_alanlari": ["kdv_modu", "kdv_orani", "tevkifat_orani"], "sayfa": "tedarikciler",
         "yinelenme": getattr(form, "yinelenme", False), "hafiza": malzeme_servisi.hafiza_verisi(),
     })
 

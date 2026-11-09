@@ -68,6 +68,7 @@
       <td>{{ b.aciklama|default:"" }}{% with ks=b.kalemler.all %}{% if ks %}
         <details class="kalemler"><summary>{{ ks|length }} kalem</summary>
           <table class="kalem-mini"><tbody>{% for k in ks %}<tr><td>{{ k.aciklama }}</td><td class="sayi">{{ k.miktar|miktar }}{% if k.birim %} {{ k.birim }}{% endif %}</td><td class="sayi">{{ k.tutar_kurus|kurus_say }}</td></tr>{% endfor %}</tbody></table></details>{% endif %}{% endwith %}{% if "veri_gir" in yetkiler %}
+        <a class="kucuk ikincil dugme yazdirma-gizle" href="{% url 'belge_duzelt' b.pk %}">Düzenle</a>
         <details class="satir-iptal yazdirma-gizle"><summary>İptal</summary>
           <form method="post" action="{% url 'belge_iptal' b.pk %}" class="satir-form">{% csrf_token %}
             <input name="neden" placeholder="İptal nedeni" required aria-label="İptal nedeni">
