@@ -257,11 +257,25 @@ class KalemTests(Temel):
             self.assertContains(r, parca)
         self.assertEqual((Belge.objects.count(), Belge.objects.filter(kalemler__isnull=False).count()), (0, 0))
 
-    def test_odeme_ve_iadede_kalem_olmaz(self):
+    def test_odemede_kalem_olmaz(self):
         r = self.client.post(self.url, self.kalemli(("A", "1", "", "5,00", ""), tur="ODEME", tutar_kurus="5,00"))
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "yalnızca alış fişi veya alış faturasında")
+        self.assertContains(r, "yalnızca alış fişi, alış faturası veya iadede")
         self.assertEqual(Belge.objects.count(), 0)
+
+    def test_iadede_kalem_girilir_bakiyeyi_azaltir_fiyat_hafizasina_girmez(self):
+        from .malzeme_servisi import fiyat_gecmisi
+        from .models import Malzeme
+        self.client.post(self.url, self.kalemli(("KLOZET KAPAK", "48", "adet", "190,00", ""), tutar_kurus="", evrak_no="A1"))
+        r = self.client.post(self.url, self.kalemli(("KLOZET KAPAK", "10", "adet", "120,00", ""), tur="IADE", tutar_kurus="", evrak_no="I1"), follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, "Zam:")
+        iade = Belge.objects.get(tur="IADE")
+        self.assertEqual((iade.tutar_kurus, iade.kalemler.count()), (120000, 1))
+        self.assertEqual(self.cari.bakiye_kurus(), 48 * 19000 - 120000)
+        gecmis = fiyat_gecmisi(Malzeme.objects.get())
+        self.assertEqual(len(gecmis), 1)                                     # yalnızca alış; iade fiyatı geçmişe girmedi
+        self.assertEqual(gecmis[0]["tutar_kurus"], 48 * 19000)
 
     def test_tutar_da_kalem_de_yoksa_hata(self):
         r = self.client.post(self.url, self.veri(tutar_kurus=""))

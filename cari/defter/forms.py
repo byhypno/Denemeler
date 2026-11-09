@@ -200,8 +200,8 @@ class BelgeForm(forms.ModelForm):
         d = super().clean()
         tur, no = d.get("tur"), (d.get("evrak_no") or "").strip()
         kalemler = self._kalemleri_coz()
-        if kalemler and tur not in (Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI):
-            self.add_error(None, "Fiş kalemleri yalnızca alış fişi veya alış faturasında girilir.")
+        if kalemler and tur not in (Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI, Belge.Tur.IADE):
+            self.add_error(None, "Fiş kalemleri yalnızca alış fişi, alış faturası veya iadede girilir.")
             kalemler = []
         toplam = sum(k[4] for k in kalemler)
         if not d.get("tutar_kurus"):

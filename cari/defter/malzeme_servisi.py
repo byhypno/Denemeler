@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db import transaction
 
 from . import metin
-from .models import BelgeKalem, Malzeme
+from .models import Belge, BelgeKalem, Malzeme
 
 KURUS = Decimal(1)
 
@@ -36,7 +36,8 @@ def _degisim(yeni: Decimal, eski: Decimal):
 
 
 def _kalemler(malzeme=None):
-    qs = (BelgeKalem.objects.filter(belge__iptal=False, malzeme__isnull=False)
+    # yalnızca ALIŞ kalemleri fiyat hafızasına girer; iade kalemleri alış fiyatı değildir
+    qs = (BelgeKalem.objects.filter(belge__iptal=False, belge__tur__in=(Belge.Tur.ALIS_FISI, Belge.Tur.ALIS_FATURASI), malzeme__isnull=False)
           .select_related("belge", "belge__cari", "malzeme"))
     if malzeme is not None:
         qs = qs.filter(malzeme=malzeme)
