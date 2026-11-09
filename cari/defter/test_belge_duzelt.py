@@ -145,7 +145,7 @@ class KalemDuzeltTests(Temel):
         b = self.kalemli()
         veri = self.veri(b, tutar_kurus="", kalem_sayisi="2")
         veri.update(self.satir(0, "Vida", "20", "ADET", "100", "2.000,00"))
-        veri.update(self.satir(1, "Çivi", "1", "KG", "", "500,00"))
+        veri.update(self.satir(1, "Çivi", "1", "KG", "500,00", "999,00"))      # gönderilen tutar yok sayılır
         self.assertEqual(self.client.post(self.url(b), veri).status_code, 302)
         b.refresh_from_db()
         self.assertEqual(b.tutar_kurus, 250000)
@@ -166,3 +166,20 @@ class KalemDuzeltTests(Temel):
         veri = self.veri(b, tutar_kurus="3.000,00", kalem_sayisi="0")
         self.assertEqual(self.client.post(self.url(b), veri).status_code, 302)
         self.assertEqual(b.kalemler.count(), 0)
+
+    def test_fiyatsiz_eski_kalem_forma_turetilmis_fiyatla_gelir(self):
+        b = self.belge(tutar=30000)
+        BelgeKalem.objects.create(belge=b, sira=1, aciklama="Eski kalem", miktar=Decimal("4"), birim="AD", birim_fiyat=None, tutar_kurus=30000)
+        r = self.client.get(self.url(b))
+        self.assertContains(r, 'value="75"')                       # 300,00 / 4
+        self.assertContains(r, 'value="300,00"')
+
+    def test_tutar_alani_salt_okunur_ve_sunucu_hesabi_gecerli(self):
+        r = self.client.get(reverse("belge_yeni", args=[self.cari.pk]))
+        self.assertContains(r, 'readonly tabindex="-1" class="kalem-tutar"')
+        b = self.belge(tutar=100000)
+        veri = self.veri(b, tutar_kurus="", kalem_sayisi="1")
+        veri.update(self.satir(0, "Vida", "3", "AD", "0,335", "5000,00"))        # 3 × 0,335 = 1,005 -> 1,01
+        self.assertEqual(self.client.post(self.url(b), veri).status_code, 302)
+        b.refresh_from_db()
+        self.assertEqual((b.kalemler.get().tutar_kurus, b.tutar_kurus), (101, 101))

@@ -4,7 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
 
-from .fields import KurusFormField, kurus_bicimle, ondalik_ayristir, tl_ayristir
+from .fields import MAKS_KURUS, KurusFormField, kurus_bicimle, ondalik_ayristir, tl_ayristir
 from . import malzeme_servisi, metin
 from .kdv import KdvModu, kdv_hesapla, oranlari_dogrula
 from .models import Belge, BelgeKalem, Cari, KasaHareketi, KasaKategori
@@ -180,18 +180,16 @@ class BelgeForm(forms.ModelForm):
                     fiyat = ondalik_ayristir(k["fiyat"], 4) if k["fiyat"] else None
                 except ValueError:
                     raise ValueError("birim fiyatı 1.234,50 biçiminde girin")
-                try:
-                    tutar = tl_ayristir(k["tutar"]) if k["tutar"] else None
-                except ValueError:
-                    raise ValueError("tutarı 1.234,50 biçiminde girin")
-                if fiyat is not None and fiyat <= 0:
+                if fiyat is None:
+                    raise ValueError("birim fiyat girin (tutar miktar × birim fiyattan otomatik hesaplanır)")
+                if fiyat <= 0:
                     raise ValueError("birim fiyat sıfırdan büyük olmalı")
-                if tutar is None and fiyat is not None:
-                    tutar = int((miktar * fiyat * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
-                if tutar is None:
-                    raise ValueError("tutar ya da birim fiyat girin")
+                # Kalem tutarı HER ZAMAN miktar × birim fiyat'tır; formdan gelen tutar değeri yok sayılır (elle müdahale edilemez).
+                tutar = int((miktar * fiyat * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
                 if tutar <= 0:
-                    raise ValueError("tutar sıfırdan büyük olmalı")
+                    raise ValueError("hesaplanan tutar sıfırdan büyük olmalı")
+                if tutar > MAKS_KURUS:
+                    raise ValueError("tutar çok büyük")
                 temiz.append((k["aciklama"], miktar, k["birim"][:20], fiyat, tutar))
             except ValueError as e:
                 k["hata"] = str(e)
@@ -285,9 +283,14 @@ class BelgeDuzeltForm(BelgeForm):
         self.fields["tur"].disabled = True
         if not self.is_bound:
             self.initial["tutar_kurus"] = self._girilen_tutar(belge)
-            self.kalem_satirlari = [
-                {"aciklama": k.aciklama, "miktar": _sayi_metni(k.miktar), "birim": k.birim, "fiyat": _sayi_metni(k.birim_fiyat),
-                 "tutar": kurus_bicimle(k.tutar_kurus)} for k in belge.kalemler.order_by("sira")]
+            self.kalem_satirlari = []
+            for k in belge.kalemler.order_by("sira"):
+                fiyat = k.birim_fiyat
+                if fiyat is None and k.miktar:                       # eski kayıt (ör. Excel): fiyat yok, tutardan türet
+                    fiyat = (Decimal(k.tutar_kurus) / 100 / k.miktar).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+                tutar = int((k.miktar * fiyat * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP)) if fiyat is not None else k.tutar_kurus
+                self.kalem_satirlari.append({"aciklama": k.aciklama, "miktar": _sayi_metni(k.miktar), "birim": k.birim,
+                                             "fiyat": _sayi_metni(fiyat), "tutar": kurus_bicimle(tutar)})
 
     @staticmethod
     def _girilen_tutar(b) -> int:

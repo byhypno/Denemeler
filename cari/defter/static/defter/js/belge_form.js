@@ -12,12 +12,26 @@
     if (!m || !/^(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$/.test(m)) return null;
     return parseFloat(m.replace(/\./g, '').replace(',', '.'));
   }
+  // Kalem tutarı = miktar × birim fiyat (kuruşa yarım yukarı yuvarlanır; sunucudaki hesapla birebir aynı). Tamsayı/BigInt ile: kayan nokta hatası olmaz.
+  function olcekli(metin, kesir) {            // '1.234,5' -> BigInt (10^kesir ile ölçekli); geçersizse null
+    const m = (metin || '').trim().replace(/\s/g, '');
+    if (!m || !/^(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$/.test(m)) return null;
+    const [tam, k = ''] = m.replace(/\./g, '').split(',');
+    if (k.length > kesir) return null;
+    return BigInt(tam + k.padEnd(kesir, '0'));
+  }
+  function satirKurus(tr) {
+    const mk = tr.querySelector('[name^="kalem_miktar_"]').value.trim();
+    const miktar = mk === '' ? 1000n : olcekli(mk, 3);
+    const fiyat = olcekli(tr.querySelector('[name^="kalem_fiyat_"]').value, 4);
+    if (miktar === null || fiyat === null || miktar <= 0n || fiyat <= 0n) return null;
+    return (miktar * fiyat + 50000n) / 100000n;
+  }
   function satirTutari(tr) {
-    const girilen = sayi(tr.querySelector('[name^="kalem_tutar_"]').value);
-    if (girilen !== null) return girilen;
-    const miktar = tr.querySelector('[name^="kalem_miktar_"]').value.trim() === '' ? 1 : sayi(tr.querySelector('[name^="kalem_miktar_"]').value);
-    const fiyat = sayi(tr.querySelector('[name^="kalem_fiyat_"]').value);
-    return miktar !== null && fiyat !== null ? Math.round(miktar * fiyat * 100) / 100 : 0;
+    const kutu = tr.querySelector('[name^="kalem_tutar_"]');
+    const kurus = satirKurus(tr);
+    kutu.value = kurus === null ? '' : tl.format(Number(kurus) / 100);
+    return kurus === null ? 0 : Number(kurus) / 100;
   }
   function topla() {
     let t = 0;
@@ -35,9 +49,7 @@
   function birimFiyat(tr) {
     const f = sayi(tr.querySelector('[name^="kalem_fiyat_"]').value);
     if (f !== null) return f;
-    const t = sayi(tr.querySelector('[name^="kalem_tutar_"]').value);
-    const mk = tr.querySelector('[name^="kalem_miktar_"]').value.trim() === '' ? 1 : sayi(tr.querySelector('[name^="kalem_miktar_"]').value);
-    return t !== null && mk ? t / mk : null;
+    return null;
   }
   function ipucu(tr) {
     const kutu = tr.querySelector('.kalem-ipucu');
@@ -91,7 +103,7 @@
   govde.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.isComposing || e.target.tagName !== 'INPUT') return;
     e.preventDefault();
-    const alanlar = Array.from(govde.querySelectorAll('input'));
+    const alanlar = Array.from(govde.querySelectorAll('input:not([readonly])'));
     const sira = alanlar.indexOf(e.target);
     if (sira < 0) return;
     if (sira === alanlar.length - 1) { satirEkle(); return; }

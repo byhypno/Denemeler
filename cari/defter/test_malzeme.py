@@ -154,7 +154,7 @@ class FisFormuTests(Temel):
 
     def post(self, ad, tutar, miktar="1", fiyat="", tarih="2026-03-05", no="", **kw):
         d = {"tur": "ALIS_FISI", "tarih": tarih, "tutar_kurus": "", "kdv_modu": "BILINMIYOR", "evrak_no": no, "kalem_sayisi": "1",
-             "kalem_aciklama_0": ad, "kalem_miktar_0": miktar, "kalem_birim_0": "adet", "kalem_fiyat_0": fiyat, "kalem_tutar_0": tutar}
+             "kalem_aciklama_0": ad, "kalem_miktar_0": miktar, "kalem_birim_0": "adet", "kalem_fiyat_0": fiyat or tutar, "kalem_tutar_0": tutar}
         d.update(kw)
         return self.client.post(self.url, d, follow=True)
 

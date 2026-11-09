@@ -497,3 +497,7 @@ p.form-dugmeler { margin-bottom: var(--b-5); max-width: none; }
 .toplu-tablo tr.hatali td { background: var(--negatif-zemin); }
 .toplu-tablo tr.hatali-not td { background: var(--negatif-zemin); padding-top: 0; }
 .toplu-tablo .hata { color: var(--negatif); font-size: var(--t-sm); }
+
+/* Fiş kalemi tutarı otomatik hesaplanır: elle değiştirilemez */
+.kalem-tablo input.kalem-tutar { background: var(--kart-2); cursor: default; font-weight: 600; }
+.kalem-tablo input.kalem-tutar:focus { outline: none; }
