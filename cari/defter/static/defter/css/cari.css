@@ -408,7 +408,7 @@ button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .kalem-bolum h2 { margin-bottom: var(--b-2); }
 .kalem-tablo { min-width: 700px; }                 /* dar ekranda tablo kutusu içinde yatay kayar; girdiler ezilmez */
 .kalem-tablo td:first-child input { min-width: 220px; }
-.kalem-tablo td { padding: 4px var(--b-2); }
+.kalem-tablo td { padding: 4px var(--b-2); vertical-align: top; }   /* ipucu satırı yükseltse de tüm kutular aynı hizada başlar */
 .kalem-tablo td input { width: 100%; min-height: 36px; }
 .kalem-tablo td.sayi input { text-align: right; font-variant-numeric: tabular-nums; }
 .kalem-ipucu { display: block; font-size: var(--t-xs); color: var(--metin-2); min-height: 0; margin-top: 2px; }
