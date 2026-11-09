@@ -3,6 +3,7 @@ from django import forms
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
+from django.db.models import Q
 
 from .fields import MAKS_KURUS, KurusFormField, kurus_bicimle, ondalik_ayristir, tl_ayristir
 from . import malzeme_servisi, metin
@@ -97,7 +98,7 @@ class CariForm(forms.ModelForm):
                   "tedarikcideki_kodumuz": "Tedarikçideki cari kodumuz", "not_metni": "Not", "aktif": "Aktif tedarikçi"}
         help_texts = {"vade_gun": "Boş bırakılırsa vade takibi yapılmaz.", "aktif": "Pasif tedarikçi yeni kayıt seçeneklerinde çıkmaz; geçmişi durur."}
 
-    # ---- yalnızca YENİ tedarikçide: açılış bakiyesi (view, düzenlemede bu alanları kaldırır)
+    # ---- açılış bakiyesi: yeni tedarikçide girilir; mevcutta varsa gösterilir/düzeltilir, yoksa eklenir
     acilis_tutar = KurusFormField(required=False, label="Açılış bakiyesi (₺)",
                                   help_text="Programa başlarken bu tedarikçiyle aranızdaki mevcut bakiye. Yoksa boş bırakın; sonra ekstreden hareket girersiniz.")
     acilis_yon = forms.ChoiceField(required=False, label="Açılış bakiyesi yönü", initial="BORC",
@@ -106,6 +107,23 @@ class CariForm(forms.ModelForm):
                                    help_text="Bakiyenin geçerli olduğu gün (ör. programa başladığınız gün).")
     field_order = ["unvan", "kisa_kod", "vergi_bilgisi", "yetkili", "telefon", "eposta", "vade_gun", "tedarikcideki_kodumuz",
                    "acilis_tutar", "acilis_yon", "acilis_tarih", "not_metni", "aktif"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.acilis_belge = self._acilis_belgesi()
+        if self.acilis_belge is not None and not self.is_bound:
+            b = self.acilis_belge
+            self.initial["acilis_tutar"] = b.tutar_kurus
+            self.initial["acilis_yon"] = "ALACAK" if b.tur == Belge.Tur.DUZELTME_EKSI else "BORC"
+            self.initial["acilis_tarih"] = b.tarih
+
+    def _acilis_belgesi(self):
+        """Bu tedarikçinin aktif açılış kaydı: 'Açılış / Devir' türü ya da bu formdan girilen alacak/avans açılışı (en yenisi)."""
+        if not self.instance.pk:
+            return None
+        qs = Belge.objects.filter(cari=self.instance, iptal=False).filter(
+            Q(tur=Belge.Tur.ACILIS) | Q(tur=Belge.Tur.DUZELTME_EKSI, aciklama__startswith="Açılış bakiyesi"))
+        return qs.order_by("-id").first()
 
     def clean_acilis_tarih(self):
         t = self.cleaned_data.get("acilis_tarih")
@@ -123,13 +141,24 @@ class CariForm(forms.ModelForm):
 
     @transaction.atomic
     def save(self, commit=True):
-        yeni = self.instance._state.adding
         cari = super().save(commit=True)
-        tutar = self.cleaned_data.get("acilis_tutar") if yeni else None
-        if tutar:
+        tutar = self.cleaned_data.get("acilis_tutar")
+        if tutar:                                      # boş bırakılırsa mevcut açılış kaydına dokunulmaz (kaldırmak için ekstreden iptal)
             alacak = self.cleaned_data.get("acilis_yon") == "ALACAK"
-            Belge.objects.create(cari=cari, tur=Belge.Tur.DUZELTME_EKSI if alacak else Belge.Tur.ACILIS, tarih=self.cleaned_data["acilis_tarih"],
-                                 tutar_kurus=tutar, aciklama="Açılış bakiyesi" + (" (alacak / avans)" if alacak else ""), kaynak_notu="Tedarikçi oluşturulurken girildi")
+            tur = Belge.Tur.DUZELTME_EKSI if alacak else Belge.Tur.ACILIS
+            aciklama = "Açılış bakiyesi" + (" (alacak / avans)" if alacak else "")
+            b = self.acilis_belge
+            if b is None:
+                Belge.objects.create(cari=cari, tur=tur, tarih=self.cleaned_data["acilis_tarih"], tutar_kurus=tutar,
+                                     aciklama=aciklama, kaynak_notu="Tedarikçi formundan girildi")
+            else:
+                if (b.tur, b.tutar_kurus, b.tarih) != (tur, tutar, self.cleaned_data["acilis_tarih"]):
+                    b.tur, b.tutar_kurus, b.tarih = tur, tutar, self.cleaned_data["acilis_tarih"]
+                    b.kdv_modu, b.kdv_orani, b.tevkifat_orani = "BILINMIYOR", None, None
+                    b.matrah_kurus = b.kdv_kurus = b.tevkifat_kurus = None
+                    if b.aciklama.startswith("Açılış bakiyesi"):
+                        b.aciklama = aciklama
+                    b.save()
         return cari
 
     def clean_unvan(self):

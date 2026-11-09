@@ -58,12 +58,60 @@ class AcilisBakiyesiTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(Belge.objects.count(), 0)
 
-    def test_duzenlemede_alanlar_yok_ve_belge_olusmaz(self):
-        c = Cari.objects.create(unvan="X")
-        url = reverse("tedarikci_duzenle", args=[c.pk])
-        self.assertNotContains(self.client.get(url), "Açılış bakiyesi")
-        self.client.post(url, {"unvan": "X", "aktif": "on", "acilis_tutar": "999,00", "acilis_tarih": "2026-11-01", "acilis_yon": "BORC"})
-        self.assertEqual(Belge.objects.count(), 0)
+    def duzenle(self, c, **kw):
+        d = {"unvan": c.unvan, "aktif": "on", "acilis_tutar": "", "acilis_yon": "BORC", "acilis_tarih": "2026-11-01"}
+        d.update(kw)
+        return self.client.post(reverse("tedarikci_duzenle", args=[c.pk]), d)
+
+    def test_eski_tedarikciye_acilis_eklenir(self):
+        c = Cari.objects.create(unvan="ESKİ")
+        self.assertContains(self.client.get(reverse("tedarikci_duzenle", args=[c.pk])), "henüz açılış kaydı yok")
+        self.assertEqual(self.duzenle(c, acilis_tutar="750,00").status_code, 302)
+        self.assertEqual((c.belgeler.count(), c.bakiye_kurus()), (1, 75000))
+
+    def test_mevcut_acilis_formda_dolu_gelir_ve_duzelir(self):
+        self.post(acilis_tutar="1.000,00")
+        c = Cari.objects.get()
+        r = self.client.get(reverse("tedarikci_duzenle", args=[c.pk]))
+        self.assertContains(r, 'value="1.000,00"')
+        self.assertContains(r, "açılış kaydı var")
+        self.assertEqual(self.duzenle(c, acilis_tutar="1.500,00", acilis_tarih="2026-10-01").status_code, 302)
+        b = c.belgeler.get()                                                    # çoğalmadı, aynı kayıt güncellendi
+        self.assertEqual((b.tutar_kurus, b.tarih), (150000, date(2026, 10, 1)))
+        self.assertEqual(c.bakiye_kurus(), 150000)
+
+    def test_yon_degisince_tur_degisir(self):
+        self.post(acilis_tutar="200,00")
+        c = Cari.objects.get()
+        self.duzenle(c, acilis_tutar="200,00", acilis_yon="ALACAK")
+        self.assertEqual((c.belgeler.get().tur, c.bakiye_kurus()), ("DUZELTME_EKSI", -20000))
+        self.duzenle(c, acilis_tutar="200,00", acilis_yon="BORC")
+        self.assertEqual((c.belgeler.get().tur, c.bakiye_kurus()), ("ACILIS", 20000))
+
+    def test_bos_birakilirsa_mevcut_acilis_degismez(self):
+        self.post(acilis_tutar="300,00")
+        c = Cari.objects.get()
+        self.duzenle(c, unvan="YENİ AD")
+        self.assertEqual((c.belgeler.get().tutar_kurus, Cari.objects.get().unvan), (30000, "YENİ AD"))
+
+    def test_excel_devri_acilis_sayilir_iptal_edilen_sayilmaz(self):
+        c = Cari.objects.create(unvan="DEVİRLİ")
+        d = Belge.objects.create(cari=c, tur="ACILIS", tarih=date(2026, 1, 1), tutar_kurus=10000)
+        self.assertContains(self.client.get(reverse("tedarikci_duzenle", args=[c.pk])), 'value="100,00"')
+        self.duzenle(c, acilis_tutar="250,00")
+        d.refresh_from_db()
+        self.assertEqual(d.tutar_kurus, 25000)
+        Belge.objects.filter(pk=d.pk).update(iptal=True, iptal_nedeni="x")
+        self.duzenle(c, acilis_tutar="90,00")                                   # iptal edilmiş açılış sayılmaz: yenisi eklenir
+        self.assertEqual(c.belgeler.filter(iptal=False).count(), 1)
+        self.assertEqual(c.bakiye_kurus(), 9000)
+
+    def test_kdvli_acilis_degisince_kdv_temizlenir(self):
+        c = Cari.objects.create(unvan="K")
+        Belge.objects.create(cari=c, tur="ACILIS", tarih=date(2026, 1, 1), tutar_kurus=10000, kdv_modu="HARIC", kdv_orani=20)
+        self.duzenle(c, acilis_tutar="500,00")
+        b = c.belgeler.get()
+        self.assertEqual((b.tutar_kurus, b.kdv_modu, b.matrah_kurus), (50000, "BILINMIYOR", None))
 
     def test_gunluge_yazilir_ve_ekstrede_gorunur(self):
         self.post(acilis_tutar="100,00")

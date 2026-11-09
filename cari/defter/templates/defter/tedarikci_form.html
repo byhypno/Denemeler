@@ -17,7 +17,8 @@
   {% if form.acilis_tutar %}
   <fieldset class="kart-ic acilis-bolum">
     <legend>Açılış bakiyesi <span class="not">(isteğe bağlı)</span></legend>
-    <p class="not">Programa başlarken bu tedarikçiyle aranızdaki mevcut bakiye. Yoksa boş bırakın; sonra ekstreden hareket girersiniz. Ekstrede "Açılış bakiyesi" satırı olarak görünür.</p>
+    <p class="not">Programa başlarken bu tedarikçiyle aranızdaki mevcut bakiye. Yoksa boş bırakın; sonra ekstreden hareket girersiniz. Ekstrede "Açılış bakiyesi" satırı olarak görünür.
+      {% if cari %}{% if form.acilis_belge %}<b>Bu tedarikçinin açılış kaydı var; burada değiştirebilirsiniz</b> (eski ve yeni değer işlem günlüğünde kalır). Boş bırakırsanız mevcut kayıt değişmez; kaldırmak için ekstreden iptal edin.{% else %}Bu tedarikçide henüz açılış kaydı yok; yazıp kaydederseniz eklenir.{% endif %}{% endif %}</p>
     <div class="form-izgara">
       {% for alan in form %}{% if alan.name == "acilis_tutar" or alan.name == "acilis_yon" or alan.name == "acilis_tarih" %}
       <label for="{{ alan.id_for_label }}"><span>{{ alan.label }}</span>{{ alan }}
