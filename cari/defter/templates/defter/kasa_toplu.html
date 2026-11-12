@@ -5,8 +5,7 @@
 <p class="not">{{ hesap.ad }}</p>
 <p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
 <p class="not">Boş bırakılan satırlar atlanır. <b>Geçerli satırlar kaydedilir, hatalı satırlar hata mesajıyla ekranda kalır.</b>
-  Enter bir sonraki alana geçer; son alanda yeni satır açılır. KDV gerekiyorsa kaydı tek tek girin.
-  {% if kilit_siniri %}{{ kilit_siniri|date:"d.m.Y" }} ve öncesi kapalı: bu günlere kayıt girilemez.{% endif %}</p>
+  Enter bir sonraki alana geçer; son alanda yeni satır açılır. KDV gerekiyorsa kaydı tek tek girin.</p>
 <datalist id="harcayan-listesi">{% for a in harcayanlar %}<option value="{{ a }}">{% endfor %}</datalist>
 <form method="post" novalidate>{% csrf_token %}
   <input type="hidden" name="hesap" value="{{ hesap.pk }}">

@@ -73,7 +73,7 @@ class HarcayanDuzeltTests(Temel):
         onceki = self.kasa.bakiye_kurus()
         n = IslemGunlugu.objects.count()
         s = ks.harcayan_duzelt(self.kasa, "ali", "Ali")
-        self.assertEqual(s, {"degisen": 2, "kilitli": 0})
+        self.assertEqual(s, {"degisen": 2})
         self.h1.refresh_from_db(); self.h2.refresh_from_db()
         self.assertEqual((self.h1.harcayan, self.h2.harcayan), ("Ali", "Ali"))
         self.assertEqual(self.kasa.bakiye_kurus(), onceki)
@@ -85,14 +85,6 @@ class HarcayanDuzeltTests(Temel):
         self.assertEqual(s["degisen"], 1)
         self.h3.refresh_from_db()
         self.assertEqual(self.h3.harcayan, "Ofis")
-
-    def test_kapali_gun_atlanir(self):
-        from .models import GunSonu
-        GunSonu.objects.create(hesap=self.kasa, tarih=date(2026, 5, 1), beklenen_kurus=0, sayilan_kurus=0, fark_kurus=0, kilitli=True)
-        s = ks.harcayan_duzelt(self.kasa, "ali", "Ali")
-        self.assertEqual(s, {"degisen": 1, "kilitli": 1})
-        self.h1.refresh_from_db()
-        self.assertEqual(self.h1.harcayan, "ali")
 
     def test_bos_yeni_ad_reddedilir(self):
         with self.assertRaises(ValidationError):

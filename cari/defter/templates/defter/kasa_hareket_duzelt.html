@@ -5,7 +5,7 @@
 <p><a href="{{ geri }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
 <section class="kart">
   <p><b>{{ h.tarih|date:"d.m.Y" }}</b> · {{ h.get_yon_display }} · <b>{{ h.tutar_kurus|kurus_tl }}</b></p>
-  <p class="not">Tutar, tarih ve yön buradan değişmez; bakiye ve gün sonu kapanışları bozulmasın. Tutar yanlışsa kaydı iptal edip doğrusunu girin.
+  <p class="not">Tutar, tarih ve yön buradan değişmez; bakiye bozulmasın. Tutar yanlışsa kaydı iptal edip doğrusunu girin.
     Yapılan düzeltme işlem günlüğüne yazılır.</p>
   <form method="post" class="form-izgara">{% csrf_token %}
     {{ form.non_field_errors }}

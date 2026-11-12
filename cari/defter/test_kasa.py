@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from . import kasa_servisi as ks
-from .models import Belge, Cari, GunSonu, Hesap, KasaHareketi, KasaKategori
+from .models import Belge, Cari, Hesap, KasaHareketi, KasaKategori
 from .test_yardimci import rol_kullanici
 
 GIRIS, CIKIS = KasaHareketi.Yon.GIRIS, KasaHareketi.Yon.CIKIS
@@ -19,113 +19,6 @@ class KasaTemel(TestCase):
 
     def hareket(self, yon, tutar, tarih, **kw):
         return KasaHareketi.objects.create(hesap=self.kasa, yon=yon, tutar_kurus=tutar, tarih=tarih, **kw)
-
-
-class GunSonuKilitTests(KasaTemel):
-    def test_beklenen_acilis_bakiyesini_ve_tarihe_kadar_olani_icerir(self):
-        self.kasa.acilis_bakiye_kurus = 5000
-        self.kasa.save()
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        self.hareket(CIKIS, 3000, date(2026, 3, 2))
-        self.hareket(GIRIS, 99999, date(2026, 3, 5))      # sonraki gün: dahil değil
-        self.assertEqual(ks.gun_sonu_beklenen(self.kasa, date(2026, 3, 2)), 12000)
-
-    def test_iptal_beklenene_dahil_degil(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        self.hareket(GIRIS, 5000, date(2026, 3, 1), iptal=True, iptal_nedeni="hatalı")
-        self.assertEqual(ks.gun_sonu_beklenen(self.kasa, date(2026, 3, 1)), 10000)
-
-    def test_kapanis_tutarsa_fark_sifir_ve_kilitler(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        g = ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 10000, bugun=date(2026, 3, 2))
-        self.assertEqual((g.beklenen_kurus, g.sayilan_kurus, g.fark_kurus, g.kilitli), (10000, 10000, 0, True))
-        self.assertEqual(self.kasa.kilit_siniri(), date(2026, 3, 1))
-
-    def test_kapali_gune_kayit_girilemez(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 10000, bugun=date(2026, 3, 2))
-        yeni = KasaHareketi(hesap=self.kasa, yon=GIRIS, tutar_kurus=100, tarih=date(2026, 3, 1))
-        with self.assertRaises(ValidationError):
-            yeni.full_clean()
-        with self.assertRaises(ValidationError):
-            yeni.save()                       # clean'i atlayan doğrudan kayıt da engellenir
-        with self.assertRaises(ValidationError):
-            self.hareket(GIRIS, 100, date(2026, 2, 15))   # daha eski gün de kapalı
-        self.assertEqual(KasaHareketi.objects.count(), 1)
-
-    def test_kapali_gunun_kaydi_degistirilemez_veya_iptal_edilemez(self):
-        h = self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 10000, bugun=date(2026, 3, 2))
-        h.tutar_kurus = 1
-        with self.assertRaises(ValidationError):
-            h.save()
-        h.refresh_from_db()
-        h.iptal, h.iptal_nedeni = True, "x"
-        with self.assertRaises(ValidationError):
-            h.full_clean()
-        h.refresh_from_db()
-        self.assertEqual((h.tutar_kurus, h.iptal), (10000, False))
-
-    def test_sonraki_gun_serbest(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 10000, bugun=date(2026, 3, 2))
-        self.hareket(CIKIS, 4000, date(2026, 3, 2))
-        self.assertEqual(self.kasa.bakiye_kurus(), 6000)
-
-    def test_noksan_farki_cikis_hareketi_olarak_isler(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        g = ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 9000, farki_isle=True, bugun=date(2026, 3, 2))
-        self.assertEqual((g.fark_kurus, g.fark_islendi), (-1000, True))
-        fark = KasaHareketi.objects.get(kategori__ad=ks.KASA_FARKI)
-        self.assertEqual((fark.yon, fark.tutar_kurus, fark.tarih), (CIKIS, 1000, date(2026, 3, 1)))
-        self.assertEqual(self.kasa.bakiye_kurus(), 9000)        # artık sayılanla aynı
-
-    def test_fazla_farki_giris_hareketi_olarak_isler(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 10250, farki_isle=True, bugun=date(2026, 3, 2))
-        self.assertEqual(KasaHareketi.objects.get(kategori__ad=ks.KASA_FARKI).yon, GIRIS)
-        self.assertEqual(self.kasa.bakiye_kurus(), 10250)
-
-    def test_fark_islenmezse_hareket_olusmaz(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        g = ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 9000, bugun=date(2026, 3, 2))
-        self.assertEqual((g.fark_kurus, g.fark_islendi), (-1000, False))
-        self.assertEqual(KasaHareketi.objects.count(), 1)
-
-    def test_gecersiz_kapanislar(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        with self.assertRaises(ValidationError):
-            ks.gun_sonu_kapat(self.kasa, date(2026, 3, 9), 0, bugun=date(2026, 3, 2))       # gelecek
-        with self.assertRaises(ValidationError):
-            ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), -5, bugun=date(2026, 3, 2))      # eksi sayım
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 5), 10000, bugun=date(2026, 3, 6))
-        for gun in (date(2026, 3, 5), date(2026, 3, 4)):                                    # tekrar / geri
-            with self.assertRaises(ValidationError):
-                ks.gun_sonu_kapat(self.kasa, gun, 10000, bugun=date(2026, 3, 6))
-        self.assertEqual(GunSonu.objects.count(), 1)
-
-    def test_gun_sonu_tarihi_tekil(self):
-        GunSonu.objects.create(hesap=self.kasa, tarih=date(2026, 3, 1), beklenen_kurus=0,
-                               sayilan_kurus=0, fark_kurus=0)
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            GunSonu.objects.create(hesap=self.kasa, tarih=date(2026, 3, 1), beklenen_kurus=0,
-                                   sayilan_kurus=0, fark_kurus=0)
-
-    def test_kilit_acilinca_kayit_girilebilir(self):
-        self.hareket(GIRIS, 10000, date(2026, 3, 1))
-        g = ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 10000, bugun=date(2026, 3, 2))
-        g.kilitli = False
-        g.save()
-        self.assertIsNone(self.kasa.kilit_siniri())
-        self.hareket(GIRIS, 100, date(2026, 3, 1))
-
-    def test_acik_gunler(self):
-        self.hareket(GIRIS, 100, date(2026, 3, 1))
-        self.hareket(GIRIS, 100, date(2026, 3, 3))
-        self.hareket(GIRIS, 100, date(2026, 3, 9))   # bugün: sayılmaz
-        self.assertEqual(ks.acik_gunler(self.kasa, date(2026, 3, 9)), [date(2026, 3, 1), date(2026, 3, 3)])
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 1), 100, bugun=date(2026, 3, 9))
-        self.assertEqual(ks.acik_gunler(self.kasa, date(2026, 3, 9)), [date(2026, 3, 3)])
 
 
 class EksiBakiyeTests(KasaTemel):
@@ -236,10 +129,9 @@ class KasaEkranTests(KasaTemel):
         self.client.force_login(self.user)
 
     def test_giris_gerekli(self):
-        for ad in ("kasa", "kasa_gun_sonu"):
-            r = self.client.get(reverse(ad))
-            self.assertEqual(r.status_code, 302, ad)
-            self.assertIn("/giris/", r["Location"])
+        r = self.client.get(reverse("kasa"))
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("/giris/", r["Location"])
         self.assertEqual(self.client.post(reverse("kasa_hareket_iptal", args=[1])).status_code, 302)
 
     def test_kasa_sayfasinda_cari_alani_yok(self):
@@ -285,18 +177,7 @@ class KasaEkranTests(KasaTemel):
         h = KasaHareketi.objects.get(yon=CIKIS)
         self.assertEqual((h.matrah_kurus, h.kdv_kurus, h.tutar_kurus), (100000, 20000, 120000))
 
-    def test_kapali_gune_ekrandan_kayit_girilemez(self):
-        self.giris()
-        d = self.bugun - timedelta(days=3)
-        KasaHareketi.objects.create(hesap=self.kasa, yon=GIRIS, tutar_kurus=1000, tarih=d)
-        ks.gun_sonu_kapat(self.kasa, d, 1000)
-        r = self.client.post(reverse("kasa"), {"tarih": d.isoformat(), "yon": "GIRIS", "tutar_kurus": "1,00",
-                                               "kdv_modu": "BILINMIYOR"})
-        self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "kapatıldı")
-        self.assertEqual(KasaHareketi.objects.count(), 1)
-
-    def test_iptal_neden_ister_ve_kapali_gunu_reddeder(self):
+    def test_iptal_neden_ister(self):
         self.giris()
         h = KasaHareketi.objects.create(hesap=self.kasa, yon=GIRIS, tutar_kurus=1000, tarih=self.bugun)
         url = reverse("kasa_hareket_iptal", args=[h.pk])
@@ -309,16 +190,6 @@ class KasaEkranTests(KasaTemel):
         h.refresh_from_db()
         self.assertTrue(h.iptal)
         self.assertEqual(h.iptal_nedeni, "yanlış girildi")
-
-    def test_kapali_gunun_iptali_ekranda_reddedilir(self):
-        self.giris()
-        d = self.bugun - timedelta(days=2)
-        h = KasaHareketi.objects.create(hesap=self.kasa, yon=GIRIS, tutar_kurus=1000, tarih=d)
-        ks.gun_sonu_kapat(self.kasa, d, 1000)
-        r = self.client.post(reverse("kasa_hareket_iptal", args=[h.pk]), {"neden": "x"}, follow=True)
-        self.assertContains(r, "kapatılmış bir güne ait")
-        h.refresh_from_db()
-        self.assertFalse(h.iptal)
 
     def test_filtreler_ve_bozuk_parametreler_cokmez(self):
         self.giris()
@@ -339,33 +210,7 @@ class KasaEkranTests(KasaTemel):
         self.giris()
         Hesap.objects.update(aktif=False)
         self.assertContains(self.client.get(reverse("kasa")), "Aktif kasa hesabı yok")
-        self.assertContains(self.client.get(reverse("kasa_gun_sonu")), "Aktif kasa hesabı yok")
 
-    def test_gun_sonu_ekrani(self):
-        self.giris()
-        d = self.bugun - timedelta(days=1)
-        KasaHareketi.objects.create(hesap=self.kasa, yon=GIRIS, tutar_kurus=250000, tarih=d)
-        r = self.client.get(reverse("kasa_gun_sonu"), {"tarih": d.isoformat()})
-        self.assertContains(r, "2.500,00 ₺")
-        r = self.client.post(reverse("kasa_gun_sonu"), {"tarih": d.isoformat(), "sayilan": "2.400,00",
-                                                        "aciklama": "sayım", "farki_isle": "on"})
-        self.assertEqual(r.status_code, 302)
-        g = GunSonu.objects.get()
-        self.assertEqual((g.fark_kurus, g.fark_islendi), (-10000, True))
-        r = self.client.get(reverse("kasa_gun_sonu"))
-        self.assertContains(r, "Kasa noksanı")
-        r = self.client.post(reverse("kasa_gun_sonu"), {"tarih": d.isoformat(), "sayilan": "2.400,00"})
-        self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "zaten kapatılmış")
-        r = self.client.post(reverse("kasa_gun_sonu"), {"tarih": d.isoformat(), "sayilan": "abc"})
-        self.assertContains(r, "1.234,50 biçiminde")
-
-    def test_gelecek_gun_ekrandan_kapatilamaz(self):
-        self.giris()
-        r = self.client.post(reverse("kasa_gun_sonu"), {"tarih": (self.bugun + timedelta(days=2)).isoformat(),
-                                                        "sayilan": "0,00"})
-        self.assertContains(r, "Gelecek bir gün")
-        self.assertEqual(GunSonu.objects.count(), 0)
 
 
 class KasaAdminTests(KasaTemel):
@@ -373,20 +218,13 @@ class KasaAdminTests(KasaTemel):
         super().setUp()
         self.client.force_login(get_user_model().objects.create_superuser("a", password="Guclu-Parola-9"))
 
-    def test_gun_sonu_yonetimden_eklenemez_silinemez(self):
-        self.assertEqual(self.client.get(reverse("admin:defter_gunsonu_add")).status_code, 403)
-        self.assertEqual(self.client.get(reverse("admin:defter_gunsonu_changelist")).status_code, 200)
-
-    def test_toplu_iptal_kapali_gunu_atlar(self):
-        eski = self.hareket(GIRIS, 1000, date(2026, 3, 1))
-        yeni = self.hareket(GIRIS, 2000, date(2026, 3, 10))
-        ks.gun_sonu_kapat(self.kasa, date(2026, 3, 5), 1000, bugun=date(2026, 3, 6))
-        r = self.client.post(reverse("admin:defter_kasahareketi_changelist"), {
-            "action": "kasa_iptal_et", "_selected_action": [eski.pk, yeni.pk]}, follow=True)
-        self.assertContains(r, "İptal edilemedi")
-        eski.refresh_from_db(); yeni.refresh_from_db()
-        self.assertFalse(eski.iptal)
-        self.assertTrue(yeni.iptal)
+    def test_toplu_iptal(self):
+        a = self.hareket(GIRIS, 1000, date(2026, 3, 1))
+        b = self.hareket(GIRIS, 2000, date(2026, 3, 10))
+        self.client.post(reverse("admin:defter_kasahareketi_changelist"), {
+            "action": "kasa_iptal_et", "_selected_action": [a.pk, b.pk]}, follow=True)
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertTrue(a.iptal and b.iptal)
 
 
 class CariKasaKaldirildiTests(TestCase):
@@ -417,3 +255,20 @@ class CariKasaKaldirildiTests(TestCase):
         self.assertEqual(r.status_code, 403)
         self.assertEqual(KasaHareketi.objects.count(), n)
         self.assertEqual(self.client.get(reverse("kasa"), {"hesap": pasif.pk}).context["hesap"].ad, "Ofis Kasa")
+
+
+class GunSonuKaldirildiTests(KasaTemel):
+    def test_sayfa_ve_baglantilar_yok(self):
+        self.client.force_login(rol_kullanici("m", "Muhasebe"))
+        self.assertEqual(self.client.get("/kasa/gun-sonu/").status_code, 404)
+        r = self.client.get(reverse("kasa"))
+        for metin in ("Gün sonu", "Son kapanış", "kapanış bekliyor", "kapalı gün"):
+            self.assertNotContains(r, metin)
+
+    def test_eski_gun_sonu_kaydi_olsa_bile_kayit_engellenmez(self):
+        from .models import GunSonu
+        GunSonu.objects.create(hesap=self.kasa, tarih=date(2026, 3, 1), beklenen_kurus=0, sayilan_kurus=0, fark_kurus=0, kilitli=True)
+        h = self.hareket(GIRIS, 1000, date(2026, 2, 1))                      # kilitli güne/öncesine girilebilir
+        h.aciklama = "düzeltildi"
+        h.save()
+        self.assertEqual(KasaHareketi.objects.get().aciklama, "düzeltildi")

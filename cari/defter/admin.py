@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from . import metin
 from .fields import kurus_bicimle
 from .models import (Belge, BelgeKalem, Cari, Ek, EkstreMutabakat, GenelGider, GiderKategori, IslemGunlugu, EkstreSatiri,
-                     GunSonu, Hesap, KasaHareketi, KasaKategori, Malzeme, MalzemeKategori)
+                     Hesap, KasaHareketi, KasaKategori, Malzeme, MalzemeKategori)
 
 
 def gecmis_baglantisi(model_adi):
@@ -221,36 +221,6 @@ class EkstreMutabakatAdmin(SilmeKapali, admin.ModelAdmin):
     @admin.display(description="Ekstre bakiyesi (₺)")
     def ekstre_bakiye(self, obj):
         return kurus_bicimle(obj.ekstre_bakiye_kurus)
-
-
-@admin.register(GunSonu)
-class GunSonuAdmin(SilmeKapali, admin.ModelAdmin):
-    """Kapanışlar Kasa > Gün sonu ekranından yapılır. Burada yalnızca görülür; kilit kaldırma (kilitli
-    kutusu) bilinçli ve nadir bir işlemdir."""
-
-    list_display = ("tarih", "hesap", "beklenen", "sayilan", "fark", "kilitli", "fark_islendi")
-    list_filter = ("hesap", "kilitli")
-    readonly_fields = ("hesap", "tarih", "beklenen_kurus", "sayilan_kurus", "fark_kurus", "fark_islendi",
-                       "aciklama")
-    fields = readonly_fields + ("kilitli",)
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return request.user.is_superuser          # kapanış kilidini kaldırmak yalnızca yöneticidir
-
-    @admin.display(description="Kayıtlı bakiye (₺)")
-    def beklenen(self, obj):
-        return kurus_bicimle(obj.beklenen_kurus)
-
-    @admin.display(description="Sayılan (₺)")
-    def sayilan(self, obj):
-        return kurus_bicimle(obj.sayilan_kurus)
-
-    @admin.display(description="Fark (₺)")
-    def fark(self, obj):
-        return kurus_bicimle(obj.fark_kurus)
 
 
 @admin.register(Ek)

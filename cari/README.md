@@ -74,7 +74,7 @@ Simge ile yazı arasındaki satır farklıysa `--sembol-alt-sinir <piksel>` veri
 - **Cari hareketini (fiş) düzenle** (Ekstre → "Düzenle"): tarih, evrak no, açıklama, ödeme şekli, tutar, KDV ve fiş kalemleri düzelir; **tür ve tedarikçi değişmez** (yanlışsa kaydı iptal edip doğrusunu girin). KDV'li kayıtta formda girilen tutar gösterilir ve kaydederken yeniden hesaplanır. İptal edilmiş kayıt düzeltilemez. Eski ve yeni değer işlem günlüğüne yazılır.
 - **Tedarikçi eklerken açılış bakiyesi**: yeni tedarikçi formunda isteğe bağlı "Açılış bakiyesi" (tutar, yön: borcumuz/alacağımız-avans, bakiye tarihi) girilir; ekstrede "Açılış bakiyesi" satırı olarak görünür, işlem günlüğüne yazılır. Mevcut tedarikçide de **Tedarikçiler → Düzenle** formundan açılış bakiyesi eklenir ya da varsa düzeltilir (boş bırakmak mevcut kaydı değiştirmez; kaldırmak için ekstreden iptal). Ekstredeki satır da **Düzenle** ile düzelir.
 - **Toplu kasa girişi** (Kasa → "Toplu giriş"): 10 satırda birden çok kayıt girilir (Enter ile alan alan ilerler, son alanda yeni satır). Geçerli satırlar kaydedilir; hatalı satırlar hata mesajıyla ekranda kalır, düzeltip tekrar kaydedilir. Her satır ayrı kayıt olarak günlüğe yazılır. KDV gerekiyorsa kayıt tek tek girilir.
-- **Kasa kaydını düzenle** (Kasa listesinde "Düzenle"): açıklama, kategori, fiş no ve harcayan düzeltilir; tutar, tarih ve yön değişmez (yanlış tutar için kaydı iptal edip doğrusunu girin). İptal edilmiş ve kapanışı yapılmış güne ait kayıtlar düzeltilemez; her düzeltme işlem günlüğüne yazılır.
+- **Kasa kaydını düzenle** (Kasa listesinde "Düzenle"): açıklama, kategori, fiş no ve harcayan düzeltilir; tutar, tarih ve yön değişmez (yanlış tutar için kaydı iptal edip doğrusunu girin). İptal edilmiş kayıtlar düzeltilemez; her düzeltme işlem günlüğüne yazılır.
 - **Kasa raporu** (Kasa → "Rapor"): dönem seçilir (bu ay, önceki ay, son para girişinden bugüne, bu yıl, özel aralık). Ekranda, **Excel** (Kasa defteri: solda girişler, sağda çıkışlar + TOPLAM/KALAN; Özet; Günlük sayfaları) ve **PDF** olarak alınır.
   Kasa hareketindeki **Harcayan** alanı kişi bazında toplam verir; fişi girilmemiş çıkışlar uyarılır. PDF için `reportlab` gerekir (Windows paketinde hazır gelir; Türkçe/₺ yazı tipi `defter/static/defter/fonts/pdf/` içindedir).
 - **Aylık rapor** (menü): seçilen ayın tedarikçi hareketleri (ay başı bakiye + alışlar + devir/düzeltme − iadeler − ödemeler = ay sonu bakiye), net genel gider,
@@ -118,16 +118,13 @@ Yeni kasa eklemek için Yönetim > Hesaplar.
 - **Hızlı giriş:** tarih, yön, tutar (`1.234,50`), kategori, makbuz no, açıklama, isteğe bağlı KDV . Kategorileri *Kategoriler* bağlantısından ekleyin.
 - **Kasa eksiye düşemez** (Hesap ayarından değiştirilebilir). Bir girişi iptal etmek de kasayı eksiye düşürüyorsa reddedilir.
 - **Silme yok, iptal var:** satırdaki iptal kutusuna neden yazılır; iptal kayıtlar bakiyeye girmez, "iptaller: göster" ile görülür.
-- **Gün sonu kapanışı:** nakdi sayıp yazarsınız; program kayıtlı bakiyeyle farkı saklar. İsterseniz fark, kapanış gününe
-  "Kasa farkı" kategorili bir hareket olarak işlenir. **Kapatılan gün ve öncesi kilitlenir**: o günlere kayıt eklenemez,
-  o günlerin kayıtları değiştirilemez/iptal edilemez. Yanlış için güncel tarihli *ters kayıt* girilir.
-  (Kilidi kaldırmak yalnızca Yönetim > Gün sonu kapanışları > "Kilitli" kutusundandır; bilinçli ve nadir bir işlemdir.)
+- **Gün sonu kapanışı yoktur:** kasada gün kapatma/kilitleme kaldırıldı; her tarihe kayıt girilebilir ve düzeltilebilir. Yanlış tutar için kaydı iptal edip doğrusunu girin.
 - **Hareket listesinde arama ve süzgeç:** tarih, yön, kategori, **Harcayan** ve metin araması (açıklama / makbuz / harcayan / kategori; büyük-küçük harf ve aksan farkı yok sayılır).
   Listenin altında süzülmüş kayıtların giriş/çıkış/net toplamı (iptaller hariç) görünür; **Bu listeyi Excel'e aktar** aynı süzgeçle dosya verir.
 - **Harcayan adlarını düzelt** (Yönetici/Muhasebe/Kasiyer): "ali / Ali / ALİ" gibi yazım farklarını tek adda toplar ya da harcayanı boş kayıtları doldurur.
-  Yalnızca ad değişir (tutar/bakiye etkilenmez), her kayıt işlem günlüğüne düşer; **kapanışı yapılmış günlerin kayıtlarına dokunulmaz** (atlanır, sayısı bildirilir).
+  Yalnızca ad değişir (tutar/bakiye etkilenmez), her kayıt işlem günlüğüne düşer.
 - **Kasa dashboard'u:** güncel bakiye, bugün/bu ay giriş-çıkış, aylık giriş/çıkış ve ay sonu bakiye grafiği,
-  kategoriye göre çıkışlar, en büyük çıkışlar, kapanış bekleyen günler.
+  kategoriye göre çıkışlar, en büyük çıkışlar.
 
 ## Ödeme listesi (üst menü: Ödeme Listesi)
 Cari ödemeleri için iki liste; ikisi de **Yazdır** (tarayıcıdan PDF'e de kaydedilebilir) ve **Excel'e aktar** ile alınır:
@@ -168,9 +165,9 @@ Tamamen **çevrimdışı** (yazı tipleri ve simgeler yerel) ve WCAG AA kontrast
 
   | Rol | Yapabildiği |
   |---|---|
-  | **Yönetici** | Her şey + **Yedek**, **Günlük**, kullanıcı yönetimi, kasa ayarları ve **kapanış kilidi kaldırma** |
+  | **Yönetici** | Her şey + **Yedek**, **Günlük**, kullanıcı yönetimi, kasa ayarları |
   | **Muhasebe** | Cari + kasa görüntüleme ve girişi, ek yükleme/kaldırma; yönetim panelinde ekleme/değiştirme (silme yok) |
-  | **Kasiyer** | **Yalnızca Ofis Kasa**: hareket girişi/iptali, gün sonu, kasa hareketlerine ek. Cari verileri ve genel giderleri **göremez** |
+  | **Kasiyer** | **Yalnızca Ofis Kasa**: hareket girişi/iptali, kasa hareketlerine ek. Cari verileri ve genel giderleri **göremez** |
   | **Görüntüleyici** | Her şeyi **görür**, hiçbir şey yazamaz (düğmeler hiç görünmez) |
 
   Muhasebe rolü verilince kullanıcı otomatik olarak yönetim paneline girebilir; rol kaldırılınca bu yetki de gider. Rol değişiklikleri günlüğe yazılır.

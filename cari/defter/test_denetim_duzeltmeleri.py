@@ -145,7 +145,7 @@ class GuvenliIntTests(SimpleTestCase):
 class GuvenliIntSayfaTests(Temel):
     def test_ussu_ve_benzeri_parametreler_500_vermez(self):
         self.client.force_login(rol_kullanici("y", is_superuser=True, is_staff=True))
-        for url in ("/?cari=²", "/takvim/?cari=²", "/kasa/?kategori=²", "/kasa/?hesap=²", "/kasa/gun-sonu/?hesap=²", "/gunluk/?nesne=²",
+        for url in ("/?cari=²", "/takvim/?cari=²", "/kasa/?kategori=²", "/kasa/?hesap=²", "/gunluk/?nesne=²",
                     "/malzemeler/?kategori=²", "/odemeler/?cari=²", "/tedarikciler/?sira=²"):
             self.assertIn(self.client.get(url).status_code, (200, 302), url)
 

@@ -127,7 +127,6 @@ class SayfaYetkiMatrisiTests(YetkiTemel):
 
     def test_kasa_sayfalari(self):
         self.kontrol("kasa", reverse("kasa"), (200, 200, 200, 200, 403, 302))
-        self.kontrol("gun_sonu", reverse("kasa_gun_sonu"), (200, 200, 200, 200, 403, 302))
         self.kontrol("ofis_kasa_eki", reverse("ek_sahip", args=["kasa", self.h_ofis.pk]), (200, 200, 200, 200, 403, 302))
         self.kontrol("ofis_kasa_eki_indir", reverse("ek_indir", args=[self.ek_ofis.pk]), (200, 200, 200, 200, 403, 302))
 
@@ -187,14 +186,6 @@ class YazmaYetkiMatrisiTests(YetkiTemel):
         self.h_ofis.refresh_from_db()
         self.assertTrue(self.h_ofis.iptal)
 
-    def test_gun_sonu_kapatma(self):
-        d = date.today().replace(day=1) - __import__("datetime").timedelta(days=1)
-        veri = {"tarih": d.isoformat(), "sayilan": "0,00"}
-        KasaHareketi.objects.create(hesap=self.ofis, yon=GIRIS, tutar_kurus=100, tarih=d)
-        for rol in ("goruntuleyici", "rolsuz"):
-            self.assertEqual(self.durum(rol, reverse("kasa_gun_sonu"), "post", **veri), 403, rol)
-        self.assertEqual(self.durum("kasiyer", reverse("kasa_gun_sonu"), "post", **veri), 302)
-
     def test_ek_yukleme_ve_kaldirma(self):
         def yukle(rol, tur, pk, ad):
             self.giris(rol)
@@ -226,8 +217,6 @@ class YazmaYetkiMatrisiTests(YetkiTemel):
         self.assertNotContains(r, "Dosya ekle")
         self.assertNotContains(r, "Kaldır")
         self.assertContains(r, "b.png")                                     # ama görebilir
-        r = self.client.get(reverse("kasa_gun_sonu"))
-        self.assertNotContains(r, "Kapat ve kilitle")
         self.giris("muhasebe")
         self.assertContains(self.client.get(reverse("kasa")), "Yeni kasa hareketi")
 
@@ -237,8 +226,7 @@ class YonetimPaneliYetkiTests(YetkiTemel):
         self.giris("muhasebe")
         izinli = [reverse("admin:defter_belge_changelist"), reverse("admin:defter_belge_add"),
                   reverse("admin:defter_cari_add"), reverse("admin:defter_kasahareketi_changelist"),
-                  reverse("admin:defter_hesap_changelist"), reverse("admin:defter_ek_changelist"),
-                  reverse("admin:defter_gunsonu_changelist")]
+                  reverse("admin:defter_hesap_changelist"), reverse("admin:defter_ek_changelist")]
         for u in izinli:
             self.assertEqual(self.client.get(u).status_code, 200, u)
         yasak = [reverse("admin:defter_hesap_add"), reverse("admin:defter_islemgunlugu_changelist"),
@@ -247,26 +235,16 @@ class YonetimPaneliYetkiTests(YetkiTemel):
         for u in yasak:
             self.assertEqual(self.client.get(u).status_code, 403, u)
 
-    def test_muhasebe_hesap_ve_kilit_degistiremez(self):
+    def test_muhasebe_hesap_degistiremez(self):
         self.giris("muhasebe")
-        gs_kapat = __import__("defter.kasa_servisi", fromlist=["x"]).gun_sonu_kapat(
-            self.ofis, date(2026, 1, 5), 900000, bugun=date(2026, 1, 6))
-        self.assertEqual(self.client.post(reverse("admin:defter_gunsonu_change", args=[gs_kapat.pk]), {"kilitli": ""}).status_code, 403)
-        gs_kapat.refresh_from_db()
-        self.assertTrue(gs_kapat.kilitli)
         self.assertEqual(self.client.post(reverse("admin:defter_hesap_change", args=[self.ofis.pk]),
                                           {"ad": "Ofis Kasa", "tur": "KASA", "acilis_bakiye_kurus": "0"}).status_code, 403)
-        # yönetici kilidi kaldırabilir
-        self.giris("yonetici")
-        self.assertEqual(self.client.get(reverse("admin:defter_gunsonu_change", args=[gs_kapat.pk])).status_code, 200)
 
-    def test_hesap_ve_kilit_izni_yanlislikla_verilse_bile_yalniz_yonetici(self):
-        """İkinci güvence: bir yönetici Muhasebe'ye 'change' izni verse bile hesap ayarı ve kilit kaldırma yalnızca yöneticidir."""
+    def test_hesap_izni_yanlislikla_verilse_bile_yalniz_yonetici(self):
+        """İkinci güvence: bir yönetici Muhasebe'ye 'change' izni verse bile hesap ayarı yalnızca yöneticidir."""
         muh = self.kullanicilar["muhasebe"]
-        for kod in ("change_hesap", "add_hesap", "change_gunsonu"):
+        for kod in ("change_hesap", "add_hesap"):
             muh.user_permissions.add(Permission.objects.get(codename=kod))
-        gs = __import__("defter.kasa_servisi", fromlist=["x"]).gun_sonu_kapat(
-            self.ofis, date(2026, 1, 5), 900000, bugun=date(2026, 1, 6))
         self.giris("muhasebe")
         # Görme izni olan kullanıcıya düzenleme sayfası SALT OKUNUR açılır: "Kaydet" düğmesi olmamalı, POST reddedilmeli.
         r = self.client.get(reverse("admin:defter_hesap_change", args=[self.ofis.pk]))
@@ -277,14 +255,6 @@ class YonetimPaneliYetkiTests(YetkiTemel):
         self.ofis.refresh_from_db()
         self.assertEqual(self.ofis.acilis_bakiye_kurus, 0)
         self.assertEqual(self.client.get(reverse("admin:defter_hesap_add")).status_code, 403)
-        r = self.client.get(reverse("admin:defter_gunsonu_change", args=[gs.pk]))
-        self.assertNotContains(r, 'name="_save"')
-        self.assertEqual(self.client.post(reverse("admin:defter_gunsonu_change", args=[gs.pk]), {"kilitli": ""}).status_code, 403)
-        gs.refresh_from_db()
-        self.assertTrue(gs.kilitli)
-        # Yönetici aynı sayfada düzenleyebilir
-        self.giris("yonetici")
-        self.assertContains(self.client.get(reverse("admin:defter_gunsonu_change", args=[gs.pk])), 'name="_save"')
 
     def test_muhasebe_silemez(self):
         self.giris("muhasebe")

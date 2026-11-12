@@ -129,13 +129,6 @@ class KasaDuzeltTests(TestCase):
         self.h.refresh_from_db()
         self.assertEqual(self.h.harcayan, "Ali")
 
-    def test_kapali_gun_duzeltilemez(self):
-        from unittest import mock
-        with mock.patch.object(Hesap, "kilit_siniri", return_value=date.today()):
-            self.client.post(self.url, {"aciklama": "yeni", "harcayan": "Z", "makbuz_no": ""})
-        self.h.refresh_from_db()
-        self.assertEqual(self.h.harcayan, "Ali")
-
     def test_yetki(self):
         self.client.logout()
         self.assertEqual(self.client.get(self.url).status_code, 302)
@@ -191,13 +184,6 @@ class KasaTopluTests(TestCase):
         self.assertContains(r, "eski tarih")
         self.assertNotContains(r, "iyi1")                    # kaydedilen satır listeden çıkar
         self.assertContains(r, 'class="hata"')
-
-    def test_kapali_gun_satiri_reddedilir_digeri_kaydedilir(self):
-        from unittest import mock
-        with mock.patch.object(Hesap, "kilit_siniri", return_value=date.today()):
-            r = self.post(self.satir(0, "1,00", aciklama="kapalı"), self.satir(1, "2,00", tarih=date.today() + timedelta(days=1), aciklama="açık"))
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(list(KasaHareketi.objects.values_list("aciklama", flat=True)), ["açık"])
 
     def test_yetki(self):
         self.client.logout()

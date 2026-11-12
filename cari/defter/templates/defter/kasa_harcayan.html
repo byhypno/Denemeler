@@ -6,7 +6,7 @@
 {% url 'kasa' as sekme_url %}{% include "defter/_hesap_sekmeleri.html" %}
 <p><a href="{% url 'kasa' %}?hesap={{ hesap.pk }}">{% ikon "geri" "kucuk" %}{{ hesap.ad }} sayfasına dön</a></p>
 <p class="not">Aynı kişinin farklı yazılmış adlarını (ali / Ali / ALİ) ya da harcayanı boş bırakılmış kayıtları tek adda toplayın.
-Tutar, tarih ve bakiye değişmez; yalnızca ad düzelir ve işlem günlüğüne yazılır. <b>Kapanışı yapılmış günlerin kayıtlarına dokunulmaz.</b></p>
+Tutar, tarih ve bakiye değişmez; yalnızca ad düzelir ve işlem günlüğüne yazılır.</p>
 <section class="kart">
   <div class="tablo-kaydir"><table>
     <thead><tr><th>Harcayan</th><th class="sayi">Kayıt</th><th>Yazılışlar</th><th>Yeni ad</th></tr></thead>

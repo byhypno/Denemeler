@@ -4,12 +4,12 @@ Roller Django 'Grup'larıdır; yönetici = superuser. Her rol bir YETENEK kümes
 
   goruntule        cari tarafını (Genel Bakış, ekstre, mutabakat, ödeme listesi, ekler) görme
   kasa_goruntule   kasa sayfalarını görme
-  kasa_yaz         kasa hareketi girme/iptal, gün sonu kapanışı
+  kasa_yaz         kasa hareketi girme/iptal/düzeltme
   ek_yaz           cari tarafındaki kayıtlara ek yükleme/kaldırma
   veri_gir         eşleştirme gibi cari tarafı yazma işlemleri (veri girişi yönetim panelinden, model izinleriyle)
-  yonetim          yedek, işlem günlüğü, kullanıcı yönetimi, kilit kaldırma (yalnızca yönetici)
+  yonetim          yedek, işlem günlüğü, kullanıcı yönetimi, (yalnızca yönetici)
 
-Hiçbir rol kayıt silemez (uygulamada silme yoktur); kilit kaldırma ve hesap ayarları yalnızca yöneticidir.
+Hiçbir rol kayıt silemez (uygulamada silme yoktur); hesap ayarları yalnızca yöneticidir.
 """
 from functools import wraps
 

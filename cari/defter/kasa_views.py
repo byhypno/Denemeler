@@ -15,8 +15,8 @@ from . import metin
 from . import kasa_rapor as kr
 from . import kasa_servisi as ks
 from .fields import kurus_bicimle
-from .forms import GunSonuForm, KasaHareketiDuzeltForm, KasaHareketiForm, KasaTopluSatirForm
-from .models import GunSonu, KasaHareketi, KasaKategori
+from .forms import KasaHareketiDuzeltForm, KasaHareketiForm, KasaTopluSatirForm
+from .models import KasaHareketi, KasaKategori
 from .views import AYLAR
 from .yetki import gorunur_kasalar, yetki_gerekli
 
@@ -86,7 +86,6 @@ def kasa_ana(request):
         "yil": yil, "yillar": yillar, "filtre": f, "sayfa_nesnesi": sayfa, "sorgu": sorgu.urlencode(),
         "bakiyeler": ks.hareketler_bakiyeli(hesap), "kategoriler": KasaKategori.objects.filter(aktif=True),
         "en_buyuk": ks.en_buyuk_cikislar(hesap, yil),
-        "kilit_siniri": ozet["kilit_siniri"],
         "grafik": {"aylar": AYLAR, **aylik, "kat_etiket": [a for a, _ in dagilim],
                    "kat_deger": [t for _, t in dagilim]},
         "sayfa": "kasa", "bugun": bugun,
@@ -115,39 +114,6 @@ def kasa_hareket_iptal(request, pk):
             messages.error(request, _hata_metni(e))
     return redirect(f"{reverse('kasa')}?hesap={h.hesap_id}")
 
-
-@yetki_gerekli("kasa_goruntule", "kasa_yaz")
-def kasa_gun_sonu(request):
-    bugun = date.today()
-    hesap = _hesap_veya_yok(request, request.GET.get("hesap"))
-    if hesap is None:
-        return render(request, "defter/kasa_gun_sonu.html", {"hesap": None, "sayfa": "kasa"})
-    if request.method == "POST":
-        form = GunSonuForm(request.POST)
-        if form.is_valid():
-            try:
-                g = ks.gun_sonu_kapat(hesap, form.cleaned_data["tarih"], form.cleaned_data["sayilan"],
-                                      form.cleaned_data["aciklama"], form.cleaned_data["farki_isle"], bugun)
-            except ValidationError as e:
-                form.add_error(None, _hata_metni(e))
-            else:
-                messages.success(request, f"{g.tarih:%d.%m.%Y} kapatıldı. Fark: {kurus_bicimle(g.fark_kurus)} ₺")
-                return redirect(f"{reverse('kasa_gun_sonu')}?hesap={hesap.pk}")
-        secili = form["tarih"].value()
-    else:
-        secili = request.GET.get("tarih") or bugun.isoformat()
-        form = GunSonuForm(initial={"tarih": secili})
-    try:
-        secili_tarih = date.fromisoformat(str(secili))
-    except ValueError:
-        secili_tarih = bugun
-    return render(request, "defter/kasa_gun_sonu.html", {
-        "hesap": hesap, "form": form, "secili_tarih": secili_tarih,
-        "hesaplar": gorunur_kasalar(request.user),
-        "beklenen": ks.gun_sonu_beklenen(hesap, secili_tarih),
-        "kilit_siniri": hesap.kilit_siniri(), "acik_gunler": ks.acik_gunler(hesap, bugun),
-        "kapanislar": GunSonu.objects.filter(hesap=hesap)[:30], "sayfa": "kasa",
-    })
 
 
 @yetki_gerekli("kasa_goruntule")
@@ -203,8 +169,6 @@ def kasa_harcayan_duzelt(request):
             messages.error(request, _hata_metni(e))
         else:
             mesaj = f"{sonuc['degisen']} kayıtta harcayan düzeltildi."
-            if sonuc["kilitli"]:
-                mesaj += f" {sonuc['kilitli']} kayıt kapalı güne ait olduğu için değiştirilmedi."
             messages.success(request, mesaj)
         return redirect(f"{reverse('kasa_harcayan_duzelt')}?hesap={hesap.pk}")
     return render(request, "defter/kasa_harcayan.html", {"hesap": hesap, "satirlar": ozet, "sayfa": "kasa",
@@ -214,14 +178,13 @@ def kasa_harcayan_duzelt(request):
 @yetki_gerekli("kasa_yaz")
 def kasa_hareket_duzelt(request, pk):
     """Kasa hareketinin açıklama, kategori, fiş no ve harcayan bilgisini düzeltir. Tutar/tarih/yön değişmez;
-    iptal edilmiş ya da kapanışı yapılmış güne ait kayıt düzeltilemez. Değişiklik işlem günlüğüne yazılır."""
+    iptal edilmiş kayıt düzeltilemez. Değişiklik işlem günlüğüne yazılır."""
     h = get_object_or_404(KasaHareketi.objects.select_related("hesap", "kategori"), pk=pk)
     if not gorunur_kasalar(request.user).filter(pk=h.hesap_id).exists():
         raise PermissionDenied("Bu kasaya erişim yetkiniz yok.")
     geri = f"{reverse('kasa')}?hesap={h.hesap_id}"
-    sinir = h.hesap.kilit_siniri()
-    if h.iptal or (sinir and h.tarih <= sinir):
-        messages.error(request, "İptal edilmiş ya da kapanışı yapılmış güne ait kayıt düzeltilemez.")
+    if h.iptal:
+        messages.error(request, "İptal edilmiş kayıt düzeltilemez.")
         return redirect(geri)
     form = KasaHareketiDuzeltForm(request.POST or None, instance=h)
     if request.method == "POST" and form.is_valid():
@@ -287,5 +250,5 @@ def kasa_toplu(request):
         sonraki = TOPLU_SATIR
     return render(request, "defter/kasa_toplu.html", {
         "hesap": hesap, "satirlar": satirlar, "sonraki": sonraki, "harcayanlar": ks.harcayanlar(hesap),
-        "sayfa": "kasa", "kilit_siniri": hesap.kilit_siniri(),
+        "sayfa": "kasa",
     })

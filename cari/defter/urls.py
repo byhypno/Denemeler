@@ -37,5 +37,4 @@ urlpatterns = [
     path("kasa/rapor/", kasa_views.kasa_rapor, name="kasa_rapor"),
     path("kasa/harcayan-duzelt/", kasa_views.kasa_harcayan_duzelt, name="kasa_harcayan_duzelt"),
     path("kasa/toplu/", kasa_views.kasa_toplu, name="kasa_toplu"),
-    path("kasa/gun-sonu/", kasa_views.kasa_gun_sonu, name="kasa_gun_sonu"),
 ]

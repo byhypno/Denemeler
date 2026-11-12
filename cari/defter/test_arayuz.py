@@ -197,7 +197,7 @@ class SayfaYapisiTests(TestCase):
 
     def sayfalar(self):
         return [reverse("dashboard"), reverse("kasa"), reverse("odeme_listesi"), reverse("mutabakat_liste"),
-                reverse("ek_depo"), reverse("cari_ekstre", args=[self.c.pk]), reverse("kasa_gun_sonu"),
+                reverse("ek_depo"), reverse("cari_ekstre", args=[self.c.pk]),
                 reverse("ek_sahip", args=["cari", self.c.pk]), reverse("parola")]
 
     def test_erisilebilirlik_iskeleti(self):

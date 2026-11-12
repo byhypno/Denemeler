@@ -74,16 +74,6 @@ class KasaTopluSatirForm(KasaHareketiForm):
         fields = ["tarih", "yon", "tutar_kurus", "kategori", "harcayan", "makbuz_no", "aciklama"]
 
 
-class GunSonuForm(forms.Form):
-    tarih = forms.DateField(label="Kapanış günü",
-                            widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
-    sayilan = KurusFormField(label="Sayılan nakit (₺)",
-                             widget=forms.TextInput(attrs={"placeholder": "1.234,50", "inputmode": "decimal"}))
-    aciklama = forms.CharField(label="Açıklama", required=False, max_length=250)
-    farki_isle = forms.BooleanField(
-        label="Fark varsa kasa hareketi olarak işle (kategori: Kasa farkı)", required=False)
-
-
 class CariForm(forms.ModelForm):
     """Tedarikçi ekleme/düzenleme. Ünvan, büyük/küçük harf ve aksan farkı yok sayılarak da benzersiz olmalı
     ('ERÖZ' ile 'Eroz' aynı tedarikçidir; iki ayrı cari açılıp bakiyeler bölünmesin)."""

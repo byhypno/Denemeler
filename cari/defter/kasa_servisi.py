@@ -10,9 +10,7 @@ from django.db import transaction
 from django.db.models import Sum
 
 from . import metin
-from .models import GunSonu, Hesap, KasaHareketi, KasaKategori
-
-KASA_FARKI = "Kasa farkı"
+from .models import Hesap, KasaHareketi, KasaKategori
 
 
 def varsayilan_hesap(hesap_id=None, hesaplar=None):
@@ -34,16 +32,6 @@ def gun_toplami(hesap, bas, bit):
     return (_toplam(qs.filter(yon=KasaHareketi.Yon.GIRIS)), _toplam(qs.filter(yon=KasaHareketi.Yon.CIKIS)))
 
 
-def acik_gunler(hesap, bugun=None):
-    """Kapanış bekleyen günler: son kilitten sonra hareket olan, bugünden önceki günler."""
-    bugun = bugun or date.today()
-    sinir = hesap.kilit_siniri()
-    qs = hesap.hareketler.filter(iptal=False, tarih__lt=bugun)
-    if sinir:
-        qs = qs.filter(tarih__gt=sinir)
-    return sorted(set(qs.values_list("tarih", flat=True)))
-
-
 def harcayanlar(hesap) -> list:
     """Bu kasada daha önce girilmiş harcayan adları (forma öneri olarak), Türkçe alfabe sırasıyla; büyük/küçük harf farkı tek sayılır."""
     gorulen = {}
@@ -57,13 +45,10 @@ def kasa_ozeti(hesap, bugun=None) -> dict:
     ay_bas = bugun.replace(day=1)
     bugun_giris, bugun_cikis = gun_toplami(hesap, bugun, bugun)
     ay_giris, ay_cikis = gun_toplami(hesap, ay_bas, bugun)
-    acik = acik_gunler(hesap, bugun)
     return {
         "bakiye_kurus": hesap.bakiye_kurus(),
         "bugun_giris": bugun_giris, "bugun_cikis": bugun_cikis,
         "ay_giris": ay_giris, "ay_cikis": ay_cikis,
-        "kilit_siniri": hesap.kilit_siniri(),
-        "acik_gunler": acik,
     }
 
 
@@ -112,40 +97,6 @@ def hareketler_bakiyeli(hesap):
         sonuc[h.pk] = bakiye
     return sonuc
 
-
-# ---------------------------------------------------------------- Gün sonu kapanışı
-def gun_sonu_beklenen(hesap, tarih) -> int:
-    return hesap.bakiye_kurus(tarih_kadar=tarih)
-
-
-@transaction.atomic
-def gun_sonu_kapat(hesap, tarih, sayilan_kurus: int, aciklama="", farki_isle=False, bugun=None) -> GunSonu:
-    """
-    `tarih` ve öncesini kilitler. Sayılan nakit ile kayıtlı bakiye arasındaki fark GunSonu'ya yazılır;
-    `farki_isle` ise fark, kapanış gününe 'Kasa farkı' kategorili bir hareket olarak işlenir.
-    """
-    bugun = bugun or date.today()
-    if tarih > bugun:
-        raise ValidationError("Gelecek bir gün kapatılamaz.")
-    sinir = hesap.kilit_siniri()
-    if sinir and tarih <= sinir:
-        raise ValidationError(f"Kasa {sinir:%d.%m.%Y} tarihine kadar zaten kapatılmış.")
-    if sayilan_kurus is None or sayilan_kurus < 0:
-        raise ValidationError("Sayılan nakit eksi olamaz.")
-    beklenen = gun_sonu_beklenen(hesap, tarih)
-    fark = sayilan_kurus - beklenen
-    islendi = False
-    if farki_isle and fark != 0:
-        kat, _ = KasaKategori.objects.get_or_create(
-            ad=KASA_FARKI, defaults={"tur": KasaKategori.Tur.GIDER})
-        KasaHareketi.objects.create(
-            hesap=hesap, tarih=tarih, kategori=kat,
-            yon=KasaHareketi.Yon.GIRIS if fark > 0 else KasaHareketi.Yon.CIKIS,
-            tutar_kurus=abs(fark), aciklama=f"Gün sonu kasa farkı ({tarih:%d.%m.%Y})")
-        islendi = True
-    return GunSonu.objects.create(
-        hesap=hesap, tarih=tarih, beklenen_kurus=beklenen, sayilan_kurus=sayilan_kurus,
-        fark_kurus=fark, fark_islendi=islendi, aciklama=aciklama[:250], kilitli=True)
 
 
 # ------------------------------------------------------------------ liste süzgeci, toplam, dışa aktarma, harcayan düzeltme
@@ -229,9 +180,9 @@ def hareketler_xlsx(hesap, qs) -> bytes:
 def harcayan_duzelt(hesap, eski: str, yeni: str) -> dict:
     """
     Bu kasadaki hareketlerde harcayan adını toplu düzeltir (yazım farkı: 'ali' / 'Ali ' -> 'Ali'; ya da boş harcayanı doldurma: eski='-').
-    Eşleşme büyük/küçük harf ve aksan farkına bakmaz. Kapanış kilidi altındaki günlerin kayıtlarına DOKUNULMAZ (atlanır ve sayılır).
+    Eşleşme büyük/küçük harf ve aksan farkına bakmaz.
     Her kayıt tek tek kaydedilir; değişiklik işlem günlüğüne düşer. Tutar/tarih/yön değişmez, bakiye etkilenmez.
-    Dönüş: {"degisen": n, "kilitli": n}
+    Dönüş: {"degisen": n}
     """
     eski, yeni = (eski or "").strip(), " ".join((yeni or "").split())
     if not eski:
@@ -240,21 +191,17 @@ def harcayan_duzelt(hesap, eski: str, yeni: str) -> dict:
         raise ValidationError("Yeni harcayan adını yazın.")
     if len(yeni) > 80:
         raise ValidationError("Harcayan adı en çok 80 karakter olabilir.")
-    sinir = hesap.kilit_siniri()
     if eski == "-":
         adaylar = list(hesap.hareketler.filter(harcayan="", iptal=False))
     else:
         hedef = metin.katla(eski)
         adaylar = [h for h in hesap.hareketler.exclude(harcayan="") if metin.katla(h.harcayan) == hedef]
-    degisen = kilitli = 0
+    degisen = 0
     with transaction.atomic():
         for h in adaylar:
             if h.harcayan == yeni:
                 continue
-            if sinir and h.tarih <= sinir:
-                kilitli += 1
-                continue
             h.harcayan = yeni
             h.save()
             degisen += 1
-    return {"degisen": degisen, "kilitli": kilitli}
+    return {"degisen": degisen}

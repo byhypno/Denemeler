@@ -11,7 +11,7 @@ from django.urls import reverse
 from . import gunluk
 from . import kasa_servisi as ks
 from .excel_aktar import ice_aktar
-from .models import Belge, Cari, Ek, GunSonu, Hesap, IslemGunlugu, KasaHareketi
+from .models import Belge, Cari, Ek, Hesap, IslemGunlugu, KasaHareketi
 from .tests import _ornek_excel
 
 BASE = Path(__file__).resolve().parent
@@ -73,16 +73,10 @@ class KayitGunluguTests(GunlukTemel):
         self.assertEqual(g.nesne_id, pk)
         self.assertEqual(g.degisiklik["Tutar (₺)"], ["1.000,00 ₺", None])
 
-    def test_kasa_ve_gun_sonu_kilidi(self):
+    def test_kasa_hareketi_gunluge_yazilir(self):
         kasa = Hesap.objects.get(ad="Ofis Kasa")
         KasaHareketi.objects.create(hesap=kasa, yon="GIRIS", tutar_kurus=5000, tarih=date(2026, 3, 1))
         self.assertEqual(self.son(model="KasaHareketi").degisiklik["Yön"], [None, "Giriş"])
-        g = ks.gun_sonu_kapat(kasa, date(2026, 3, 1), 5000, bugun=date(2026, 3, 2))
-        self.assertEqual(self.son(model="GunSonu", islem="OLUSTURDU").nesne_id, g.pk)
-        g.kilitli = False                                              # kilit kaldırma KAYIT ALTINDA
-        g.save()
-        kilit = self.son(model="GunSonu", islem="DEGISTI")
-        self.assertEqual(kilit.degisiklik, {"Kilitli": ["Evet", "Hayır"]})
 
     def test_ek_kaldirma(self):
         import tempfile
