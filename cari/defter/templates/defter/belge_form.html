@@ -1,0 +1,53 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}{% if duzenle %}Hareketi düzelt{% else %}Yeni cari hareket{% endif %} · {{ cari.unvan }} · Cari{% endblock %}
+{% block icerik %}
+<div class="baslik-kisi">{% avatar cari.unvan "buyuk" %}
+  <div><h1>{% if duzenle %}Hareketi düzelt{% else %}Yeni cari hareket{% endif %}</h1><p class="cari-bilgi not">{{ cari.unvan }}{% if cari.vade_gun %} <span class="chip bilgi">Vade {{ cari.vade_gun }} gün</span>{% endif %}</p></div></div>
+<form method="post" class="kart" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="hata-kutu" role="alert">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-izgara">
+    {% for f in form %}{% if f.name not in kdv_alanlari and f.name != "yine_de" %}
+    <label for="{{ f.id_for_label }}"><span>{{ f.label }}{% if f.field.required %} <span class="zorunlu" aria-hidden="true">*</span>{% endif %}</span>{{ f }}
+      {% for e in f.errors %}<span class="hata" role="alert">{{ e }}</span>{% endfor %}</label>
+    {% endif %}{% endfor %}
+  </div>
+  <section class="kalem-bolum" id="kalem-bolum">
+    <h2>Fiş kalemleri <span class="not">(isteğe bağlı: alış fişi/faturası ve iade)</span></h2>
+    <p class="not">Açıklamayı <b>malzeme adı</b> olarak yazın (listeden seçebilirsiniz): son alış fiyatı hatırlatılır, yeni fiyat yüksekse uyarılır, malzeme kendiliğinden katalogya eklenir. <b>Kalem tutarı otomatik hesaplanır</b> (miktar × birim fiyat; miktar boşsa 1) ve elle değiştirilemez; tutarın hesaplanması için birim fiyat girilmelidir;
+      fiş tutarı boş bırakılırsa kalemlerin toplamı alınır. Miktar <code>1,5</code>, tutar <code>1.234,50</code> biçiminde yazılır.</p>
+    <div class="tablo-kaydir"><table class="kalem-tablo">
+      <thead><tr><th>Açıklama</th><th class="sayi">Miktar</th><th>Birim</th><th class="sayi">Birim fiyat</th><th class="sayi">Tutar (₺)</th></tr></thead>
+      <tbody id="kalem-govde">
+      {% for i, k in kalem_satirlari %}
+        <tr{% if k.hata %} class="hatali"{% endif %}>
+          <td><input type="text" name="kalem_aciklama_{{ i }}" value="{{ k.aciklama }}" maxlength="250" list="malzeme-listesi" autocomplete="off" aria-label="Kalem {{ i|add:1 }} açıklaması (malzeme)"><span class="kalem-ipucu" aria-live="polite"></span></td>
+          <td class="sayi"><input type="text" name="kalem_miktar_{{ i }}" value="{{ k.miktar }}" inputmode="decimal" aria-label="Kalem {{ i|add:1 }} miktarı"></td>
+          <td><input type="text" name="kalem_birim_{{ i }}" value="{{ k.birim }}" maxlength="20" aria-label="Kalem {{ i|add:1 }} birimi" placeholder="adet"></td>
+          <td class="sayi"><input type="text" name="kalem_fiyat_{{ i }}" value="{{ k.fiyat }}" inputmode="decimal" aria-label="Kalem {{ i|add:1 }} birim fiyatı"></td>
+          <td class="sayi"><input type="text" name="kalem_tutar_{{ i }}" value="{{ k.tutar }}" readonly tabindex="-1" class="kalem-tutar" aria-label="Kalem {{ i|add:1 }} tutarı (otomatik: miktar × birim fiyat)"></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="4">Kalemlerin toplamı</th><td class="sayi" id="kalem-toplam">—</td></tr></tfoot>
+    </table></div>
+    <datalist id="malzeme-listesi">{% for h in hafiza %}<option value="{{ h.ad }}">{% endfor %}</datalist>
+    <input type="hidden" name="kalem_sayisi" id="kalem-sayisi" value="{{ kalem_satirlari|length }}">
+    <p class="yazdirma-gizle"><button type="button" class="ikincil dugme kucuk" id="kalem-ekle">{% ikon "arti" "kucuk" %}Satır ekle</button></p>
+  </section>
+  <details class="ek" {% if form.kdv_orani.errors or form.tevkifat_orani.errors %}open{% endif %}><summary>KDV (isteğe bağlı)</summary>
+    <p class="not">KDV girerseniz tutar, seçtiğiniz KDV'li/KDV'siz biçime göre "ödenecek tutar"a çevrilir (tevkifat yalnızca KDV hariç girişte).</p>
+    <div class="form-izgara">
+      {% for f in form %}{% if f.name in kdv_alanlari %}
+      <label for="{{ f.id_for_label }}"><span>{{ f.label }}</span>{{ f }}{% for e in f.errors %}<span class="hata" role="alert">{{ e }}</span>{% endfor %}</label>
+      {% endif %}{% endfor %}
+    </div>
+  </details>
+  {% if yinelenme %}<p class="onay-kutu"><label class="onay"><input type="checkbox" name="yine_de" value="on"> {{ form.yine_de.label }}</label></p>{% endif %}
+  <p class="form-dugmeler"><button type="submit">{% if duzenle %}Düzeltmeyi kaydet{% else %}Kaydet{% endif %}</button>
+    {% if not duzenle %}<button type="submit" name="_yenisi" value="1" class="ikincil">Kaydet ve yenisini ekle</button>{% endif %}
+    <a class="dugme ikincil" href="{% url 'cari_ekstre' cari.pk %}">Vazgeç</a></p>
+  {% if duzenle %}<p class="not">Tür ve tedarikçi değişmez (yanlışsa kaydı iptal edip doğrusunu girin). Tutar ya da tarih değişirse ekstre bakiyesi geriye dönük yeni değere göre hesaplanır; eski ve yeni değer işlem günlüğünde kalır.</p>{% endif %}
+  <p class="not">Kayıt silinmez; yanlış girilirse ekstrede <b>İptal</b> edilir (neden yazılır, bakiyeden düşer, işlem günlüğünde kalır).</p>
+</form>
+{{ hafiza|json_script:"malzeme-hafiza" }}
+<script src="{% static 'defter/js/belge_form.js' %}"></script>
+{% endblock %}

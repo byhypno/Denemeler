@@ -1,0 +1,119 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}Genel bakış · Cari{% endblock %}
+{% block icerik %}
+<h1>Genel bakış{% if cari %}: {{ cari.unvan }}{% endif %}</h1>
+
+<form class="filtre" method="get">
+  <label>Yıl
+    <select name="yil">{% for y in yillar %}<option value="{{ y }}" {% if y == yil %}selected{% endif %}>{{ y }}</option>{% endfor %}</select>
+  </label>
+  <label>Cari
+    <select name="cari"><option value="">Tüm cariler</option>
+      {% for c in cariler %}<option value="{{ c.pk }}" {% if cari and c.pk == cari.pk %}selected{% endif %}>{{ c.unvan }}</option>{% endfor %}
+    </select>
+  </label>
+  <button type="submit">Uygula</button>
+  {% if cari %}<a class="dugme ikincil" href="{% url 'cari_ekstre' cari.pk %}">Ekstreyi aç</a>{% endif %}
+</form>
+
+{% if not veri_var %}
+  <div class="kart bos"><h2>Henüz kayıt yok</h2>
+    <p>Yönetim panelinden hareket girin veya Excel'den içe aktarın
+    (<code>python manage.py excel_ice_aktar dosya.xlsx</code>).</p></div>
+{% else %}
+{% if takvim.gecikmis.kalemler or takvim.hafta.kalemler %}
+<div class="mesaj {% if takvim.gecikmis.kalemler %}error{% else %}warning{% endif %}" role="status">
+  <span>{% if takvim.gecikmis.kalemler %}Vadesi geçmiş <b>{{ takvim.gecikmis.toplam|kurus_tl }}</b> ({{ takvim.gecikmis.kalemler|length }} kalem).{% endif %}
+  {% if takvim.hafta.kalemler %}Bu hafta ödenecek <b>{{ takvim.hafta.toplam|kurus_tl }}</b> ({{ takvim.hafta.kalemler|length }} kalem).{% endif %}
+  <a href="{% url 'odeme_takvimi' %}{% if cari %}?cari={{ cari.pk }}{% endif %}">Ödeme takvimini aç</a></span></div>
+{% endif %}
+<section class="kpi" aria-label="Özet göstergeler">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "cuzdan" %}</span><span class="etiket">Güncel borcumuz</span></div>
+    <div class="deger">{{ guncel_borc|kurus_tl }}</div>
+    <div class="kpi-alt"><span class="alt">{% if yas.avans_kurus %}Ayrıca fazla ödeme (avans): {{ yas.avans_kurus|kurus_tl }}{% else %}Tedarikçilere{% endif %}</span>
+      {% sparkline aylik.ay_sonu %}</div>
+    {% if degisimler.ay_sonu %}<div class="kpi-alt">{% degisim_etiketi degisimler.ay_sonu "yuksek_kotu" %}<span class="alt">son tam ay, önceki aya göre</span></div>{% endif %}</div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">{{ yil }} alışları</span></div>
+    <div class="deger">{{ yil_alis|kurus_tl }}</div>
+    <div class="kpi-alt">{% degisim_etiketi degisimler.alis "notr" %}{% sparkline aylik.alis %}</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gonder" %}</span><span class="etiket">{{ yil }} ödemeleri</span></div>
+    <div class="deger">{{ yil_odeme|kurus_tl }}</div>
+    <div class="kpi-alt">{% degisim_etiketi degisimler.odeme "notr" %}{% sparkline aylik.odeme %}</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "geri-al" %}</span><span class="etiket">{{ yil }} iadeleri</span></div>
+    <div class="deger">{{ yil_iade|kurus_tl }}</div>
+    <div class="kpi-alt">{% degisim_etiketi degisimler.iade "notr" %}{% sparkline aylik.iade %}</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "terazi" %}</span><span class="etiket">Açık mutabakat farkı</span></div>
+    <div class="deger">{{ acik_fark|kurus_tl }}</div>
+    <div class="alt">{% if acik_fark %}<span class="chip uyari">Tedarikçiyle netleştirilmeli</span>{% else %}<span class="chip tamam">Fark yok</span>{% endif %}</div></div>
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">Kontrol bekleyen</span></div>
+    <div class="deger">{{ kontrol.adet }}</div>
+    <div class="alt">{% if kontrol.adet %}<span class="chip uyari">Aşağıdaki listeye bakın</span>{% else %}<span class="chip tamam">Sorun yok</span>{% endif %}</div></div>
+  {% if kasa_bakiye is not None %}<a class="kart ton-vurgu kpi-bag" href="{% url 'kasa' %}"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kasa" %}</span><span class="etiket">Ofis Kasa bakiyesi</span></div>
+    <div class="deger">{{ kasa_bakiye|kurus_tl }}</div><div class="alt">Cari defterinden bağımsız</div></a>{% endif %}
+  <a class="kart ton-bilgi kpi-bag" href="{% url 'giderler' %}?yil={{ bugun.year }}&amp;ay={{ bugun.month }}"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "rapor" %}</span><span class="etiket">{{ bugun|date:"F Y" }} net genel gider</span></div>
+    <div class="deger">{% if gider_ay %}{{ gider_ay|kurus_tl }}{% else %}Girilmedi{% endif %}</div><div class="alt">KDV hariç, aylık genel giderler</div></a>
+</section>
+
+<section class="kart">
+  <h2>{{ yil }} yılı aylık alış, iade, ödeme ve ay sonu bakiye</h2>
+  <div class="grafik uzun"><canvas id="g-aylik" role="img"
+    aria-label="Aylık alış, iade, ödeme sütunları ve ay sonu bakiye çizgisi"></canvas></div>
+</section>
+
+<section class="izgara iki">
+  <div class="kart">
+    <h2>Açık borç yaşlandırması</h2>
+    <div class="grafik"><canvas id="g-yas" role="img" aria-label="Açık borcun yaşa göre dağılımı"></canvas></div>
+    <p class="not">Ödeme ve iadeler <b>en eski borca</b> mahsup edilir (FIFO varsayımı).
+      Yaş, belge tarihinden bugüne gündür.
+      {% if yas.vade_tanimli %}Vadesi geçmiş: <b>{{ yas.vadesi_gecmis_kurus|kurus_tl }}</b>.
+      {% else %}Hiçbir cariye vade günü tanımlı değil, bu yüzden "vadesi geçmiş" hesaplanmadı.{% endif %}</p>
+  </div>
+  <div class="kart">
+    <h2>En çok borçlu olduğumuz cariler</h2>
+    <div class="grafik"><canvas id="g-borclu" role="img" aria-label="En çok borçlu olunan cariler"></canvas></div>
+    <p class="not">{% for c, b in borclular|slice:":5" %}<a href="{% url 'cari_ekstre' c.pk %}">{{ c.unvan }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+  </div>
+</section>
+
+<section class="izgara iki">
+  <div class="kart">
+    <h2>{{ yil }} yılında en çok alınan kalemler</h2>
+    {% if grafik.kalem_etiket %}
+    <div class="grafik"><canvas id="g-kalem" role="img" aria-label="En çok alınan kalemler"></canvas></div>
+    {% else %}<p class="not">Bu yıl için kalem detayı girilmiş alış yok.</p>{% endif %}
+  </div>
+  <div class="kart kontrol">
+    <h2>Kontrol gerektirenler</h2>
+    {% if not kontrol.adet %}<p><span class="chip tamam">Sorun yok</span></p>{% endif %}
+    {% if kontrol.mutabakat %}<b>Ekstre farkı</b><ul>
+      {% for oz in kontrol.mutabakat %}<li><a href="{% url 'mutabakat_detay' oz.mutabakat.pk %}">{{ oz.mutabakat.cari }}</a>:
+        bakiye farkı {{ oz.fark_kurus|kurus_tl }}, {{ oz.farkli_satirlar|length }} satır farklı</li>{% endfor %}</ul>{% endif %}
+    {% if kontrol.eksi_bakiye %}<b>Ay sonu bakiyesi eksiye düşen aylar</b>
+      <span class="not">(fazla ödeme veya eksik alış kaydı olabilir)</span><ul>
+      {% for e in kontrol.eksi_bakiye|slice:":8" %}<li>{{ e.cari }} · {{ e.ay|stringformat:"02d" }}.{{ e.yil }}: {{ e.bakiye_kurus|kurus_tl }}</li>{% endfor %}
+      {% if kontrol.eksi_bakiye|length > 8 %}<li class="not">… ve {{ kontrol.eksi_bakiye|length|add:"-8" }} ay daha</li>{% endif %}</ul>{% endif %}
+    {% if kontrol.tekrar_evrak_no %}<b>Aynı tedarikçi evrak numarası birden çok kayıtta</b><ul>
+      {% for grup in kontrol.tekrar_evrak_no|slice:":6" %}<li>{{ grup.0.cari }} · no {{ grup.0.harici_evrak_no }}:
+        {% for b in grup %}{{ b.get_tur_display }} {{ b.tarih|date:"d.m.Y" }}{% if not forloop.last %}; {% endif %}{% endfor %}</li>{% endfor %}</ul>{% endif %}
+    {% if kontrol.kdv_bilinmeyen %}<p><span class="chip bilgi">{{ kontrol.kdv_bilinmeyen }} alış belgesinde KDV bilgisi girilmemiş</span></p>{% endif %}
+  </div>
+</section>
+
+<section class="kart">
+  <h2>En eski açık kalemler</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th>Cari</th><th>Evrak</th><th>Tür</th><th class="sayi">Açık tutar</th><th class="sayi">Yaş (gün)</th></tr></thead>
+    <tbody>{% for k in yas.en_eski %}
+      <tr><td>{{ k.belge.tarih|date:"d.m.Y" }}</td><td><span class="kisi">{% avatar k.cari.unvan %}{{ k.cari }}</span></td><td>{{ k.belge.evrak_no|default:"—" }}</td>
+          <td>{{ k.belge.get_tur_display }}</td><td class="sayi">{{ k.kalan_kurus|kurus_tl }}</td><td class="sayi">{{ k.yas_gun }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="not">Açık kalem yok.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+{{ grafik|json_script:"grafik-veri" }}
+<script src="{% static 'defter/vendor/chart.umd.js' %}"></script>
+<script src="{% static 'defter/js/grafik_ortak.js' %}"></script>
+<script src="{% static 'defter/js/dashboard.js' %}"></script>
+{% endif %}
+{% endblock %}
