@@ -1,0 +1,49 @@
+{
+  "siteler": [
+    {
+      "ad": "Egeser Prefabrik",
+      "alan_adi": "egeserprefabrik.com.tr",
+      "adres": "https://www.egeserprefabrik.com.tr/",
+      "sitemaps": [
+        "https://www.egeserprefabrik.com.tr/sitemap.xml"
+      ]
+    },
+    {
+      "ad": "Egeser Konteyner",
+      "alan_adi": "egeserkonteyner.com",
+      "adres": "https://www.egeserkonteyner.com/",
+      "sitemaps": [
+        "https://www.egeserkonteyner.com/sitemap.xml",
+        "https://www.egeserkonteyner.com/sitemap-with-images-with-alternate-links-index.xml"
+      ]
+    }
+  ],
+
+  "takip_kelimeleri": [
+    "egeser prefabrik",
+    "egeser konteyner",
+    "izmir prefabrik",
+    "izmir prefabrik ev",
+    "prefabrik ev",
+    "prefabrik ev fiyatları",
+    "izmir konteyner",
+    "yaşam konteyneri",
+    "konteyner fiyatları",
+    "kemalpaşa prefabrik"
+  ],
+
+  "serpapi": {
+    "_aciklama": "Yalnızca SERPAPI_KEY tanımlıysa çalışır. Her kelime için en fazla 'en_fazla_sayfa' arama yapılır (sayfa = 10 sonuç).",
+    "en_fazla_sayfa": 3,
+    "google_domain": "google.com.tr",
+    "gl": "tr",
+    "hl": "tr",
+    "konum": "Izmir,Izmir,Turkey",
+    "gorsel_sayimi": true
+  },
+
+  "rapor": {
+    "en_iyi_sorgu_sayisi": 20,
+    "hareket_sayisi": 10
+  }
+}

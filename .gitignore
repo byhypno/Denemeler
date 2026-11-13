@@ -21,3 +21,9 @@ cari/veri/
 .claude/worktrees/
 cari/dist/
 cari/baslangic_verisi/
+
+# SEO raporu: deneme çıktıları ve anahtar dosyaları
+seo_rapor/raporlar/*-ornek.html
+seo_rapor/raporlar/ornek.md
+*service-account*.json
+anahtar.json
