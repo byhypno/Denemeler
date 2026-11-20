@@ -83,8 +83,8 @@ def odenecekler_xlsx(veri: dict) -> bytes:
     ws.title = "Ödenecekler"
     _yaz(ws, 1, 1, f"Ödenecekler Listesi — {veri['bugun']:%d.%m.%Y}", kalin=True)
     _yaz(ws, 2, 1, "Açık borç, ödemelerin en eski borca mahsup edildiği (FIFO) varsayımıyla hesaplanmıştır.")
-    baslik = ["Cari", "Açık borç (₺)", *[f"{k} (₺)" for k in KOVA_ETIKETLERI], "En eski belge",
-              "Yaş (gün)", "Vadesi geçmiş (₺)", "Planlanan ödeme (₺)", "Not"]
+    baslik = ["Cari", "Açık borç (₺)", *[f"{k} (₺)" for k in KOVA_ETIKETLERI],
+              "Vadesi geçmiş (₺)", "Planlanan ödeme (₺)", "Not"]
     for i, b in enumerate(baslik, start=1):
         _yaz(ws, 4, i, b, kalin=True, doldur="DDE6F0")
     r = 5
@@ -93,10 +93,8 @@ def odenecekler_xlsx(veri: dict) -> bytes:
         _yaz(ws, r, 2, _lira(s["toplam_kurus"]), para=True)
         for i, k in enumerate(s["kovalar"]):
             _yaz(ws, r, 3 + i, _lira(k), para=True)
-        ws.cell(row=r, column=7, value=s["en_eski_tarih"]).number_format = "DD.MM.YYYY"
-        ws.cell(row=r, column=8, value=s["en_eski_yas"])
         if s["vade_tanimli"]:
-            _yaz(ws, r, 9, _lira(s["vadesi_gecmis_kurus"]), para=True)
+            _yaz(ws, r, 7, _lira(s["vadesi_gecmis_kurus"]), para=True)
         r += 1
     _yaz(ws, r, 1, "TOPLAM", kalin=True)
     _yaz(ws, r, 2, _lira(veri["toplam_kurus"]), kalin=True, para=True)
@@ -107,7 +105,7 @@ def odenecekler_xlsx(veri: dict) -> bytes:
         _yaz(ws, r, 1, f"Fazla ödeme (avans): {cari.unvan}")
         _yaz(ws, r, 2, _lira(avans), para=True)
     ws.freeze_panes = "B5"
-    _genislik(ws, [34, 16, 14, 14, 14, 14, 14, 10, 18, 20, 30])
+    _genislik(ws, [34, 16, 14, 14, 14, 14, 18, 20, 30])
     return _kaydet(wb)
 
 

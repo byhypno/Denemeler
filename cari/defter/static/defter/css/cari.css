@@ -479,7 +479,17 @@ th.satir-bas { background: transparent; border: 0; border-bottom: 1px solid var(
   th.yazdirma-sutun, td.yazdirma-sutun { display: table-cell; min-width: 120px; height: 34px; border: 1px solid #888; }
   table { font-size: 12px; } th { background: #fff; border-radius: 0; } th, td { border-bottom: 1px solid #bbb; }
   tfoot th, tfoot td { border-top: 1px solid #444; border-bottom: 3px double #444; }
+  /* Ödeme listesi: yatay A4 ve büyük yazı (diğer sayfalar dik kalır). Adlandırılmış sayfa: Chrome/Edge 85+ */
+  .yazdirma-yatay { page: yatay; }
+  .yazdirma-yatay table { font-size: 15px; }
+  .yazdirma-yatay th, .yazdirma-yatay td { padding-top: 9px; padding-bottom: 9px; font-size: 15px; }
+  .yazdirma-yatay h2 { font-size: 20px; }
+  .yazdirma-yatay .yazdirma-baslik, .yazdirma-yatay .sayfa-baslik h1 { font-size: 26px; }
+  .yazdirma-yatay .not, .yazdirma-yatay p { font-size: 14px; }
+  .yazdirma-yatay .deger { font-size: 20px; }
+  th.yazdirma-sutun, td.yazdirma-sutun { min-width: 150px; }
 }
+@page yatay { size: A4 landscape; margin: 10mm; }
 
 /* ---------- 6. HAREKET ---------- */
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

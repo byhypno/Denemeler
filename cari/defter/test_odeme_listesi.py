@@ -173,6 +173,16 @@ class EkranTests(ListeTemel):
                      {"indir": "pdf"}):
             self.assertEqual(self.client.get(reverse("odeme_listesi"), kotu).status_code, 200, kotu)
 
+    def test_yas_ve_belge_tarihi_sutunu_yok(self):
+        r = self.client.get(reverse("odeme_listesi"))
+        for metin in ("En eski belge", ">Yaş<"):
+            self.assertNotContains(r, metin)
+        ws = openpyxl.load_workbook(BytesIO(self.client.get(reverse("odeme_listesi"), {"indir": "xlsx"}).content)).active
+        basliklar = [c.value for c in ws[4]]
+        self.assertNotIn("En eski belge", basliklar)
+        self.assertNotIn("Yaş (gün)", basliklar)
+        self.assertEqual(basliklar[-3:], ["Vadesi geçmiş (₺)", "Planlanan ödeme (₺)", "Not"])
+
     def test_excel_indirme(self):
         r = self.client.get(reverse("odeme_listesi"), {"indir": "xlsx"})
         self.assertEqual(r.status_code, 200)
