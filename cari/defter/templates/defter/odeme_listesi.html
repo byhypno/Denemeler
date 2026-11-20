@@ -59,24 +59,24 @@
   <div class="kart"><div class="tablo-kaydir"><table>
     <thead><tr><th>Cari</th><th class="sayi">Açık borç</th>
       {% for k in kova_etiketleri %}<th class="sayi yazdirma-gizle">{{ k }}</th>{% endfor %}
-      <th>En eski belge</th><th class="sayi">Yaş</th><th class="sayi yazdirma-gizle">Vadesi geçmiş</th>
+      <th class="sayi">Yaş</th><th class="sayi yazdirma-gizle">Vadesi geçmiş</th>
       <th class="yazdirma-sutun">Planlanan ödeme</th><th class="yazdirma-sutun">Not</th></tr></thead>
     <tbody>{% for s in veri.satirlar %}
       <tr><td><a href="{% url 'cari_ekstre' s.cari.pk %}">{{ s.cari.unvan }}</a></td>
         <td class="sayi"><b>{{ s.toplam_kurus|kurus_tl }}</b></td>
         {% for k in s.kovalar %}<td class="sayi yazdirma-gizle">{{ k|kurus_say }}</td>{% endfor %}
-        <td>{{ s.en_eski_tarih|date:"d.m.Y" }}</td><td class="sayi">{{ s.en_eski_yas }} gün</td>
+        <td class="sayi" title="En eski belge: {{ s.en_eski_tarih|date:'d.m.Y' }}">{{ s.en_eski_yas }} gün</td>
         <td class="sayi yazdirma-gizle">{% if s.vade_tanimli %}{{ s.vadesi_gecmis_kurus|kurus_say }}{% else %}—{% endif %}</td>
         <td class="yazdirma-sutun"></td><td class="yazdirma-sutun"></td></tr>
-    {% empty %}<tr><td colspan="10" class="not">Açık borç yok.</td></tr>{% endfor %}</tbody>
+    {% empty %}<tr><td colspan="9" class="not">Açık borç yok.</td></tr>{% endfor %}</tbody>
     <tfoot><tr><th>TOPLAM</th><th class="sayi">{{ veri.toplam_kurus|kurus_tl }}</th>
       {% for k in veri.kovalar %}<th class="sayi yazdirma-gizle">{{ k|kurus_say }}</th>{% endfor %}
-      <th></th><th></th><th class="yazdirma-gizle"></th><th class="yazdirma-sutun"></th><th class="yazdirma-sutun"></th></tr></tfoot>
+      <th></th><th class="yazdirma-gizle"></th><th class="yazdirma-sutun"></th><th class="yazdirma-sutun"></th></tr></tfoot>
   </table></div></div>
   {% for c, a in veri.avanslar %}{% if forloop.first %}<p class="not">Fazla ödeme (avans) olan cariler:{% endif %}
     {{ c.unvan }} {{ a|kurus_tl }}{% if not forloop.last %};{% endif %}{% if forloop.last %}</p>{% endif %}{% endfor %}
   <p class="not">Açık borç, ödeme ve iadelerin <b>en eski borca mahsup edildiği (FIFO)</b> varsayımıyla hesaplanır; toplam cari bakiyesine eşittir.
-    Yaş, belge tarihinden itibaren gündür.</p>
+    Yaş, en eski açık belgenin tarihinden itibaren gündür.</p>
   <div class="sadece-yazdir imza"><span>Hazırlayan: ____________</span><span>Onaylayan: ____________</span></div>
 {% endif %}
 {% endblock %}
