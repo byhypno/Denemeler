@@ -1,7 +1,7 @@
 {% extends "defter/base.html" %}{% load defter_filtreleri %}
 {% block baslik %}Ödeme listesi: {% if liste == "yapilan" %}yapılan ödemeler{% else %}ödenecekler{% endif %} · Cari{% endblock %}
 {% block icerik %}
-<div class="yazdirma-yatay">
+<div class="yazdirma-yatay {% if liste == 'yapilan' %}boyut-3{% elif veri.satirlar|length > 16 %}boyut-4{% elif veri.satirlar|length > 13 %}boyut-3{% elif veri.satirlar|length > 10 %}boyut-2{% else %}boyut-1{% endif %}">
 <h1 class="yazdirma-gizle">Ödeme listesi</h1>
 <nav class="sekmeler yazdirma-gizle" aria-label="Liste türü">
   <a href="?liste=odenecek{% if cari %}&cari={{ cari.pk }}{% endif %}" class="{% if liste != 'yapilan' %}aktif{% endif %}">Ödenecekler (açık borç)</a>
