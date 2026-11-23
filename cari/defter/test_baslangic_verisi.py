@@ -163,3 +163,60 @@ class EkstreHareketleriTests(Temel):
         self.calistir()
         self.calistir()
         self.assertEqual(Ek.objects.count(), 1)
+
+
+class MevcutAcilisiDegistirmeTests(Temel):
+    def veri(self, bakiye=450, iptal_et=True, acilis=True):
+        (self.kl / "h.json").write_text(json.dumps({
+            "cari": "TOROS YAPI", "kaynak": "ekstre", "cari_notu": "eski kod 123", "mevcut_acilisi_iptal_et": iptal_et,
+            "beklenen_bakiye_kurus": bakiye * 100,
+            **({"acilis": {"tarih": "2026-01-01", "yon": "ALACAK", "tutar_kurus": 10000, "aciklama": "Açılış bakiyesi (alacak / avans)"}} if acilis else {}),
+            "satirlar": [
+                {"tarih": "2026-01-02", "evrak_no": "F1", "aciklama": "FATURAMIZ (T)", "tur": "ALIS_FATURASI", "tutar_kurus": 100000, "odeme_sekli": ""},
+                {"tarih": "2026-01-03", "evrak_no": "P1", "aciklama": "HAVALE", "tur": "ODEME", "tutar_kurus": 40000, "odeme_sekli": "HAVALE"}]}), encoding="utf-8")
+        (self.kl / "yukle.json").write_text(json.dumps({"hareketler": [{"dosya": "h.json"}]}), encoding="utf-8")
+
+    def test_sadece_acilisi_olan_tedarikcide_acilis_iptal_edilir_hareketler_yuklenir(self):
+        c = Cari.objects.create(unvan="Toros Yapı")                      # büyük/küçük harf ve aksan farkı yok sayılır
+        Belge.objects.create(cari=c, tur="ACILIS", tarih=date(2026, 11, 20), tutar_kurus=45000, aciklama="Açılış bakiyesi")
+        self.veri(bakiye=450)                                            # -100 +1000 -400 = 500? hesapla: 1000-100-400
+        with self.assertRaises(CommandError):
+            self.calistir()                                              # 500 != 450 -> geri alınır
+        self.assertEqual(c.belgeler.filter(iptal=False).count(), 1)      # eski açılış hâlâ aktif
+        self.veri(bakiye=500)
+        cikti = self.calistir()
+        self.assertEqual(Cari.objects.count(), 1)
+        self.assertEqual(c.bakiye_kurus(), 50000)
+        eski = c.belgeler.get(tur="ACILIS")
+        self.assertTrue(eski.iptal and "Ayrıntılı ekstre" in eski.iptal_nedeni)
+        self.assertEqual(c.belgeler.filter(iptal=False).count(), 3)
+        self.assertIn("1 açılış kaydı iptal edildi", cikti)
+        c.refresh_from_db()
+        self.assertEqual(c.not_metni, "eski kod 123")
+
+    def test_baska_hareketi_olan_tedarikciye_dokunmaz(self):
+        c = Cari.objects.create(unvan="TOROS YAPI")
+        Belge.objects.create(cari=c, tur="ALIS_FISI", tarih=date(2026, 11, 20), tutar_kurus=1000)
+        self.veri(bakiye=500)
+        self.assertIn("zaten hareketi var", self.calistir())
+        self.assertEqual(c.belgeler.count(), 1)
+
+    def test_bayrak_yoksa_acilisi_olan_tedarikciye_dokunmaz(self):
+        c = Cari.objects.create(unvan="TOROS YAPI")
+        Belge.objects.create(cari=c, tur="ACILIS", tarih=date(2026, 11, 20), tutar_kurus=45000)
+        self.veri(bakiye=500, iptal_et=False)
+        self.assertIn("zaten hareketi var", self.calistir())
+        self.assertEqual(c.belgeler.filter(iptal=False).count(), 1)
+
+    def test_tekrar_calistirmak_cogaltmaz(self):
+        c = Cari.objects.create(unvan="TOROS YAPI")
+        Belge.objects.create(cari=c, tur="ACILIS", tarih=date(2026, 11, 20), tutar_kurus=45000)
+        self.veri(bakiye=500)
+        self.calistir(); self.calistir()
+        self.assertEqual(c.belgeler.filter(iptal=False).count(), 3)
+
+    def test_tedarikci_hic_yoksa_olusturur(self):
+        self.veri(bakiye=500)
+        self.calistir()
+        c = Cari.objects.get(unvan="TOROS YAPI")
+        self.assertEqual((c.belgeler.count(), c.bakiye_kurus()), (3, 50000))
