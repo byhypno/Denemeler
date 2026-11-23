@@ -1,0 +1,15 @@
+{% extends "defter/base.html" %}
+{% block baslik %}Parolamı değiştir · Cari{% endblock %}
+{% block icerik %}
+<div class="kart giris-kutusu">
+  <h1>Parolamı değiştir</h1>
+  <form method="post" class="form-izgara" style="grid-template-columns:1fr">{% csrf_token %}
+    {% if form.errors %}<div class="hata-kutu">{% for k, hatalar in form.errors.items %}{{ hatalar|join:" " }} {% endfor %}</div>{% endif %}
+    <label>Eski parola {{ form.old_password }}</label>
+    <label>Yeni parola {{ form.new_password1 }}</label>
+    <label>Yeni parola (tekrar) {{ form.new_password2 }}</label>
+    <button type="submit">Değiştir</button>
+  </form>
+  <p class="not">En az 8 karakter; çok yaygın veya yalnızca rakamlardan oluşan parolalar kabul edilmez.</p>
+</div>
+{% endblock %}

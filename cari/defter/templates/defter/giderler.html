@@ -1,0 +1,107 @@
+{% extends "defter/base.html" %}{% load static defter_filtreleri %}
+{% block baslik %}Genel giderler · Cari{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik">
+  <div><h1>Genel giderler</h1>
+    <p class="not">Aylık net gider (KDV hariç). Kira, elektrik, su, mali müşavir, avukat, personel gibi kalemler her ay tek rakam olarak girilir.</p></div>
+  <form method="get" class="filtre yazdirma-gizle">
+    <input type="hidden" name="ay" value="{{ ay }}">
+    <label>Yıl <select name="yil" onchange="this.form.submit()">{% for y in yillar %}<option value="{{ y }}" {% if y == yil %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></label>
+    <a class="dugme ikincil" href="?yil={{ yil }}&ay={{ ay }}&indir=xlsx">{% ikon "indir" "kucuk" %}Excel</a>
+    <button type="button" class="ikincil dugme" onclick="window.print()">{% ikon "yazdir" "kucuk" %}Yazdır</button>
+  </form>
+</div>
+
+<section class="kpi dort" aria-label="Genel gider özeti">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "gider" %}</span><span class="etiket">{{ ay_adi }} net genel gider</span></div>
+    <div class="deger">{{ ozet.secili|kurus_tl }}</div>
+    <div class="kpi-alt"><span class="alt">Önceki ay: {{ ozet.onceki|kurus_tl }}</span>{% sparkline toplam_seri %}</div>
+    {% if ozet.degisim %}<div class="kpi-alt">{% degisim_etiketi ozet.degisim "yuksek_kotu" %}<span class="alt">önceki aya göre</span></div>{% endif %}</div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "sepet" %}</span><span class="etiket">Yıl başından {{ ay_adi }} sonuna</span></div>
+    <div class="deger">{{ ozet.ytd|kurus_tl }}</div><div class="alt">{{ yil }} birikmiş net gider</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "terazi" %}</span><span class="etiket">Aylık ortalama</span></div>
+    <div class="deger">{{ ozet.ortalama|kurus_tl }}</div><div class="alt">{% if ozet.dolu_ay %}Gider girilen {{ ozet.dolu_ay }} ay üzerinden{% else %}Henüz gider girilmedi{% endif %}</div></div>
+  <div class="kart ton-negatif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "uyari" %}</span><span class="etiket">En büyük kalem</span></div>
+    {% if ozet.en_buyuk %}<div class="deger orta">{{ ozet.en_buyuk.1.ad }}</div><div class="alt">{{ ozet.en_buyuk.0|kurus_tl }}</div>
+    {% else %}<div class="deger orta">—</div><div class="alt">{{ ay_adi }} için gider yok</div>{% endif %}</div>
+</section>
+
+<nav class="sekmeler yazdirma-gizle" aria-label="Ay seçimi">
+  {% for no, ad in aylar %}<a href="?yil={{ yil }}&ay={{ no }}" {% if no == ay %}class="aktif" aria-current="true"{% endif %}>{{ ad }}</a>{% endfor %}
+</nav>
+
+<section class="kart" id="ay-girisi">
+  <h2>{{ ay_adi }} {{ yil }} giderleri</h2>
+  {% if hatalar %}<div class="hata-kutu" role="alert">{% for h in hatalar %}{{ h }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+  {% if yazabilir %}
+  <form method="post" action="?yil={{ yil }}&ay={{ ay }}" novalidate>{% csrf_token %}
+    <div class="tablo-kaydir"><table class="gider-form">
+      <thead><tr><th>Kategori</th><th class="sayi">Net tutar (₺, KDV hariç)</th><th>Not</th></tr></thead>
+      <tbody>
+      {% for s in satirlar %}
+        <tr><th scope="row">{{ s.kategori.ad }}{% if not s.kategori.aktif %} <span class="chip">Pasif</span>{% endif %}</th>
+          <td class="sayi"><input type="text" name="tutar_{{ s.kategori.pk }}" inputmode="decimal" placeholder="0,00" autocomplete="off"
+               aria-label="{{ s.kategori.ad }} net tutarı"
+               value="{% if s.girdi_tutar is not None %}{{ s.girdi_tutar }}{% elif s.kurus %}{{ s.kurus|kurus_ham }}{% endif %}"></td>
+          <td><input type="text" name="not_{{ s.kategori.pk }}" maxlength="250" placeholder="isteğe bağlı" aria-label="{{ s.kategori.ad }} notu"
+               value="{% if s.girdi_not is not None %}{{ s.girdi_not }}{% else %}{{ s.not }}{% endif %}"></td></tr>
+      {% empty %}<tr><td colspan="3" class="not">Kategori yok. Aşağıdan ekleyin.</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr><th>{{ ay_adi }} net genel gider</th><td class="sayi">{{ ozet.secili|kurus_tl }}</td><td></td></tr></tfoot>
+    </table></div>
+    <p class="form-dugmeler"><button type="submit" name="eylem" value="kaydet">Kaydet</button>
+      <button type="submit" name="eylem" value="kopyala" class="ikincil" formnovalidate>Önceki aydan kopyala</button></p>
+    <p class="not">Boş bırakılan satır "gider yok" demektir. Bir kalemi sıfırlamak için boş bırakın; geçmiş değişiklikler işlem günlüğünde saklanır.
+      Aynı ayda birden çok fatura varsa toplamını yazın. Kopyalama yalnızca bu ayın <b>boş</b> satırlarını doldurur.</p>
+  </form>
+  {% else %}
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Kategori</th><th class="sayi">Net tutar</th><th>Not</th></tr></thead>
+    <tbody>{% for s in satirlar %}<tr><th scope="row">{{ s.kategori.ad }}</th><td class="sayi">{% if s.kurus %}{{ s.kurus|kurus_tl }}{% else %}—{% endif %}</td><td>{{ s.not }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th>{{ ay_adi }} net genel gider</th><td class="sayi">{{ ozet.secili|kurus_tl }}</td><td></td></tr></tfoot>
+  </table></div>
+  {% endif %}
+</section>
+
+<section class="kart">
+  <h2>{{ yil }} yılı aylık net genel gider</h2>
+  {% if grafik.seriler %}<div class="grafik uzun"><canvas id="g-gider" role="img" aria-label="Kategoriye göre aylık net genel gider sütunları"></canvas></div>
+  {% else %}<p class="not">Bu yıl için gider girilmemiş.</p>{% endif %}
+</section>
+
+<section class="kart">
+  <h2>{{ yil }} yıllık tablo</h2>
+  <div class="tablo-kaydir"><table class="gider-yillik">
+    <thead><tr><th>Kategori</th>{% for no, ad in aylar %}<th class="sayi{% if no == ay %} secili{% endif %}"><a href="?yil={{ yil }}&ay={{ no }}">{{ ad }}</a></th>{% endfor %}<th class="sayi">Toplam</th></tr></thead>
+    <tbody>
+    {% for r in tablo.satirlar %}
+      <tr><th scope="row" title="{{ r.kategori.ad }}">{{ r.kategori.ad }}</th>
+        {% for v in r.aylar %}<td class="sayi{% if forloop.counter == ay %} secili{% endif %}">{% if v %}{{ v|kurus_say }}{% else %}—{% endif %}</td>{% endfor %}
+        <td class="sayi"><b>{{ r.toplam|kurus_say }}</b></td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th>Net genel gider</th>{% for t in tablo.ay_toplam %}<td class="sayi{% if forloop.counter == ay %} secili{% endif %}">{% if t %}{{ t|kurus_say }}{% else %}—{% endif %}</td>{% endfor %}
+      <td class="sayi">{{ tablo.toplam|kurus_tl }}</td></tr></tfoot>
+  </table></div>
+</section>
+
+{% if yazabilir %}
+<section class="kart yazdirma-gizle">
+  <h2>Yeni kategori</h2>
+  <form method="post" action="{% url 'gider_kategori_ekle' %}" class="filtre">{% csrf_token %}
+    <input type="hidden" name="yil" value="{{ yil }}"><input type="hidden" name="ay" value="{{ ay }}">
+    <label class="ara-kutu">Kategori adı <input type="text" name="ad" maxlength="80" placeholder="ör. Sigorta, Muhasebe programı, İnternet" required></label>
+    <button type="submit">{% ikon "arti" "kucuk" %}Ekle</button>
+    {% if request.user.is_staff %}<a class="dugme ikincil" href="{% url 'admin:defter_giderkategori_changelist' %}">Kategorileri düzenle</a>{% endif %}
+  </form>
+  <p class="not">Kategori silinmez; kullanılmayacaksa "Kategorileri düzenle"den pasif yapılır (geçmiş tutarlar tabloda kalır).</p>
+</section>
+{% endif %}
+
+{{ grafik|json_script:"gider-veri" }}
+{% if grafik.seriler %}
+<script src="{% static 'defter/vendor/chart.umd.js' %}"></script>
+<script src="{% static 'defter/js/grafik_ortak.js' %}"></script>
+<script src="{% static 'defter/js/giderler.js' %}"></script>
+{% endif %}
+{% endblock %}

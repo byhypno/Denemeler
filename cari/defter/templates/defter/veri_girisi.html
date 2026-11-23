@@ -1,0 +1,38 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Veri girişi · Cari{% endblock %}
+{% block icerik %}
+<div class="sayfa-baslik"><div><h1>Veri girişi</h1>
+  <p class="not">Günlük işlerin hepsi buradan: ne girmek istediğinizi seçin.</p></div></div>
+
+<section class="kart" aria-labelledby="h-hareket">
+  <h2 id="h-hareket">Tedarikçi hareketi: alış, ödeme, iade</h2>
+  <form method="get" class="filtre">
+    <label class="ara-kutu">Tedarikçi
+      <select name="cari" required><option value="">— tedarikçi seçin —</option>
+        {% for c in cariler %}<option value="{{ c.pk }}">{{ c.unvan }}</option>{% endfor %}</select></label>
+    <button type="submit" name="tur" value="ALIS_FISI">{% ikon "sepet" "kucuk" %}Alış</button>
+    <button type="submit" name="tur" value="ODEME" class="ikincil">{% ikon "gonder" "kucuk" %}Ödeme</button>
+    <button type="submit" name="tur" value="IADE" class="ikincil">{% ikon "geri-al" "kucuk" %}İade</button>
+  </form>
+  <p class="not">Alışta fiş kalemlerini de girebilirsiniz. Tedarikçi listede yoksa aşağıdan ekleyin.</p>
+</section>
+
+<section class="veri-kartlari" aria-label="Diğer girişler">
+  <a class="kart veri-kart" href="{% url 'tedarikci_yeni' %}"><span class="kpi-ikon ton-vurgu">{% ikon "tedarikci" %}</span>
+    <span><b>Yeni tedarikçi</b><span class="not">Ünvan, vade günü, yetkili…</span></span></a>
+  <a class="kart veri-kart" href="{% url 'kasa' %}#yeni-hareket"><span class="kpi-ikon ton-pozitif">{% ikon "kasa" %}</span>
+    <span><b>Kasa hareketi</b><span class="not">Ofis kasasına para girişi / çıkışı</span></span></a>
+  <a class="kart veri-kart" href="{% url 'giderler' %}"><span class="kpi-ikon ton-uyari">{% ikon "gider" %}</span>
+    <span><b>Aylık genel gider</b><span class="not">Kira, elektrik, personel…</span></span></a>
+  <a class="kart veri-kart" href="{% url 'malzemeler' %}"><span class="kpi-ikon ton-bilgi">{% ikon "kutu" %}</span>
+    <span><b>Malzemeler ve kategoriler</b><span class="not">Kategori ata, fiyat geçmişi</span></span></a>
+</section>
+
+{% if request.user.is_staff %}
+<section class="kart">
+  <h2>Gelişmiş işler</h2>
+  <p class="not">Açılış/devir kaydı, düzeltme, ekstre mutabakatı, kullanıcı ve kasa ayarları gibi seyrek işler yönetim panelindedir.</p>
+  <p><a class="dugme ikincil" href="{% url 'admin:index' %}">{% ikon "yonetim" "kucuk" %}Yönetim paneli</a></p>
+</section>
+{% endif %}
+{% endblock %}

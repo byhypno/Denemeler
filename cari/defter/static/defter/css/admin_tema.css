@@ -1,0 +1,166 @@
+/* Yönetim paneli teması: panelin kendi değişkenlerini Cari Program paletiyle eşler (indigo vurgu).
+   Renk değerleri cari.css ile AYNI paletten gelir; kontrast test_arayuz.py ile denetlenir. */
+
+html[data-theme="light"], :root {
+  --primary: #4F46E5;
+  --secondary: #3730A3;
+  --accent: #6366F1;
+  --primary-fg: #FFFFFF;
+  --body-fg: #0F172A;
+  --body-bg: #F4F6FA;
+  --body-quiet-color: #475569;
+  --body-medium-color: #334155;
+  --body-loud-color: #0F172A;
+  --header-color: #475569;
+  --header-branding-color: #0F172A;
+  --header-bg: #FFFFFF;
+  --header-link-color: #0F172A;
+  --breadcrumbs-fg: #475569;
+  --breadcrumbs-link-fg: #3730A3;
+  --breadcrumbs-bg: #EEF0FF;
+  --link-fg: #4338CA;
+  --link-hover-color: #3730A3;
+  --link-selected-fg: #3730A3;
+  --hairline-color: #E5E9F2;
+  --border-color: #7C8BA3;
+  --error-fg: #B91C1C;
+  --message-debug-bg: #F8FAFC;
+  --message-info-bg: #E6EEFF;
+  --message-success-bg: #E4F7EE;
+  --message-warning-bg: #FEF3C7;
+  --message-error-bg: #FDEBEB;
+  --darkened-bg: #F8FAFC;
+  --selected-bg: #EEF0FF;
+  --selected-row: #FEF3C7;
+  --button-fg: #FFFFFF;
+  --button-bg: #4F46E5;
+  --button-hover-bg: #4338CA;
+  --default-button-bg: #3730A3;
+  --default-button-hover-bg: #4F46E5;
+  --close-button-bg: #475569;
+  --close-button-hover-bg: #0F172A;
+  --delete-button-bg: #B91C1C;
+  --delete-button-hover-bg: #991B1B;
+  --object-tools-bg: #475569;
+  --font-family-primary: "Plus Jakarta Sans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #1E2347;
+    --secondary: #0B0F19;
+    --accent: #818CF8;
+    --primary-fg: #E6EAF4;
+    --body-fg: #E6EAF4;
+    --body-bg: #0B0F19;
+    --body-quiet-color: #A5B0C6;
+    --body-medium-color: #CBD3E4;
+    --body-loud-color: #FFFFFF;
+    --header-color: #A5B0C6;
+    --header-branding-color: #E6EAF4;
+    --header-bg: #0E1320;
+    --header-link-color: #E6EAF4;
+    --breadcrumbs-fg: #A5B0C6;
+    --breadcrumbs-link-fg: #C7CCFF;
+    --breadcrumbs-bg: #1E2347;
+    --link-fg: #A5B4FC;
+    --link-hover-color: #C7CCFF;
+    --link-selected-fg: #A5B4FC;
+    --hairline-color: #1F2738;
+    --border-color: #5A6884;
+    --error-fg: #FCA5A5;
+    --message-debug-bg: #171E2E;
+    --message-info-bg: #14243F;
+    --message-success-bg: #0E2A22;
+    --message-warning-bg: #2B230C;
+    --message-error-bg: #321718;
+    --darkened-bg: #171E2E;
+    --selected-bg: #1E2347;
+    --selected-row: #2B230C;
+    --button-fg: #0B0F19;
+    --button-bg: #818CF8;
+    --button-hover-bg: #A5B4FC;
+    --default-button-bg: #818CF8;
+    --default-button-hover-bg: #A5B4FC;
+    --close-button-bg: #A5B0C6;
+    --close-button-hover-bg: #CBD3E4;
+    --delete-button-bg: #FCA5A5;
+    --delete-button-hover-bg: #FECACA;
+    --object-tools-fg: #0B0F19;
+    --object-tools-bg: #A5B0C6;
+    --object-tools-hover-bg: #CBD3E4;
+    color-scheme: dark;
+  }
+}
+
+html[data-theme="dark"] {
+  --primary: #1E2347;
+  --secondary: #0B0F19;
+  --accent: #818CF8;
+  --primary-fg: #E6EAF4;
+  --body-fg: #E6EAF4;
+  --body-bg: #0B0F19;
+  --body-quiet-color: #A5B0C6;
+  --body-medium-color: #CBD3E4;
+  --body-loud-color: #FFFFFF;
+  --header-color: #A5B0C6;
+  --header-branding-color: #E6EAF4;
+  --header-bg: #0E1320;
+  --header-link-color: #E6EAF4;
+  --breadcrumbs-fg: #A5B0C6;
+  --breadcrumbs-link-fg: #C7CCFF;
+  --breadcrumbs-bg: #1E2347;
+  --link-fg: #A5B4FC;
+  --link-hover-color: #C7CCFF;
+  --link-selected-fg: #A5B4FC;
+  --hairline-color: #1F2738;
+  --border-color: #5A6884;
+  --error-fg: #FCA5A5;
+  --message-debug-bg: #171E2E;
+  --message-info-bg: #14243F;
+  --message-success-bg: #0E2A22;
+  --message-warning-bg: #2B230C;
+  --message-error-bg: #321718;
+  --darkened-bg: #171E2E;
+  --selected-bg: #1E2347;
+  --selected-row: #2B230C;
+  --button-fg: #0B0F19;
+  --button-bg: #818CF8;
+  --button-hover-bg: #A5B4FC;
+  --default-button-bg: #818CF8;
+  --default-button-hover-bg: #A5B4FC;
+  --close-button-bg: #A5B0C6;
+  --close-button-hover-bg: #CBD3E4;
+  --delete-button-bg: #FCA5A5;
+  --delete-button-hover-bg: #FECACA;
+  --object-tools-fg: #0B0F19;
+  --object-tools-bg: #A5B0C6;
+  --object-tools-hover-bg: #CBD3E4;
+  color-scheme: dark;
+}
+
+/* Tema tek yerden (uygulamadaki düğmeyle) değişir; panelin kendi düğmesi gizlenir. */
+.theme-toggle { display: none !important; }
+
+body { background: var(--body-bg); }
+#header { border-bottom: 1px solid var(--hairline-color); box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
+#site-name a { font-weight: 700; font-size: 1.3rem; letter-spacing: -.02em; }
+h1, #content h1 { font-weight: 700; font-size: 1.6rem; letter-spacing: -.02em; color: var(--body-fg); }
+.module { border: 1px solid var(--hairline-color); border-radius: 14px; overflow: hidden; background: var(--body-bg); }
+.module h2, .module caption, .inline-group h2 { font-weight: 650; letter-spacing: 0; background: var(--selected-bg); color: var(--breadcrumbs-link-fg); }
+.module h2 a, .module caption a { color: inherit; }
+#changelist table, .module table { font-variant-numeric: tabular-nums; }
+#changelist table thead th { background: var(--darkened-bg); border-bottom: 1px solid var(--hairline-color); color: var(--body-quiet-color); font-weight: 600; }
+#changelist table thead th a, #changelist table thead th a:link, #changelist table thead th a:visited { color: var(--body-quiet-color); }
+#changelist tbody tr:hover td, #changelist tbody tr:hover th { background: var(--darkened-bg); }
+.button, input[type=submit], input[type=button], .submit-row input, a.button { border-radius: 10px; font-weight: 600; }
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=url], input[type=date], textarea, select {
+  border-radius: 10px; border-color: var(--border-color); background: var(--body-bg); color: var(--body-fg); }
+:focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; }
+html[data-theme="dark"] :focus-visible { outline-color: #A5B4FC; }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) :focus-visible { outline-color: #A5B4FC; } }
+.messagelist li { border-radius: 10px; }
+.object-tools a { border-radius: 999px; }
+
+input::placeholder, textarea::placeholder { color: var(--body-quiet-color); opacity: 1; }
+.admin-logo { height: 23px; width: auto; vertical-align: -5px; margin-right: 10px; }

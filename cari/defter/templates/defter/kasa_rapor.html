@@ -1,0 +1,87 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}Kasa raporu · Cari{% endblock %}
+{% block icerik %}
+{% if not hesap %}
+  <div class="kart bos"><h2>Aktif kasa hesabı yok</h2></div>
+{% else %}
+<div class="sayfa-baslik">
+  <div><h1>{{ hesap.ad }} raporu</h1>
+    <p class="not">{{ r.bas|date:"d.m.Y" }} – {{ r.bit|date:"d.m.Y" }} · {{ etiket }}. İptal edilen kayıtlar dahil değildir.</p></div>
+  <div class="yazdirma-gizle filtre">
+    <a class="dugme" href="?{{ sorgu }}&indir=xlsx">{% ikon "indir" "kucuk" %}Excel</a>
+    <a class="dugme" href="?{{ sorgu }}&indir=pdf">{% ikon "dosya" "kucuk" %}PDF</a>
+    <button type="button" class="ikincil dugme" onclick="window.print()">{% ikon "yazdir" "kucuk" %}Yazdır</button>
+  </div>
+</div>
+
+<form method="get" class="filtre yazdirma-gizle" aria-label="Dönem seçimi">
+  <input type="hidden" name="hesap" value="{{ hesap.pk }}">
+  <span class="chip-grup" role="group" aria-label="Hazır dönemler">
+    {% for kod, ad in donemler %}<a class="dugme ikincil {% if etiket == ad %}secili{% endif %}" href="?hesap={{ hesap.pk }}&donem={{ kod }}">{{ ad }}</a>{% endfor %}
+  </span>
+  <label>Başlangıç <input type="date" name="bas" value="{{ r.bas|date:'Y-m-d' }}"></label>
+  <label>Bitiş <input type="date" name="bit" value="{{ r.bit|date:'Y-m-d' }}"></label>
+  <button type="submit">Uygula</button>
+</form>
+
+<section class="kpi dort" aria-label="Dönem özeti">
+  <div class="kart ton-vurgu"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kilit" %}</span><span class="etiket">Devir</span></div><div class="deger">{{ r.devir|kurus_tl }}</div><div class="alt">Dönem başı bakiye</div></div>
+  <div class="kart ton-pozitif"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-asagi" %}</span><span class="etiket">Para girişleri</span></div><div class="deger">{{ r.giris_toplam|kurus_tl }}</div><div class="alt">{{ r.girisler|length }} kayıt</div></div>
+  <div class="kart ton-uyari"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "ok-yukari" %}</span><span class="etiket">Para çıkışları</span></div><div class="deger">{{ r.cikis_toplam|kurus_tl }}</div><div class="alt">{{ r.cikislar|length }} kayıt · günlük ort. {{ r.ortalama_gunluk_cikis|kurus_tl }}</div></div>
+  <div class="kart ton-bilgi"><div class="kpi-ust"><span class="kpi-ikon">{% ikon "kasa" %}</span><span class="etiket">KALAN</span></div><div class="deger">{{ r.kalan|kurus_tl }}</div><div class="alt">Devir + giriş − çıkış</div></div>
+</section>
+
+{% if r.fissiz_adet %}<p class="mesaj warning" role="status">{{ r.fissiz_adet }} çıkışın fiş/makbuz numarası girilmemiş ({{ r.fissiz_toplam|kurus_tl }}).</p>{% endif %}
+
+<div class="izgara iki">
+<section class="kart">
+  <h2>Para girişleri</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th>Açıklama</th><th class="sayi">Tutar</th></tr></thead>
+    <tbody>
+      <tr><td>{{ r.bas|date:"d.m.Y" }}</td><td><b>DEVİR</b></td><td class="sayi">{{ r.devir|kurus_say }}</td></tr>
+      {% for h in r.girisler %}<tr><td>{{ h.tarih|date:"d.m.Y" }}</td><td>{{ h.aciklama|default:"PARA GİRİŞİ" }}</td><td class="sayi">{{ h.tutar_kurus|kurus_say }}</td></tr>{% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="2">TOPLAM</th><td class="sayi">{{ r.devir|add:r.giris_toplam|kurus_say }}</td></tr></tfoot>
+  </table></div>
+</section>
+
+<section class="kart">
+  <h2>Kişi bazında harcama</h2>
+  {% if r.kisiler %}<div class="tablo-kaydir"><table>
+    <thead><tr><th>Harcayan</th><th class="sayi">Adet</th><th class="sayi">Tutar</th><th class="sayi">Pay</th></tr></thead>
+    <tbody>{% for k in r.kisiler %}<tr><td>{{ k.ad }}</td><td class="sayi">{{ k.adet }}</td><td class="sayi">{{ k.toplam|kurus_say }}</td><td class="sayi">{% widthratio k.toplam r.cikis_toplam 100 %}%</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th>TOPLAM</th><td></td><td class="sayi">{{ r.cikis_toplam|kurus_say }}</td><td></td></tr></tfoot>
+  </table></div>
+  <p class="not">Harcayan girilmemiş çıkışlar “Belirtilmemiş” altında toplanır. Kasa sayfasındaki “Harcayan” alanını doldurun.</p>
+  {% else %}<p class="not">Bu dönemde çıkış yok.</p>{% endif %}
+</section>
+</div>
+
+<section class="kart">
+  <h2>Para çıkışları</h2>
+  {% if r.cikislar %}<div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th>Açıklama</th><th>Fiş no</th><th>Harcayan</th><th>Kategori</th><th class="sayi">Tutar</th></tr></thead>
+    <tbody>{% for h in r.cikislar %}<tr><td>{{ h.tarih|date:"d.m.Y" }}</td><td>{{ h.aciklama }}</td><td>{{ h.makbuz_no }}</td><td>{{ h.harcayan }}</td><td>{{ h.kategori.ad|default:"" }}</td><td class="sayi">{{ h.tutar_kurus|kurus_say }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th colspan="5">TOPLAM</th><td class="sayi">{{ r.cikis_toplam|kurus_say }}</td></tr></tfoot>
+  </table></div>{% else %}<p class="not">Bu dönemde çıkış yok.</p>{% endif %}
+</section>
+
+<div class="izgara iki">
+<section class="kart">
+  <h2>Kategori bazında</h2>
+  {% if r.kategoriler %}<div class="tablo-kaydir"><table>
+    <thead><tr><th>Kategori</th><th class="sayi">Adet</th><th class="sayi">Tutar</th></tr></thead>
+    <tbody>{% for k in r.kategoriler %}<tr><td>{{ k.ad }}</td><td class="sayi">{{ k.adet }}</td><td class="sayi">{{ k.toplam|kurus_say }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<p class="not">Bu dönemde çıkış yok.</p>{% endif %}
+</section>
+<section class="kart">
+  <h2>Gün gün</h2>
+  {% if r.gunler %}<div class="tablo-kaydir"><table>
+    <thead><tr><th>Tarih</th><th class="sayi">Giriş</th><th class="sayi">Çıkış</th><th class="sayi">Bakiye</th></tr></thead>
+    <tbody>{% for g in r.gunler %}<tr><td>{{ g.tarih|date:"d.m.Y" }}</td><td class="sayi">{{ g.giris|kurus_say }}</td><td class="sayi">{{ g.cikis|kurus_say }}</td><td class="sayi">{{ g.bakiye|kurus_say }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}<p class="not">Bu dönemde hareket yok.</p>{% endif %}
+</section>
+</div>
+{% endif %}
+{% endblock %}

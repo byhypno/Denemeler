@@ -1,0 +1,43 @@
+{% extends "defter/base.html" %}{% load defter_filtreleri %}
+{% block baslik %}{{ oz.mutabakat.cari }} · Mutabakat{% endblock %}
+{% block icerik %}
+<h1>{{ oz.mutabakat.cari }}</h1>
+<p class="not">Ekstre tarihi: {{ oz.mutabakat.ekstre_tarihi|date:"d.m.Y" }}</p>
+<p class="yazdirma-gizle"><a href="{% url 'mutabakat_liste' %}">{% ikon "geri" "kucuk" %}Tüm mutabakatlar</a> &nbsp;
+  <a href="{% url 'cari_ekstre' oz.mutabakat.cari.pk %}">Cari ekstresi</a> ·
+  {% if request.user.is_staff %}<a href="{% url 'admin:defter_ekstremutabakat_change' oz.mutabakat.pk %}">Düzenle</a> &nbsp;{% endif %}
+  <a href="{% url 'ek_sahip' 'mutabakat' oz.mutabakat.pk %}">{% ikon "ek" "kucuk" %}Ekler ({{ ek_sayisi }})</a> <span class="not">(ekstre PDF'i)</span></p>
+
+<section class="ozet">
+  <div class="kart"><div class="not">Bizim kayıtlara göre borç</div><div class="deger">{{ oz.bizim_bakiye_kurus|kurus_tl }}</div></div>
+  <div class="kart"><div class="not">Ekstreye göre borç</div><div class="deger">{{ oz.ekstre_bakiye_kurus|kurus_tl }}</div></div>
+  <div class="kart"><div class="not">Fark (bizim − ekstre)</div><div class="deger">{{ oz.fark_kurus|kurus_tl }}</div></div>
+  <div class="kart"><div class="not">Satırlarla açıklanan</div><div class="deger">{{ oz.aciklanan_kurus|kurus_tl }}</div></div>
+  <div class="kart"><div class="not">Açıklanamayan fark</div>
+    <div class="deger">{{ oz.aciklanamayan_kurus|kurus_tl }}</div>
+    {% if oz.aciklanamayan_kurus %}<span class="chip hata">Eksik/yanlış kayıt olabilir</span>{% else %}<span class="chip tamam">Tüm fark açıklandı</span>{% endif %}</div>
+</section>
+
+<div class="kart">
+  <h2>Farklı satırlar ({{ oz.farkli_satirlar|length }})</h2>
+  <div class="tablo-kaydir"><table>
+    <thead><tr><th>Fiş / evrak</th><th>Tarih</th><th>Durum</th><th class="sayi">Bizim</th><th class="sayi">Ekstre</th><th class="sayi">Fark</th><th>Neden / not</th></tr></thead>
+    <tbody>{% for s in oz.farkli_satirlar %}
+      <tr class="vurgu"><td>{{ s.belge.evrak_no|default:s.ekstre_evrak_no }}</td><td>{{ s.tarih|date:"d.m.Y" }}</td>
+        <td><span class="chip uyari">{{ s.durum_etiketi }}</span></td>
+        <td class="sayi">{{ s.bizim_tutar_kurus|kurus_tl }}</td><td class="sayi">{{ s.ekstre_tutar_kurus|kurus_tl }}</td>
+        <td class="sayi">{{ s.fark_kurus|kurus_tl }}</td><td>{{ s.aciklama|default:"—" }}</td></tr>
+    {% empty %}<tr><td colspan="7" class="not">Tüm satırlar uyumlu.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+
+<details class="kart"><summary><b>Tüm satırlar ({{ oz.satirlar|length }})</b></summary>
+  <div class="tablo-kaydir"><table style="margin-top:10px">
+    <thead><tr><th>#</th><th>Fiş</th><th>Tarih</th><th>Ekstre evrak no</th><th class="sayi">Bizim</th><th class="sayi">Ekstre</th><th class="sayi">Fark</th><th>Durum</th></tr></thead>
+    <tbody>{% for s in oz.satirlar %}
+      <tr><td>{{ s.sira }}</td><td>{{ s.belge.evrak_no|default:"—" }}</td><td>{{ s.tarih|date:"d.m.Y" }}</td><td>{{ s.ekstre_evrak_no }}</td>
+        <td class="sayi">{{ s.bizim_tutar_kurus|kurus_tl }}</td><td class="sayi">{{ s.ekstre_tutar_kurus|kurus_tl }}</td>
+        <td class="sayi">{{ s.fark_kurus|kurus_tl }}</td><td>{% if s.durum == "UYUMLU" %}<span class="chip tamam">{{ s.durum_etiketi }}</span>{% else %}<span class="chip uyari">{{ s.durum_etiketi }}</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+</details>
+{% endblock %}
